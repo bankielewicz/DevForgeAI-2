@@ -30,7 +30,7 @@ depends_on:
     hash: sha256:076840ec9db03155bc9edcceb587e2aa1ca8bf3849e7a8b742f788d1a3b2315f
     excerpt: "| `report_only` | the shared invariants only; from a judge, `changed[]` is empty and step 8b has already written this phase's `findings.md` under this run's own `evidence/<agent>/` | the fence held and the stack policy holds |"
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:3c4c95bbd73b5499e5569e650f84eea84cb68404c0909f5f1819c0f3a5c7b3d4
+    hash: sha256:52cf474c332c7d8a02ad1b1abac51d852d5f54c30bf5126deb8a5b18cde77206
     excerpt: "| Source basis | `source_basis[] {source, hash, status}` | no | the `provenance` and `context` entries the gate re-resolved |"
   - source: docs/design/10-sequencer-and-contracts.md#10-evidence-files
     hash: sha256:b15253fbdd40635f95f116d473af2336ef37b76b960d909d0153a12ca7e04b1f

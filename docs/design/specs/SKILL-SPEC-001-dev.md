@@ -27,7 +27,7 @@ depends_on:
     hash: sha256:076840ec9db03155bc9edcceb587e2aa1ca8bf3849e7a8b742f788d1a3b2315f
     excerpt: "`red` | build first when the section is compiled; broker `test`; classification is not `NO_TESTS` or `COLLECTION_ERROR`; the command exits non-zero; every `test_plan` name is present and `failed`, never `error`; no test outside `test_plan`; records `red_hashes`"
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:3c4c95bbd73b5499e5569e650f84eea84cb68404c0909f5f1819c0f3a5c7b3d4
+    hash: sha256:52cf474c332c7d8a02ad1b1abac51d852d5f54c30bf5126deb8a5b18cde77206
     excerpt: "| story run, promoted | `/review <arg>` |"
   - source: docs/design/11-artifact-registry.md#2-artifact-path-patterns
     hash: sha256:858455b885ac6c1ddbe427a433ba715f7266d08b90e105135172877e29ea0ecc

@@ -24,7 +24,7 @@ depends_on:
     hash: sha256:1706823f7848f5cb6b23e68dfd783885fad3fdfa5d98fb6df0b90270a818fc20
     excerpt: "A document run carries the fixed map `{unresolvable_source: BLOCK}`, because it has no story to declare a wider one."
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:3c4c95bbd73b5499e5569e650f84eea84cb68404c0909f5f1819c0f3a5c7b3d4
+    hash: sha256:52cf474c332c7d8a02ad1b1abac51d852d5f54c30bf5126deb8a5b18cde77206
     excerpt: "| document run, promoted, no verdict or `verdict: pass` | `/status` |"
   - source: docs/design/11-artifact-registry.md#1-template-registry
     hash: sha256:fabb8d2f142dcde1a31bc53768f8a46d01cac3ea4a7f6b73db22479cc89b5553

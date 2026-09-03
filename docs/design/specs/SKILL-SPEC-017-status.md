@@ -9,14 +9,14 @@ author: "DevForgeAI spec author (wave 2)"
 date: 2026-09-02
 depends_on:
   - source: docs/design/10-sequencer-and-contracts.md#2-cli-grammar
-    hash: sha256:87a07888354112467337a1b7a02b9111d2e2030e49ce8a25f22eb3f441ab87b7
+    hash: sha256:808848a3cd77c93dfa2a03846c5e1619417f20e8d05482cfb94a7aecd26be5da
     excerpt: |
       | `devforgeai status` | none | none | nothing | `0` | model |
   - source: docs/design/10-sequencer-and-contracts.md#9-enforcement-block
-    hash: sha256:fb2caa96dcd1b9657eb01e5f2e2bdafaf00f92b9303292580d2c71e0af58bf03
+    hash: sha256:c4ef5db527d878b1b1302d8912abfe770cc2f5da41917033dba11494461dcfbf
     excerpt: "`.devforgeai/work/<run>/run.yaml`, `schemas/devforgeai/v1/run.schema.json`. Written by the sequencer at `devforgeai phase start` and updated at every transition. It outlives the candidate root: promotion and abandonment remove the root, branch, tags and copy-aside, and leave `run.yaml` with the final status so `devforgeai status`, inspection and `NO_CANDIDATE` still resolve."
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:3c4c95bbd73b5499e5569e650f84eea84cb68404c0909f5f1819c0f3a5c7b3d4
+    hash: sha256:52cf474c332c7d8a02ad1b1abac51d852d5f54c30bf5126deb8a5b18cde77206
     excerpt: |
       | 7 | The run-end block and the `devforgeai status` block are the same rendering of the same file. |
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry

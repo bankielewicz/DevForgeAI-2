@@ -44,7 +44,7 @@ depends_on:
     excerpt: |
       | research | external | runner `devforgeai-research`; fence `docs/research/<arg>/**` | none here; the Research Core CLI executes it under `framework/skills/research/`, and `devforgeai phase start` refuses it (exit 3 when the runner is absent) |
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:3c4c95bbd73b5499e5569e650f84eea84cb68404c0909f5f1819c0f3a5c7b3d4
+    hash: sha256:52cf474c332c7d8a02ad1b1abac51d852d5f54c30bf5126deb8a5b18cde77206
     excerpt: |
       Research is the exception. Its typed handoff contract is `framework/skills/research/contracts/handoff.md`; on the successful path Research Core writes it and the framework does not restate it.
   - source: docs/design/02-skill-roster.md#research

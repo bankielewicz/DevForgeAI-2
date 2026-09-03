@@ -27,7 +27,7 @@ depends_on:
     hash: sha256:b15253fbdd40635f95f116d473af2336ef37b76b960d909d0153a12ca7e04b1f
     excerpt: "| `docs/reports/<skill>-<run>-<phase>.md` | Markdown | sequencer at a passing transition | the human, `retro` `collect`, `review` |"
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:3c4c95bbd73b5499e5569e650f84eea84cb68404c0909f5f1819c0f3a5c7b3d4
+    hash: sha256:52cf474c332c7d8a02ad1b1abac51d852d5f54c30bf5126deb8a5b18cde77206
     excerpt: "| document run, promoted, no verdict or `verdict: pass` | `/status` |"
   - source: docs/design/11-artifact-registry.md#1-template-registry
     hash: sha256:fabb8d2f142dcde1a31bc53768f8a46d01cac3ea4a7f6b73db22479cc89b5553
