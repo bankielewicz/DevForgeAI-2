@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devforgeai.dev/schemas/research/v1/state-event.schema.json",
+  "title": "Research run state event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "record_id", "record_version", "event_id", "run_id",
+    "lifecycle_status", "readiness_status", "owner", "decision_authority", "created_at_utc",
+    "source_refs", "evidence_refs", "decision_refs", "supersedes", "stale_if",
+    "sequence", "previous_event_sha256", "event_type",
+    "from_phase", "to_phase", "actor_id", "reason_code", "reason", "occurred_at"
+  ],
+  "properties": {
+    "schema_version": {"const": "research-state-event/v1"},
+    "record_id": {"type": "string", "pattern": "^EVT-[0-9]{6}$"},
+    "record_version": {"type": "integer", "minimum": 1},
+    "event_id": {"type": "string", "pattern": "^EVT-[0-9]{6}$"},
+    "run_id": {"type": "string", "pattern": "^RUN-[0-9]{6}$"},
+    "lifecycle_status": {"enum": ["DRAFT", "PROPOSED", "ACCEPTED", "REJECTED", "SUPERSEDED", "ARCHIVED"]},
+    "readiness_status": {"enum": ["NOT_READY", "READY", "STALE"]},
+    "owner": {"type": "string", "minLength": 1},
+    "decision_authority": {"type": "string", "minLength": 1},
+    "created_at_utc": {"type": "string", "format": "date-time"},
+    "source_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^SRC-[0-9]{6}$"}},
+    "evidence_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^EVD-[0-9]{6}$"}},
+    "decision_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^DEC-[0-9]{6}$"}},
+    "supersedes": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^(RQ|QRY|SRC|EVD|CLM|CTR|VER|SYN|DEC|HND|EVT)-[0-9]{6}$"}},
+    "stale_if": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "sequence": {"type": "integer", "minimum": 0},
+    "previous_event_sha256": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      ]
+    },
+    "from_phase": {
+      "oneOf": [
+        {"type": "null"},
+        {"enum": ["P0", "P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9"]}
+      ]
+    },
+    "event_type": {"enum": ["PHASE_TRANSITION", "TERMINAL_OUTCOME"]},
+    "to_phase": {
+      "oneOf": [
+        {"type": "null"},
+        {"enum": ["P0", "P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9"]}
+      ]
+    },
+    "outcome": {"enum": ["NEEDS_DECISION", "BLOCKED", "FAILED", "COULD_NOT_RUN", "CANCELLED"]},
+    "actor_id": {"type": "string", "minLength": 1},
+    "reason_code": {"type": "string", "pattern": "^[A-Z][A-Z0-9_/-]*$"},
+    "reason": {"type": "string", "minLength": 1},
+    "record_sha256s": {
+      "type": "array", "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+    },
+    "occurred_at": {"type": "string", "format": "date-time", "pattern": "Z$"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"event_type": {"const": "PHASE_TRANSITION"}}},
+      "then": {
+        "properties": {
+          "to_phase": {"enum": ["P0", "P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9"]}
+        },
+        "not": {"required": ["outcome"]}
+      },
+      "else": {
+        "required": ["outcome"],
+        "properties": {
+          "from_phase": {"enum": ["P0", "P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9"]},
+          "to_phase": {"type": "null"}
+        }
+      }
+    }
+  ]
+}

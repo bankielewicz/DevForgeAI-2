@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devforgeai.dev/schemas/research/v1/reconciliation.schema.json",
+  "title": "Research P6 worker-output reconciliation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "reconciliation_id", "run_id", "plan",
+    "owner", "decision_authority", "lane_results", "question_coverage",
+    "conflicts", "invalid_outputs", "accepted_record_ids", "budget_use",
+    "concurrent_workers_peak",
+    "all_expected_lanes_accounted", "budget_within_limits",
+    "majority_vote_used", "status", "completed_at_utc"
+  ],
+  "properties": {
+    "schema_version": {"const": "research-reconciliation/v1"},
+    "reconciliation_id": {"type": "string", "pattern": "^RUN-[0-9]{6}/reconciliation$"},
+    "run_id": {"type": "string", "pattern": "^RUN-[0-9]{6}$"},
+    "plan": {
+      "type": "object", "additionalProperties": false,
+      "required": ["plan_id", "sha256"],
+      "properties": {
+        "plan_id": {"type": "string", "pattern": "^RUN-[0-9]{6}/plan$"},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "owner": {"type": "string", "minLength": 1},
+    "decision_authority": {"type": "string", "minLength": 1},
+    "lane_results": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "lane_id", "terminal_status", "attempts", "worker_envelope_ids",
+          "result_artifacts", "accepted_record_ids", "usage", "reason",
+          "limitations", "completed_at_utc"
+        ],
+        "properties": {
+          "lane_id": {"type": "string", "pattern": "^LANE-[0-9]{6}$"},
+          "terminal_status": {"enum": ["RETURNED", "FAILED", "TIMED_OUT", "INVALID", "CANCELLED"]},
+          "attempts": {"type": "integer", "minimum": 1},
+          "worker_envelope_ids": {
+            "type": "array", "minItems": 1, "uniqueItems": true,
+            "items": {"type": "string", "pattern": "^ENV-[0-9]{6}$"}
+          },
+          "result_artifacts": {
+            "type": "array",
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["artifact_id", "schema_id", "path", "sha256"],
+              "properties": {
+                "artifact_id": {"type": "string", "minLength": 1},
+                "schema_id": {"type": "string", "minLength": 1},
+                "path": {"type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"},
+                "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+              }
+            }
+          },
+          "accepted_record_ids": {
+            "type": "array", "uniqueItems": true,
+            "items": {"type": "string", "pattern": "^QRY-[0-9]{6}$"}
+          },
+          "usage": {"$ref": "#/$defs/usage"},
+          "reason": {"type": "string", "minLength": 1},
+          "limitations": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "completed_at_utc": {"type": "string", "format": "date-time", "pattern": "Z$"}
+        },
+        "allOf": [
+          {
+            "if": {"properties": {"terminal_status": {"const": "RETURNED"}}},
+            "then": {"properties": {"result_artifacts": {"minItems": 1}}}
+          }
+        ]
+      }
+    },
+    "question_coverage": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": [
+          "question_id", "direct_lane_ids", "contrary_lane_ids",
+          "direct_terminal", "contrary_terminal", "stop_conditions_met"
+        ],
+        "properties": {
+          "question_id": {"type": "string", "pattern": "^RQ-[0-9]{6}$"},
+          "direct_lane_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^LANE-[0-9]{6}$"}},
+          "contrary_lane_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^LANE-[0-9]{6}$"}},
+          "direct_terminal": {"type": "boolean"},
+          "contrary_terminal": {"type": "boolean"},
+          "stop_conditions_met": {"type": "boolean"}
+        }
+      }
+    },
+    "conflicts": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": [
+          "conflict_id", "subject_ids", "kind", "status", "description",
+          "owner", "limitations", "downstream_prohibition", "review_trigger",
+          "decision_refs"
+        ],
+        "properties": {
+          "conflict_id": {"type": "string", "pattern": "^RCF-[0-9]{6}$"},
+          "subject_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+          "kind": {"enum": ["SCOPE", "VERSION", "EVIDENCE", "CLAIM", "WORKER_OUTPUT"]},
+          "status": {"enum": ["OPEN", "RESOLVED", "ACCEPTED_UNCERTAINTY"]},
+          "description": {"type": "string", "minLength": 1},
+          "owner": {"type": "string", "minLength": 1},
+          "limitations": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+          "downstream_prohibition": {"type": "string", "minLength": 1},
+          "review_trigger": {"type": "string", "minLength": 1},
+          "decision_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^DEC-[0-9]{6}$"}}
+        }
+      }
+    },
+    "invalid_outputs": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["envelope_id", "reason_code", "explanation", "sha256"],
+        "properties": {
+          "envelope_id": {"type": "string", "pattern": "^ENV-[0-9]{6}$"},
+          "reason_code": {"type": "string", "pattern": "^[A-Z][A-Z0-9_/-]*$"},
+          "explanation": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+        }
+      }
+    },
+    "accepted_record_ids": {
+      "type": "array", "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^QRY-[0-9]{6}$"}
+    },
+    "budget_use": {"$ref": "#/$defs/usage"},
+    "concurrent_workers_peak": {"type": "integer", "minimum": 1, "maximum": 5},
+    "all_expected_lanes_accounted": {"type": "boolean"},
+    "budget_within_limits": {"type": "boolean"},
+    "majority_vote_used": {"const": false},
+    "status": {"enum": ["PASS", "FAIL", "NEEDS_DECISION", "BLOCKED"]},
+    "completed_at_utc": {"type": "string", "format": "date-time", "pattern": "Z$"}
+  },
+  "$defs": {
+    "usage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["queries", "sources", "tool_calls", "model_tokens_or_bytes", "elapsed_minutes", "retries"],
+      "properties": {
+        "queries": {"type": "integer", "minimum": 0},
+        "sources": {"type": "integer", "minimum": 0},
+        "tool_calls": {"type": "integer", "minimum": 0},
+        "model_tokens_or_bytes": {"type": "integer", "minimum": 0},
+        "elapsed_minutes": {"type": "integer", "minimum": 0},
+        "retries": {"type": "integer", "minimum": 0}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "PASS"}}},
+      "then": {
+        "properties": {
+          "all_expected_lanes_accounted": {"const": true},
+          "budget_within_limits": {"const": true},
+          "question_coverage": {
+            "not": {
+              "contains": {
+                "type": "object",
+                "anyOf": [
+                  {"properties": {"direct_terminal": {"const": false}}, "required": ["direct_terminal"]},
+                  {"properties": {"contrary_terminal": {"const": false}}, "required": ["contrary_terminal"]},
+                  {"properties": {"stop_conditions_met": {"const": false}}, "required": ["stop_conditions_met"]}
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

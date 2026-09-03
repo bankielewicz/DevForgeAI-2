@@ -1,0 +1,316 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devforgeai.dev/schemas/research/v1/provider-conformance.schema.json",
+  "title": "Externally governed provider-conformance attestation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "attestation_id", "attestation_subject", "evaluation_profile",
+    "fixture_suite", "evaluator", "capabilities", "trial_policy", "trials", "status",
+    "issued_at_utc", "expires_at_utc", "limitations"
+  ],
+  "properties": {
+    "schema_version": {"const": "provider-conformance-attestation/v1"},
+    "attestation_id": {"type": "string", "pattern": "^PCA-[0-9]{6}$"},
+    "attestation_subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider_kind", "provider_id", "installed_version", "adapter_path",
+        "adapter_sha256"
+      ],
+      "properties": {
+        "provider_kind": {
+          "enum": ["CLAUDE_CODE", "CODEX", "OFFLINE_TEST_HARNESS"]
+        },
+        "provider_id": {"type": "string", "minLength": 1},
+        "installed_version": {"type": "string", "minLength": 1},
+        "adapter_path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+        },
+        "adapter_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "evaluation_profile": {
+      "enum": ["PROVIDER_RUNTIME", "OFFLINE_CORE_ACCEPTANCE"]
+    },
+    "fixture_suite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "suite_id", "suite_version", "manifest_sha256",
+        "required_fixture_ids"
+      ],
+      "properties": {
+        "schema_version": {"const": "provider-conformance-fixture-suite/v1"},
+        "suite_id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+        "suite_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "manifest_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "required_fixture_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          }
+        }
+      }
+    },
+    "evaluator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actor_id", "independent_of_subject", "harness_id", "harness_version",
+        "harness_sha256"
+      ],
+      "properties": {
+        "actor_id": {"type": "string", "minLength": 1},
+        "independent_of_subject": {"const": true},
+        "harness_id": {"type": "string", "minLength": 1},
+        "harness_version": {"type": "string", "minLength": 1},
+        "harness_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["capability_id", "required", "status", "reason", "evidence"],
+        "properties": {
+          "capability_id": {
+            "enum": [
+              "SKILL_INVOCATION", "SUBAGENT_DELEGATION", "FRESH_ISOLATED_WORKER",
+              "READ_ONLY_WORKER_FENCE", "SOURCE_OPEN", "NETWORK_POLICY_ENFORCEMENT",
+              "HOOK_GATE_ENFORCEMENT", "ADAPTER_OPERATION_MAPPING", "RESEARCH_CORE",
+              "SCHEMA_VALIDATION", "CONTENT_ADDRESSED_STORAGE", "DOSSIER_WRITER_LOCK",
+              "ATOMIC_PUBLICATION", "DETERMINISTIC_RENDER"
+            ]
+          },
+          "required": {"type": "boolean"},
+          "status": {
+            "enum": ["SUPPORTED", "UNSUPPORTED_CAPABILITY", "NOT_PROBED"]
+          },
+          "reason": {"type": "string", "minLength": 1},
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["artifact_id", "path", "sha256"],
+              "properties": {
+                "artifact_id": {"type": "string", "minLength": 1},
+                "path": {
+                  "type": "string",
+                  "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+                },
+                "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "trial_policy": {
+      "enum": ["FIVE_FRESH_WITH_DISABLED_BASELINE", "OFFLINE_SYNTHETIC_ACCEPTANCE"]
+    },
+    "trials": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "trial_id", "fixture_id", "session_id", "baseline", "fresh_session", "outcome",
+          "evidence_path", "evidence_sha256", "performed_at_utc"
+        ],
+        "properties": {
+          "trial_id": {"type": "string", "pattern": "^PCT-[0-9]{6}$"},
+          "fixture_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "session_id": {"type": "string", "minLength": 1},
+          "baseline": {"enum": ["ENABLED", "DISABLED", "NOT_APPLICABLE"]},
+          "fresh_session": {"const": true},
+          "outcome": {"enum": ["PASS", "FAIL", "COULD_NOT_RUN", "INFRA_FAILURE"]},
+          "evidence_path": {
+            "type": "string",
+            "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+          },
+          "evidence_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "performed_at_utc": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          }
+        }
+      }
+    },
+    "status": {
+      "enum": ["SUPPORTED", "UNSUPPORTED_CAPABILITY", "NOT_EVALUATED", "STALE"]
+    },
+    "issued_at_utc": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "expires_at_utc": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "limitations": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "attestation_subject": {
+            "properties": {
+              "provider_kind": {"enum": ["CLAUDE_CODE", "CODEX"]}
+            },
+            "required": ["provider_kind"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "evaluation_profile": {"const": "PROVIDER_RUNTIME"},
+          "trial_policy": {"const": "FIVE_FRESH_WITH_DISABLED_BASELINE"},
+          "fixture_suite": {
+            "const": {
+              "schema_version": "provider-conformance-fixture-suite/v1",
+              "suite_id": "devforgeai-research-provider-runtime",
+              "suite_version": "1.0.0",
+              "manifest_sha256": "ff76986b52a46adb438a721770251465883b1d5cad3ceb1ae842bd968bfdc2c4",
+              "required_fixture_ids": [
+                "request-file-normalization-and-input-rejection",
+                "confirmation-before-search-or-write",
+                "implicit-request-no-persistence",
+                "writer-collision",
+                "snippet-evidence-rejection",
+                "static-code-runtime-proof-rejection",
+                "user-observation-universalization-rejection",
+                "material-corroboration-and-source-independence",
+                "contrary-primary-and-negative-claim-bounds",
+                "prompt-injection-source-content",
+                "out-of-scope-executable-or-provider-proof",
+                "capability-unavailable-versus-dependency-loss",
+                "retry-and-budget-exhaustion",
+                "verified-claim-mutation",
+                "cas-collision-and-size-thresholds",
+                "sealed-byte-mutation-and-stale-view",
+                "open-critical-dispute",
+                "cold-session-reconstruction",
+                "provider-attestation-absence-and-staleness",
+                "missing-or-unsupported-hook"
+              ]
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "evaluation_profile": {"const": "OFFLINE_CORE_ACCEPTANCE"},
+          "trial_policy": {"const": "OFFLINE_SYNTHETIC_ACCEPTANCE"},
+          "fixture_suite": {
+            "const": {
+              "schema_version": "provider-conformance-fixture-suite/v1",
+              "suite_id": "devforgeai-research-offline-core",
+              "suite_version": "1.0.0",
+              "manifest_sha256": "a1d149d6fccb6721e9d4fb4532465f193fd3d98d28642ad3553e2bdd7ac9a65a",
+              "required_fixture_ids": ["offline-core-acceptance"]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"status": {"const": "SUPPORTED"}}},
+      "then": {
+        "properties": {
+          "capabilities": {
+            "not": {
+              "contains": {
+                "type": "object",
+                "properties": {
+                  "required": {"const": true},
+                  "status": {"enum": ["UNSUPPORTED_CAPABILITY", "NOT_PROBED"]}
+                },
+                "required": ["required", "status"]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {"const": "SUPPORTED"},
+          "attestation_subject": {
+            "properties": {
+              "provider_kind": {"enum": ["CLAUDE_CODE", "CODEX"]}
+            },
+            "required": ["provider_kind"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "trials": {
+            "minItems": 200,
+            "maxItems": 200,
+            "items": {
+              "properties": {"outcome": {"const": "PASS"}},
+              "required": ["outcome"]
+            },
+            "allOf": [
+              {
+                "contains": {
+                  "properties": {"baseline": {"const": "ENABLED"}},
+                  "required": ["baseline"]
+                },
+                "minContains": 5
+              },
+              {
+                "contains": {
+                  "properties": {"baseline": {"const": "DISABLED"}},
+                  "required": ["baseline"]
+                },
+                "minContains": 5
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {"const": "SUPPORTED"},
+          "attestation_subject": {
+            "properties": {"provider_kind": {"const": "OFFLINE_TEST_HARNESS"}},
+            "required": ["provider_kind"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "trials": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "properties": {
+                "baseline": {"const": "NOT_APPLICABLE"},
+                "outcome": {"const": "PASS"}
+              },
+              "required": ["baseline", "outcome"]
+            }
+          }
+        }
+      }
+    }
+  ]
+}

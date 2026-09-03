@@ -1,0 +1,200 @@
+{
+  "_comment": "Project-level .claude/settings.json fragment. Merge into the project's file; commit it. Hooks bind the write lease at SubagentStart, admit writes inside the run's candidate root, and route the worker's receipt at SubagentStop; they never edit an artifact. Edit and Write are allowed because the PreToolUse hook is the authority on where a write may land: under candidate.root, inside the phase fence, by the lease holder. The denies below are the paths no run may ever touch, canonical-side. Bash allows the five model-callable operations plus `devforgeai run *`, which the sequencer admits only to the lease holder. The ten `devforgeai-research` rules are the provider-external Research Core runner, which is the sole writer inside its own fence and opens no framework run.",
+  "disableAllHooks": false,
+  "permissions": {
+    "deny": [
+      "Edit(.devforgeai/state.yaml)",
+      "Write(.devforgeai/state.yaml)",
+      "Edit(.devforgeai/stack.yaml)",
+      "Write(.devforgeai/stack.yaml)",
+      "Edit(.devforgeai/provenance/**)",
+      "Write(.devforgeai/provenance/**)",
+      "Edit(.devforgeai/sessions/**)",
+      "Write(.devforgeai/sessions/**)",
+      "Edit(.devforgeai/hooks/**)",
+      "Write(.devforgeai/hooks/**)",
+      "Edit(.claude/**)",
+      "Write(.claude/**)",
+      "Edit(.codex/**)",
+      "Write(.codex/**)",
+      "Edit(docs/design/**)",
+      "Write(docs/design/**)",
+      "Edit(CLAUDE.md)",
+      "Write(CLAUDE.md)",
+      "Edit(AGENTS.md)",
+      "Write(AGENTS.md)",
+      "Read(.env)",
+      "Read(.env.*)",
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git merge *)",
+      "Bash(git rebase *)",
+      "Bash(git push *)",
+      "Bash(git reset *)",
+      "Bash(git checkout *)",
+      "Bash(git stash *)",
+      "Bash(git worktree *)",
+      "Bash(git branch *)",
+      "Bash(git tag *)",
+      "Bash(git clean *)",
+      "Agent(general-purpose)",
+      "Agent(Explore)",
+      "Agent(Plan)",
+      "Agent(claude)"
+    ],
+    "allow": [
+      "Read(**)",
+      "Bash(devforgeai status)",
+      "Bash(devforgeai phase start *)",
+      "Bash(devforgeai phase fail *)",
+      "Bash(devforgeai validate)",
+      "Bash(devforgeai promote *)",
+      "Bash(devforgeai run *)",
+      "Bash(devforgeai-research normalize-request *)",
+      "Bash(devforgeai-research open-run *)",
+      "Bash(devforgeai-research append-record *)",
+      "Bash(devforgeai-research put-source *)",
+      "Bash(devforgeai-research transition-run *)",
+      "Bash(devforgeai-research validate-run *)",
+      "Bash(devforgeai-research seal-run *)",
+      "Bash(devforgeai-research render *)",
+      "Bash(devforgeai-research render-handoff *)",
+      "Bash(devforgeai-research resume-run *)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Edit(**)",
+      "Write(**)",
+      "Bash(git show *)",
+      "Bash(git ls-files *)",
+      "Bash(git blame *)"
+    ],
+    "disableBypassPermissionsMode": "disable"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.devforgeai/hooks/dispatch.py",
+              "--provider",
+              "claude"
+            ],
+            "timeout": 15,
+            "statusMessage": "DevForgeAI session evidence and hook self-test"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "_matcher_comment": "Matches every agent: the lease is bound here, the only identity-bearing pre-write event on either provider. The sequencer refuses an agent that is not the active phase's worker, and refuses a second producer with LEASE_HELD.",
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.devforgeai/hooks/dispatch.py",
+              "--provider",
+              "claude"
+            ],
+            "timeout": 10,
+            "statusMessage": "Binding the phase write lease"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit|MultiEdit|apply_patch|Bash|Agent|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.devforgeai/hooks/dispatch.py",
+              "--provider",
+              "claude"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit|MultiEdit|apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.devforgeai/hooks/dispatch.py",
+              "--provider",
+              "claude"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "_matcher_comment": "Matches every agent: the dispatcher answers 0 when no run is active, and the sequencer refuses a result whose agent_type is not the active phase's worker. A narrow list would silently skip the other 17 skills' workers.",
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.devforgeai/hooks/dispatch.py",
+              "--provider",
+              "claude"
+            ],
+            "timeout": 660,
+            "statusMessage": "Reading the phase worker receipt"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.devforgeai/hooks/dispatch.py",
+              "--provider",
+              "claude"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "ConfigChange": [
+      {
+        "matcher": "project_settings|local_settings|user_settings",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.devforgeai/hooks/dispatch.py",
+              "--provider",
+              "claude"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

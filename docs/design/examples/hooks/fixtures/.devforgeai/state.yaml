@@ -1,0 +1,24 @@
+version: 1
+target: [claude, codex]
+mode: greenfield
+slug: tinyapp
+phase: dev
+stories:
+  STORY-001:
+    status: in_dev
+    sprint: sprint-001
+    last_command: "/dev STORY-001"
+# Canonical state carries story statuses and the run index, and nothing
+# per-phase (D5). It is tracked, and the sequencer writes it at `phase start`
+# (register the run) and at promotion or abandonment, under `.devforgeai/lock`.
+# Per-run enforcement lives in `.devforgeai/work/<run>/run.yaml`, which is not
+# tracked; nothing inside a candidate root ever reads this file.
+runs:
+  STORY-001:
+    story: STORY-001
+    skill: dev
+    mode: worktree            # worktree | copy, chosen at `candidate open`
+    root: .devforgeai/work/STORY-001/wt
+    base_ref: 9f1c2a7b4d5e6f708192a3b4c5d6e7f809a1b2c3
+    checkpoint: base          # base, then one name per phase that passed
+    status: active            # active | ready_to_promote | promoted | abandoned

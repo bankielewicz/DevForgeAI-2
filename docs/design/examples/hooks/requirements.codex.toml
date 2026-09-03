@@ -1,0 +1,97 @@
+# POST-MVP. Managed Codex requirements are not a precondition for running a
+# skill and are not implemented by this prototype; see docs/design/12-post-mvp.md.
+# The file is kept only as the shape an administrator-managed deployment would
+# take. Nothing in the dispatcher, sequencer, or conformance suite reads it.
+# Administrator-managed variant. This is not a repository config file: deploy
+# it as Codex requirements.toml and install dispatch.py plus policy.py at the
+# absolute managed_dir paths below. Change both paths for your environment.
+
+allow_managed_hooks_only = true
+allow_login_shell = false
+# Primary uses on-request; phase agents use never so sandbox failures cannot
+# turn into approval prompts. Both remain constrained by the active-story hook.
+allowed_approval_policies = ["on-request", "never"]
+# Producers need workspace-write to author inside the candidate root; judges stay
+# read-only. The hook, not the sandbox, decides which paths inside the workspace
+# a producer may touch.
+allowed_sandbox_modes = ["read-only", "workspace-write"]
+
+[features]
+hooks = true
+
+[agents]
+enabled = true
+max_concurrent_threads_per_session = 1
+
+[hooks]
+managed_dir = "/opt/devforgeai/hooks"
+windows_managed_dir = 'C:\ProgramData\DevForgeAI\hooks'
+
+[[hooks.SessionStart]]
+matcher = "startup|resume|clear|compact"
+
+[[hooks.SessionStart.hooks]]
+type = "command"
+command = "python3 /opt/devforgeai/hooks/dispatch.py --provider codex"
+command_windows = 'py -3 C:\ProgramData\DevForgeAI\hooks\dispatch.py --provider codex'
+timeout = 10
+statusMessage = "Checking DevForgeAI enforcement state"
+
+[[hooks.PreToolUse]]
+matcher = "^(Bash|apply_patch|Agent|mcp__.*)$"
+
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = "python3 /opt/devforgeai/hooks/dispatch.py --provider codex"
+command_windows = 'py -3 C:\ProgramData\DevForgeAI\hooks\dispatch.py --provider codex'
+timeout = 10
+statusMessage = "Checking phase and write policy"
+
+[[hooks.SubagentStart]]
+matcher = ".*"
+
+[[hooks.SubagentStart.hooks]]
+type = "command"
+command = "python3 /opt/devforgeai/hooks/dispatch.py --provider codex"
+command_windows = 'py -3 C:\ProgramData\DevForgeAI\hooks\dispatch.py --provider codex'
+timeout = 10
+statusMessage = "Binding worker to the active DevForgeAI phase"
+
+[[hooks.PermissionRequest]]
+matcher = "^(Bash|apply_patch|mcp__.*)$"
+
+[[hooks.PermissionRequest.hooks]]
+type = "command"
+command = "python3 /opt/devforgeai/hooks/dispatch.py --provider codex"
+command_windows = 'py -3 C:\ProgramData\DevForgeAI\hooks\dispatch.py --provider codex'
+timeout = 10
+statusMessage = "Checking escalation policy"
+
+[[hooks.PostToolUse]]
+matcher = "^(apply_patch|Edit|Write)$"
+
+[[hooks.PostToolUse.hooks]]
+type = "command"
+command = "python3 /opt/devforgeai/hooks/dispatch.py --provider codex"
+command_windows = 'py -3 C:\ProgramData\DevForgeAI\hooks\dispatch.py --provider codex'
+timeout = 10
+statusMessage = "Checking resulting tech-stack policy"
+
+[[hooks.SubagentStop]]
+matcher = ".*"
+
+[[hooks.SubagentStop.hooks]]
+type = "command"
+command = "python3 /opt/devforgeai/hooks/dispatch.py --provider codex"
+command_windows = 'py -3 C:\ProgramData\DevForgeAI\hooks\dispatch.py --provider codex'
+timeout = 660
+statusMessage = "Validating and applying the phase worker result"
+
+[[hooks.Stop]]
+
+[[hooks.Stop.hooks]]
+type = "command"
+command = "python3 /opt/devforgeai/hooks/dispatch.py --provider codex"
+command_windows = 'py -3 C:\ProgramData\DevForgeAI\hooks\dispatch.py --provider codex'
+timeout = 10
+statusMessage = "Checking workflow handoff"

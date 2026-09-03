@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devforgeai.dev/schemas/research/v1/registry.schema.json",
+  "title": "Hash-chained sealed Research run registry entry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "sequence", "run_id", "request_id", "slug", "canonical_path",
+    "lifecycle_status", "readiness_status", "outcome", "manifest_sha256",
+    "previous_entry_sha256", "entry_sha256", "sealed_at_utc", "supersedes_run_ids", "stale_if"
+  ],
+  "properties": {
+    "schema_version": {"const": "research-registry-entry/v1"},
+    "sequence": {"type": "integer", "minimum": 1},
+    "run_id": {"type": "string", "pattern": "^RUN-[0-9]{6}$"},
+    "request_id": {"type": "string", "pattern": "^RSR-[0-9]{6}$"},
+    "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "canonical_path": {"type": "string", "pattern": "^docs/research/[a-z0-9]+(?:-[a-z0-9]+)*/runs/RUN-[0-9]{6}$"},
+    "lifecycle_status": {"enum": ["ACCEPTED", "SUPERSEDED", "ARCHIVED"]},
+    "readiness_status": {"enum": ["READY", "STALE"]},
+    "outcome": {"enum": ["COMPLETE", "NEEDS_DECISION", "BLOCKED", "FAILED", "COULD_NOT_RUN", "CANCELLED"]},
+    "manifest_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "previous_entry_sha256": {
+      "oneOf": [
+        {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        {"type": "null"}
+      ]
+    },
+    "entry_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "sealed_at_utc": {"type": "string", "format": "date-time"},
+    "supersedes_run_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^RUN-[0-9]{6}$"}},
+    "stale_if": {"type": "array", "items": {"type": "string", "minLength": 1}}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"sequence": {"const": 1}}, "required": ["sequence"]},
+      "then": {"properties": {"previous_entry_sha256": {"type": "null"}}},
+      "else": {"properties": {"previous_entry_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}}
+    }
+  ]
+}

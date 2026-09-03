@@ -1,0 +1,115 @@
+# stack.yaml — the hash-pinned command and dependency policy the sequencer
+# resolves. Each top-level key is a section a run's `commands.source` anchors
+# to (`.devforgeai/stack.yaml#python`). Workers never see this file's contents:
+# they name a command key with `devforgeai run <key>`, and the sequencer runs the
+# argv it resolves, with cwd = the run's candidate root.
+#
+# Contract (plan new contract 5):
+#   version, compiled, package_manager, manifests[],
+#   commands.{build?,test,lint,format} each {argv[], cwd?, junit_path?, timeout_s?},
+#   test_glob, test_layout, runner_probe {argv[], exit_ok},
+#   packages {allow[], deny[]}, extractors[], forbidden_imports[], ignore_dirs[]
+# `compiled: true` requires commands.build; the oracle runs build before test.
+#
+# Oracle result classification, closed set:
+#   PASS | EXPECTED_TEST_FAILURE | TEST_FAILURE | NO_TESTS | COLLECTION_ERROR
+#   | INFRA_FAILURE | TIMEOUT
+# INFRA_FAILURE and TIMEOUT map to worker status could_not_run with
+# reason_code runner_missing / timeout; they are never a phase failure.
+
+python:
+  version: 1
+  compiled: false
+  package_manager: pip
+  manifests:
+    - pyproject.toml
+    - requirements*.txt
+  commands:
+    test:
+      argv: [python3, -m, pytest, -q, --junitxml=.devforgeai/work/junit.xml]
+      cwd: "."
+      junit_path: .devforgeai/work/junit.xml
+      timeout_s: 600
+    lint:
+      # A syntax check every Python 3 has, so the fixture runs anywhere. A real
+      # project names its linter here; the sequencer only cares about the exit
+      # code and runs it with cwd = candidate.root.
+      argv:
+        - python3
+        - -c
+        - "import ast, pathlib; [ast.parse(p.read_text(), str(p)) for p in sorted(pathlib.Path('.').rglob('*.py'))]"
+      cwd: "."
+      timeout_s: 300
+    format:
+      argv:
+        - python3
+        - -c
+        - "import pathlib, sys; sys.exit(any(p.read_text() != p.read_text().replace('\t', '    ') for p in pathlib.Path('.').rglob('*.py')))"
+      cwd: "."
+      timeout_s: 300
+  test_glob: "tests/test_*.py"
+  test_layout: sibling-tests-dir
+  # Directories a copy-mode candidate root leaves behind and no manifest hashes.
+  ignore_dirs: ["dist", "build", ".tox"]
+  runner_probe:
+    argv: [python3, -m, pytest, --version]
+    exit_ok: 0
+  packages:
+    allow: [pytest, ruff, pyyaml]
+    deny: ['(?i)sqlalchemy', '(?i)django']
+  extractors:
+    - paths: [pyproject.toml]
+      regex: '^\s*["'']([A-Za-z0-9_.-]+)(?:\[[^]]+\])?(?:[<>=!~][^"'']*)?["'']\s*,?\s*$'
+    - paths: [requirements*.txt]
+      regex: '^\s*([A-Za-z0-9_.-]+)(?:\[[^]]+\])?\s*(?:[<>=!~].*)?$'
+  forbidden_imports:
+    - paths: ["tinyapp/**"]
+      patterns: ['^\s*(from|import)\s+sqlalchemy', '^\s*(from|import)\s+django']
+      reason: "techstack.md#data-access mandates raw sqlite3; no ORM"
+
+# A compiled section. `compiled: true` makes commands.build mandatory at the
+# gate, and the oracle runs it before test on every transition.
+csharp:
+  version: 1
+  compiled: true
+  package_manager: dotnet
+  manifests: ["**/*.csproj", "Directory.Packages.props"]
+  commands:
+    build:
+      argv: [dotnet, build, --nologo]
+      cwd: "."
+      timeout_s: 900
+    test:
+      argv: [dotnet, test, --nologo, --logger, "junit;LogFilePath=.devforgeai/work/junit.xml"]
+      cwd: "."
+      junit_path: .devforgeai/work/junit.xml
+      timeout_s: 1200
+    lint:
+      argv: [dotnet, format, --verify-no-changes]
+      cwd: "."
+      timeout_s: 600
+    format:
+      argv: [dotnet, format]
+      cwd: "."
+      timeout_s: 600
+  test_glob: "tests/**/*Tests.cs"
+  test_layout: sibling-tests-dir
+  runner_probe:
+    argv: [dotnet, --version]
+    exit_ok: 0
+  packages:
+    allow:
+      - Dapper
+      - Microsoft.Data.SqlClient
+      - xunit
+      - xunit.runner.visualstudio
+      - Microsoft.NET.Test.Sdk
+      - JunitXml.TestLogger
+    deny: ['Microsoft\.EntityFrameworkCore']
+  extractors:
+    - paths: ["**/*.csproj", Directory.Packages.props]
+      regex: '<PackageReference\s+Include="([^"]+)"'
+  forbidden_imports:
+    - paths: ["src/**"]
+      patterns: ['^\s*using\s+Microsoft\.EntityFrameworkCore']
+      reason: "techstack.md#data-access mandates Dapper"

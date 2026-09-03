@@ -1,0 +1,41 @@
+{
+  "schema_version": "research-request/v1",
+  "request_id": "RSR-000001",
+  "project_id": "project:offline-fixture",
+  "slug": "offline-fixture",
+  "mode": "STANDALONE",
+  "caller": {
+    "workflow": "research",
+    "requesting_phase": "standalone",
+    "return_route": "$research offline-fixture --resume"
+  },
+  "questions": [{"question_id": "RQ-000001", "text": "Does a valid start signal cause exactly one green pulse?", "completion_criteria": ["Answer from admitted evidence and run a contrary lane."]}],
+  "intended_downstream_use": "Synthetic Research Core acceptance testing.",
+  "linked_refs": [],
+  "hypotheses": [{"label": "UNVERIFIED_HYPOTHESIS", "text": "A valid signal produces one pulse."}],
+  "scope": {
+    "include": ["Synthetic widget behavior"],
+    "exclude": ["Real products and providers"]
+  },
+  "as_of": "2026-09-01T00:00:00Z",
+  "risk_tier": "LOW",
+  "source_policy": {"required_classes": ["PRIMARY"], "prohibited_classes": ["SEARCH_SNIPPET"], "freshness_requirements": ["Use the exact retained fixture bytes."]},
+  "existing_refs": [],
+  "budget": {
+    "profile": "quick",
+    "limits": {"atomic_questions": 1, "research_lanes": 2, "concurrent_workers": 2, "discovery_queries": 4, "admitted_sources": 4, "external_tool_calls": 8, "aggregate_model_tokens": 1000, "context_bytes": 65536, "elapsed_minutes": 5, "retry_per_failed_lane": 1},
+    "confirmed_overrides": []
+  },
+  "authority": {
+    "requester_id": "person:requester",
+    "phase_owner_id": "person:owner",
+    "decision_authority_id": "person:owner",
+    "confirming_authority_id": "person:requester",
+    "persistence_authorized": true
+  },
+  "execution_policy": {"write_fence": ["docs/research/offline-fixture", "docs/research/_cas", ".devforgeai/research-staging", ".devforgeai/research-cas", ".devforgeai/research-locks"], "network_policy": "DENY", "network_allowlist": []},
+  "completion_criteria": ["Every question has a terminal disposition."],
+  "stop_conditions": ["Stop after the synthetic fixture is sealed."],
+  "escalation_owner_id": "person:owner",
+  "created_at_utc": "2026-09-01T00:00:00Z"
+}

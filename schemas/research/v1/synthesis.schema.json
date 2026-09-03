@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devforgeai.dev/schemas/research/v1/synthesis.schema.json",
+  "title": "Claim-bound research synthesis",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "record_id", "record_version", "run_id", "synthesis_id",
+    "lifecycle_status", "readiness_status", "owner", "decision_authority", "created_at_utc",
+    "source_refs", "evidence_refs", "decision_refs", "supersedes", "stale_if",
+    "question_dispositions", "assertions",
+    "limitations", "conclusion_status", "outcome"
+  ],
+  "properties": {
+    "schema_version": {"const": "research-synthesis/v1"},
+    "record_id": {"type": "string", "pattern": "^SYN-[0-9]{6}$"},
+    "record_version": {"type": "integer", "minimum": 1},
+    "run_id": {"type": "string", "pattern": "^RUN-[0-9]{6}$"},
+    "synthesis_id": {"type": "string", "pattern": "^SYN-[0-9]{6}$"},
+    "lifecycle_status": {"enum": ["DRAFT", "PROPOSED", "ACCEPTED", "REJECTED", "SUPERSEDED", "ARCHIVED"]},
+    "readiness_status": {"enum": ["NOT_READY", "READY", "STALE"]},
+    "owner": {"type": "string", "minLength": 1},
+    "decision_authority": {"type": "string", "minLength": 1},
+    "created_at_utc": {"type": "string", "format": "date-time"},
+    "source_refs": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^SRC-[0-9]{6}$"}},
+    "evidence_refs": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^EVD-[0-9]{6}$"}},
+    "decision_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^DEC-[0-9]{6}$"}},
+    "supersedes": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^(RQ|QRY|SRC|EVD|CLM|CTR|VER|SYN|DEC|HND)-[0-9]{6}$"}},
+    "stale_if": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "question_dispositions": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["question_id", "disposition", "claim_ids"],
+        "properties": {
+          "question_id": {"type": "string", "pattern": "^RQ-[0-9]{6}$"},
+          "disposition": {"enum": ["ANSWERED", "PARTIALLY_ANSWERED", "UNRESOLVED", "OUT_OF_SCOPE", "SUPERSEDED"]},
+          "claim_ids": {
+            "type": "array", "uniqueItems": true,
+            "items": {"type": "string", "pattern": "^CLM-[0-9]{6}$"}
+          },
+          "reason": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "assertions": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["text", "claim_ids"],
+        "properties": {
+          "text": {"type": "string", "minLength": 1},
+          "claim_ids": {
+            "type": "array", "minItems": 1, "uniqueItems": true,
+            "items": {"type": "string", "pattern": "^CLM-[0-9]{6}$"}
+          }
+        }
+      }
+    },
+    "limitations": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "conclusion_status": {"const": "PROPOSED"},
+    "outcome": {"enum": ["READY", "NEEDS_DECISION", "BLOCKED", "COULD_NOT_RUN"]},
+    "synthesis_method": {"type": "string", "minLength": 1}
+  }
+}

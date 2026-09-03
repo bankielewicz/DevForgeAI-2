@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devforgeai.dev/schemas/research/v1/validation.schema.json",
+  "title": "Research pre-seal deterministic validation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "validation_id", "run_id", "scope", "subject_files",
+    "checks", "errors", "warnings", "environment", "gate_status",
+    "validated_at_utc"
+  ],
+  "properties": {
+    "schema_version": {"const": "research-validation/v1"},
+    "validation_id": {"type": "string", "pattern": "^RUN-[0-9]{6}/validation$"},
+    "run_id": {"type": "string", "pattern": "^RUN-[0-9]{6}$"},
+    "scope": {"const": "PRE_SEAL"},
+    "subject_files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["path", "sha256", "byte_length"],
+        "properties": {
+          "path": {"type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "byte_length": {"type": "integer", "minimum": 0}
+        }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 24,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["check_id", "applicable", "status", "reason", "evidence"],
+        "properties": {
+          "check_id": {
+            "enum": [
+              "RUN_BINDING", "REQUEST_BINDING", "PREFLIGHT", "STATE_CHAIN",
+              "CONTEXT_MANIFEST", "PLAN", "ID_UNIQUENESS", "REFERENTIAL_INTEGRITY",
+              "CLAIM_DAG", "CLAIM_CLASS_CONTRACT", "VERIFICATION_FRESHNESS",
+              "RISK_CORROBORATION", "CONTRARY_COVERAGE", "QUERY_CANDIDATE_ACCOUNTING",
+              "WORKER_ACCOUNTING", "RECONCILIATION", "SOURCE_ADMISSION",
+              "EVIDENCE_EDGES", "DISPUTE_OWNERSHIP", "STALE_EXCLUSION",
+              "DECISION_AUTHORITY", "CAS_INTEGRITY", "BUDGET",
+              "DETERMINISTIC_RENDER", "HANDOFF_SHAPE"
+            ]
+          },
+          "applicable": {"type": "boolean"},
+          "status": {
+            "enum": ["PASS", "FAIL", "NOT_RUN", "COULD_NOT_RUN", "INFRA_FAILURE", "NOT_APPLICABLE"]
+          },
+          "reason": {"type": "string", "minLength": 1},
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["artifact_id", "path", "sha256"],
+              "properties": {
+                "artifact_id": {"type": "string", "minLength": 1},
+                "path": {"type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"},
+                "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+              }
+            }
+          }
+        },
+        "allOf": [
+          {
+            "if": {"properties": {"applicable": {"const": false}}},
+            "then": {"properties": {"status": {"const": "NOT_APPLICABLE"}}},
+            "else": {"properties": {"status": {"enum": ["PASS", "FAIL", "NOT_RUN", "COULD_NOT_RUN", "INFRA_FAILURE"]}}}
+          }
+        ]
+      }
+    },
+    "errors": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "warnings": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "environment": {
+      "type": "object", "additionalProperties": false,
+      "required": ["core_version", "schema_set_sha256", "platform"],
+      "properties": {
+        "core_version": {"type": "string", "minLength": 1},
+        "schema_set_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "platform": {"type": "string", "minLength": 1}
+      }
+    },
+    "gate_status": {"enum": ["READY_TO_SEAL", "FAILED"]},
+    "validated_at_utc": {"type": "string", "format": "date-time", "pattern": "Z$"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"gate_status": {"const": "READY_TO_SEAL"}}},
+      "then": {
+        "properties": {
+          "errors": {"maxItems": 0},
+          "checks": {
+            "not": {
+              "contains": {
+                "type": "object",
+                "properties": {
+                  "applicable": {"const": true},
+                  "status": {"enum": ["FAIL", "NOT_RUN", "COULD_NOT_RUN", "INFRA_FAILURE"]}
+                },
+                "required": ["applicable", "status"]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

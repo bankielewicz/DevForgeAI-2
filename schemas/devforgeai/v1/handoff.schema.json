@@ -1,0 +1,206 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devforgeai.dev/schemas/devforgeai/v1/handoff.schema.json",
+  "title": "DevForgeAI handoff envelope",
+  "description": "The sequencer-to-user envelope written to .devforgeai/work/<run>/handoff.json at the end of a run, at a block, and at an explicit phase failure. Its field groups are the Codex corpus handoff protocol. The rendered block printed by the primary window is this file's rendering and carries no fact this file does not hold.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "run", "skill", "outcome", "phase", "location", "reasons", "next",
+    "attempts", "authority", "session_id", "at"
+  ],
+  "properties": {
+    "schema": {"const": "devforgeai.handoff/v1"},
+    "run": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Location group: the run id, which is also the evidence directory name."
+    },
+    "skill": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Location group: the skill that owns this run."
+    },
+    "phase": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "Location group: the phase the run stopped in. This is the YOU ARE HERE marker."
+    },
+    "location": {
+      "type": "string",
+      "pattern": "^\\.devforgeai/work/[^\\\\]+/$",
+      "description": "Location group: the evidence directory for this run, with a trailing slash."
+    },
+    "outcome": {
+      "enum": ["pass", "BLOCK", "REQUIRE_HUMAN", "WARN", "OFF"],
+      "description": "Result group: 'pass' when every phase passed; otherwise the gate_policy action that stopped the run."
+    },
+    "reasons": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {"type": "string", "minLength": 1, "maxLength": 4000},
+      "description": "Result group: the plain-language explanation, one row per defect, oracle problem, or completion statement. Never empty."
+    },
+    "next": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "description": "Next action group: exactly one copy-pasteable command or repair instruction, cold-session safe. Mirrored into state.yaml as `next`."
+    },
+    "attempts": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {"^[a-z][a-z0-9_]*$": {"type": "integer", "minimum": 0}},
+      "description": "Validation group: the per-phase attempt counters at the moment the run stopped."
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["write_fence"],
+      "properties": {
+        "write_fence": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "description": "The only paths this run was authorised to change."
+        },
+        "requires_approval": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "description": "Actions the next step may not take without a named human decision."
+        }
+      },
+      "description": "Authority/fence group."
+    },
+    "session_id": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Session guidance group: the session evidence file this run was opened under. Empty when no SessionStart hook has run."
+    },
+    "at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "description": "UTC timestamp the envelope was written."
+    },
+    "artifacts": {
+      "type": "array",
+      "maxItems": 200,
+      "items": {"$ref": "#/$defs/artifact"},
+      "description": "Canonical artifacts group: every file this run changed, with the hash the sequencer derived from the checkpoint diff and the checkpoint the bytes live in. A run that has not been promoted has changed no canonical byte."
+    },
+    "source_basis": {
+      "type": "array",
+      "maxItems": 200,
+      "items": {"$ref": "#/$defs/reference"},
+      "description": "Source basis group: the incoming artifacts and context-bundle entries the gate re-resolved, with the hash it verified."
+    },
+    "validation": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {"$ref": "#/$defs/validation"},
+      "description": "Validation group: every stack command the transition oracle ran, its classification, and anything it could not run."
+    },
+    "decisions": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {"$ref": "#/$defs/decision"},
+      "description": "Decisions group: decisions accepted during this run and the authority that accepted each."
+    },
+    "open_items": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {"$ref": "#/$defs/open_item"},
+      "description": "Open items group: ambiguities, risks, and blocked rows carried forward, each with an owner."
+    },
+    "verdict": {
+      "enum": ["pass", "findings", "fail"],
+      "description": "Result group: the report verdict, present only for a report-producing skill (review, qa, skill-validator). The sequencer reads it from the frontmatter of the report the last phase's receipt named in `evidence_refs`. It selects the handoff row and therefore `next`; it never changes `outcome`, which stays `pass` because reporting a defect is a passing run."
+    },
+    "session_guidance": {
+      "enum": ["continue", "fresh_session"],
+      "description": "Session guidance group: whether the next command should run in this session or a cold one."
+    },
+    "repair_route": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {"$ref": "#/$defs/repair"},
+      "description": "Repair route group: the owner and exact command for each defect class, used when the next gate fails."
+    }
+  },
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1, "maxLength": 1024},
+        "sha256": {"type": "string", "pattern": "^(sha256:[0-9a-f]{64}|ABSENT)$"},
+        "phase": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "checkpoint": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "The candidate checkpoint this file's bytes come from: the phase whose transition created it, or 'base'. Until the run is promoted the bytes live in the candidate root, not in the canonical tree, so a reader needs the checkpoint as well as the hash to find them."
+        },
+        "status": {"enum": ["applied", "deleted"]}
+      }
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "hash"],
+      "properties": {
+        "source": {"type": "string", "minLength": 1, "maxLength": 1024},
+        "hash": {"type": "string", "pattern": "^(sha256:[0-9a-f]{64}|unresolvable-source)$"},
+        "status": {"enum": ["INTENDED", "OBSERVED"]}
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "classification"],
+      "properties": {
+        "key": {"enum": ["build", "test", "lint", "format"]},
+        "classification": {
+          "enum": [
+            "PASS", "EXPECTED_TEST_FAILURE", "TEST_FAILURE", "NO_TESTS",
+            "COLLECTION_ERROR", "INFRA_FAILURE", "TIMEOUT"
+          ]
+        },
+        "exit": {"type": "integer"},
+        "not_run": {"type": "boolean"}
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "authority"],
+      "properties": {
+        "text": {"type": "string", "minLength": 1, "maxLength": 1000},
+        "authority": {"type": "string", "minLength": 1, "maxLength": 200}
+      }
+    },
+    "open_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "owner"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "maxLength": 120},
+        "text": {"type": "string", "minLength": 1, "maxLength": 1000},
+        "owner": {"type": "string", "minLength": 1, "maxLength": 200},
+        "kind": {"enum": ["ambiguity", "risk", "question", "blocked"]}
+      }
+    },
+    "repair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["defect", "owner", "command"],
+      "properties": {
+        "defect": {"type": "string", "minLength": 1, "maxLength": 200},
+        "owner": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+        "command": {"type": "string", "minLength": 1, "maxLength": 500}
+      }
+    }
+  }
+}

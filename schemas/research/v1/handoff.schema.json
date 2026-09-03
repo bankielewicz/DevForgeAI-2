@@ -1,0 +1,442 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devforgeai.dev/schemas/research/v1/handoff.schema.json",
+  "title": "Research handoff",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "record_id", "record_version", "handoff_id", "run_id",
+    "lifecycle_status", "readiness_status", "owner", "decision_authority", "created_at_utc",
+    "source_refs", "evidence_refs", "decision_refs", "supersedes", "stale_if",
+    "location", "result", "questions", "claims", "sources", "contrary_evidence",
+    "exclusions", "budget", "canonical_artifacts", "source_basis", "validation",
+    "decisions", "custody", "conclusion_status", "open_items", "next_action",
+    "session_guidance", "authorities", "authority_fence", "repair_route", "rendered_at"
+  ],
+  "properties": {
+    "schema_version": {"const": "research-handoff/v1"},
+    "record_id": {"type": "string", "pattern": "^HND-[0-9]{6}$"},
+    "record_version": {"type": "integer", "minimum": 1},
+    "handoff_id": {"type": "string", "pattern": "^HND-[0-9]{6}$"},
+    "run_id": {"type": "string", "pattern": "^RUN-[0-9]{6}$"},
+    "lifecycle_status": {"enum": ["DRAFT", "PROPOSED", "ACCEPTED", "REJECTED", "SUPERSEDED", "ARCHIVED"]},
+    "readiness_status": {"enum": ["NOT_READY", "READY", "STALE"]},
+    "owner": {"type": "string", "minLength": 1},
+    "decision_authority": {"type": "string", "minLength": 1},
+    "created_at_utc": {"type": "string", "format": "date-time"},
+    "source_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^SRC-[0-9]{6}$"}},
+    "evidence_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^EVD-[0-9]{6}$"}},
+    "decision_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^DEC-[0-9]{6}$"}},
+    "supersedes": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^(RQ|QRY|SRC|EVD|CLM|CTR|VER|SYN|DEC|HND)-[0-9]{6}$"}},
+    "stale_if": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_id", "slug", "run_id", "workflow", "phase", "subphase", "marker"],
+      "properties": {
+        "project_id": {"type": "string", "minLength": 1},
+        "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+        "run_id": {"type": "string", "pattern": "^RUN-[0-9]{6}$"},
+        "workflow": {"const": "research"},
+        "phase": {"enum": ["P0", "P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9"]},
+        "subphase": {"type": "string", "minLength": 1},
+        "marker": {"const": "YOU ARE HERE"}
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcome", "reason_code", "explanation"],
+      "properties": {
+        "outcome": {"enum": ["READY_TO_SEAL", "NEEDS_DECISION", "BLOCKED", "FAILED", "COULD_NOT_RUN", "CANCELLED"]},
+        "reason_code": {"type": "string", "pattern": "^[A-Z][A-Z0-9_/-]*$"},
+        "explanation": {"type": "string", "minLength": 1}
+      }
+    },
+    "questions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["question_id", "disposition"],
+        "properties": {
+          "question_id": {"type": "string", "pattern": "^RQ-[0-9]{6}$"},
+          "disposition": {"enum": ["ANSWERED", "PARTIALLY_ANSWERED", "UNRESOLVED", "OUT_OF_SCOPE", "SUPERSEDED"]},
+          "reason": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "claims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total", "by_class", "by_readiness", "by_dispute", "by_verification", "material_claims"],
+      "properties": {
+        "total": {"type": "integer", "minimum": 0},
+        "by_class": {
+          "type": "object", "additionalProperties": false,
+          "required": ["SOURCE_FACT", "STATIC_OBSERVATION", "IMPORTED_EMPIRICAL_OBSERVATION", "USER_OBSERVATION", "INFERENCE", "PROPOSAL"],
+          "properties": {
+            "SOURCE_FACT": {"type": "integer", "minimum": 0},
+            "STATIC_OBSERVATION": {"type": "integer", "minimum": 0},
+            "IMPORTED_EMPIRICAL_OBSERVATION": {"type": "integer", "minimum": 0},
+            "USER_OBSERVATION": {"type": "integer", "minimum": 0},
+            "INFERENCE": {"type": "integer", "minimum": 0},
+            "PROPOSAL": {"type": "integer", "minimum": 0}
+          }
+        },
+        "by_readiness": {
+          "type": "object", "additionalProperties": false,
+          "required": ["NOT_READY", "READY", "STALE"],
+          "properties": {
+            "NOT_READY": {"type": "integer", "minimum": 0},
+            "READY": {"type": "integer", "minimum": 0},
+            "STALE": {"type": "integer", "minimum": 0}
+          }
+        },
+        "by_dispute": {
+          "type": "object", "additionalProperties": false,
+          "required": ["NONE", "OPEN", "RESOLVED"],
+          "properties": {
+            "NONE": {"type": "integer", "minimum": 0},
+            "OPEN": {"type": "integer", "minimum": 0},
+            "RESOLVED": {"type": "integer", "minimum": 0}
+          }
+        },
+        "by_verification": {
+          "type": "object", "additionalProperties": false,
+          "required": ["NOT_RUN", "PASS", "FAIL", "COULD_NOT_RUN", "INFRA_FAILURE", "NOT_APPLICABLE"],
+          "properties": {
+            "NOT_RUN": {"type": "integer", "minimum": 0},
+            "PASS": {"type": "integer", "minimum": 0},
+            "FAIL": {"type": "integer", "minimum": 0},
+            "COULD_NOT_RUN": {"type": "integer", "minimum": 0},
+            "INFRA_FAILURE": {"type": "integer", "minimum": 0},
+            "NOT_APPLICABLE": {"type": "integer", "minimum": 0}
+          }
+        },
+        "material_claims": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["claim_id", "limitations"],
+            "properties": {
+              "claim_id": {"type": "string", "pattern": "^CLM-[0-9]{6}$"},
+              "limitations": {"type": "array", "items": {"type": "string", "minLength": 1}}
+            }
+          }
+        }
+      }
+    },
+    "sources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total", "by_admission", "by_retrieval", "by_custody", "by_freshness"],
+      "properties": {
+        "total": {"type": "integer", "minimum": 0},
+        "by_admission": {
+          "type": "object", "additionalProperties": false,
+          "required": ["PENDING", "ADMITTED_EVIDENCE", "ADMITTED_CONTEXT", "BIBLIOGRAPHY_ONLY", "REJECTED"],
+          "properties": {
+            "PENDING": {"type": "integer", "minimum": 0},
+            "ADMITTED_EVIDENCE": {"type": "integer", "minimum": 0},
+            "ADMITTED_CONTEXT": {"type": "integer", "minimum": 0},
+            "BIBLIOGRAPHY_ONLY": {"type": "integer", "minimum": 0},
+            "REJECTED": {"type": "integer", "minimum": 0}
+          }
+        },
+        "by_retrieval": {
+          "type": "object", "additionalProperties": false,
+          "required": ["NOT_ATTEMPTED", "RETRIEVED", "PARTIAL", "UNAVAILABLE", "ACCESS_DENIED", "ERROR"],
+          "properties": {
+            "NOT_ATTEMPTED": {"type": "integer", "minimum": 0},
+            "RETRIEVED": {"type": "integer", "minimum": 0},
+            "PARTIAL": {"type": "integer", "minimum": 0},
+            "UNAVAILABLE": {"type": "integer", "minimum": 0},
+            "ACCESS_DENIED": {"type": "integer", "minimum": 0},
+            "ERROR": {"type": "integer", "minimum": 0}
+          }
+        },
+        "by_custody": {
+          "type": "object", "additionalProperties": false,
+          "required": ["TRACKED_CAS", "LOCAL_ONLY_CAS", "EXTRACT_ONLY", "NONE"],
+          "properties": {
+            "TRACKED_CAS": {"type": "integer", "minimum": 0},
+            "LOCAL_ONLY_CAS": {"type": "integer", "minimum": 0},
+            "EXTRACT_ONLY": {"type": "integer", "minimum": 0},
+            "NONE": {"type": "integer", "minimum": 0}
+          }
+        },
+        "by_freshness": {
+          "type": "object", "additionalProperties": false,
+          "required": ["CURRENT", "AGING", "STALE", "UNKNOWN"],
+          "properties": {
+            "CURRENT": {"type": "integer", "minimum": 0},
+            "AGING": {"type": "integer", "minimum": 0},
+            "STALE": {"type": "integer", "minimum": 0},
+            "UNKNOWN": {"type": "integer", "minimum": 0}
+          }
+        }
+      }
+    },
+    "contrary_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["open_count", "resolved_count", "contradictions", "uncovered_scope"],
+      "properties": {
+        "open_count": {"type": "integer", "minimum": 0},
+        "resolved_count": {"type": "integer", "minimum": 0},
+        "contradictions": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["contradiction_id", "status", "scope"],
+            "properties": {
+              "contradiction_id": {"type": "string", "pattern": "^CTR-[0-9]{6}$"},
+              "status": {"enum": ["OPEN", "RESOLVED", "ACCEPTED_UNCERTAINTY"]},
+              "scope": {"type": "string", "minLength": 1}
+            }
+          }
+        },
+        "uncovered_scope": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "exclusions": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["confirmed", "actual"],
+      "properties": {
+        "confirmed": {
+          "type": "object", "additionalProperties": false,
+          "required": ["profile", "limits", "overrides"],
+          "properties": {
+            "profile": {"enum": ["quick", "standard", "deep"]},
+            "limits": {
+              "type": "object", "additionalProperties": false,
+              "required": ["atomic_questions", "research_lanes", "concurrent_workers", "discovery_queries", "admitted_sources", "external_tool_calls", "aggregate_model_tokens", "context_bytes", "elapsed_minutes", "retry_per_failed_lane"],
+              "properties": {
+                "atomic_questions": {"type": "integer", "minimum": 1},
+                "research_lanes": {"type": "integer", "minimum": 1},
+                "concurrent_workers": {"type": "integer", "minimum": 1},
+                "discovery_queries": {"type": "integer", "minimum": 1},
+                "admitted_sources": {"type": "integer", "minimum": 1},
+                "external_tool_calls": {"type": "integer", "minimum": 1},
+                "aggregate_model_tokens": {"type": "integer", "minimum": 1},
+                "context_bytes": {"type": "integer", "minimum": 1},
+                "elapsed_minutes": {"type": "integer", "minimum": 1},
+                "retry_per_failed_lane": {"type": "integer", "minimum": 0}
+              }
+            },
+            "overrides": {
+              "type": "array",
+              "items": {
+                "type": "object", "additionalProperties": false,
+                "required": ["field", "value", "authority_id"],
+                "properties": {
+                  "field": {"type": "string", "minLength": 1},
+                  "value": {"type": "integer", "minimum": 0},
+                  "authority_id": {"type": "string", "minLength": 1}
+                }
+              }
+            }
+          }
+        },
+        "actual": {
+          "type": "object", "additionalProperties": false,
+          "required": ["atomic_questions", "research_lanes", "concurrent_workers_peak", "discovery_queries", "admitted_sources", "external_tool_calls", "aggregate_model_tokens", "context_bytes", "elapsed_minutes", "retries", "meter_mode"],
+          "properties": {
+            "atomic_questions": {"type": "integer", "minimum": 0},
+            "research_lanes": {"type": "integer", "minimum": 0},
+            "concurrent_workers_peak": {"type": "integer", "minimum": 0},
+            "discovery_queries": {"type": "integer", "minimum": 0},
+            "admitted_sources": {"type": "integer", "minimum": 0},
+            "external_tool_calls": {"type": "integer", "minimum": 0},
+            "aggregate_model_tokens": {"type": "integer", "minimum": 0},
+            "context_bytes": {"type": "integer", "minimum": 0},
+            "elapsed_minutes": {"type": "integer", "minimum": 0},
+            "retries": {"type": "integer", "minimum": 0},
+            "meter_mode": {"enum": ["MEASURED_TOKENS", "BYTE_PROXY"]}
+          }
+        }
+      }
+    },
+    "canonical_artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["artifact_id", "version", "path", "lifecycle_status", "readiness_status", "verification_status", "owner", "sha256"],
+        "properties": {
+          "artifact_id": {"type": "string", "minLength": 1},
+          "version": {"type": "string", "minLength": 1},
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$",
+            "not": {"pattern": "(?:^|/)(?:handoff\\.json|handoff\\.md|MANIFEST\\.sha256|registry\\.jsonl|[^/]*seal-receipt[^/]*)$"}
+          },
+          "lifecycle_status": {"enum": ["DRAFT", "PROPOSED", "ACCEPTED", "REJECTED", "SUPERSEDED", "ARCHIVED"]},
+          "readiness_status": {"enum": ["NOT_READY", "READY", "STALE"]},
+          "verification_status": {"enum": ["NOT_RUN", "PASS", "FAIL", "COULD_NOT_RUN", "INFRA_FAILURE", "NOT_APPLICABLE"]},
+          "owner": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "byte_length": {"type": "integer", "minimum": 0}
+        }
+      }
+    },
+    "source_basis": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["artifact_id", "version", "sha256"],
+        "properties": {
+          "artifact_id": {"type": "string", "minLength": 1},
+          "version": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["environment", "checks", "checks_not_run"],
+      "properties": {
+        "environment": {
+          "type": "object", "additionalProperties": false,
+          "required": ["runner", "platform", "provider_runtime"],
+          "properties": {
+            "runner": {"type": "string", "minLength": 1},
+            "platform": {"type": "string", "minLength": 1},
+            "provider_runtime": {"type": "string", "minLength": 1}
+          }
+        },
+        "checks": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["check", "status", "evidence_ids"],
+            "properties": {
+              "check": {"type": "string", "minLength": 1},
+              "status": {"enum": ["PASS", "FAIL", "NOT_RUN", "COULD_NOT_RUN", "INFRA_FAILURE", "NOT_APPLICABLE"]},
+              "evidence_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^EVD-[0-9]{6}$"}},
+              "reason": {"type": "string", "minLength": 1}
+            }
+          }
+        },
+        "checks_not_run": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["check", "reason"],
+            "properties": {
+              "check": {"type": "string", "minLength": 1},
+              "reason": {"type": "string", "minLength": 1},
+              "impact": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      }
+    },
+    "decisions": {"type": "array", "items": {"type": "string", "pattern": "^DEC-[0-9]{6}$"}},
+    "custody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["by_mode", "unavailable_requirements"],
+      "properties": {
+        "by_mode": {
+          "type": "object", "additionalProperties": false,
+          "required": ["TRACKED_CAS", "LOCAL_ONLY_CAS", "EXTRACT_ONLY", "NONE"],
+          "properties": {
+            "TRACKED_CAS": {"type": "integer", "minimum": 0},
+            "LOCAL_ONLY_CAS": {"type": "integer", "minimum": 0},
+            "EXTRACT_ONLY": {"type": "integer", "minimum": 0},
+            "NONE": {"type": "integer", "minimum": 0}
+          }
+        },
+        "unavailable_requirements": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["requirement", "reason", "owner"],
+            "properties": {
+              "requirement": {"type": "string", "minLength": 1},
+              "reason": {"type": "string", "minLength": 1},
+              "owner": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      }
+    },
+    "conclusion_status": {"const": "PROPOSED"},
+    "open_items": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["item", "owner"],
+        "properties": {
+          "item": {"type": "string", "minLength": 1},
+          "owner": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "next_action": {
+      "type": "object", "additionalProperties": false,
+      "required": ["provider", "invocation"],
+      "properties": {
+        "provider": {"enum": ["claude", "codex", "neutral"]},
+        "invocation": {"type": "string", "minLength": 1}
+      }
+    },
+    "session_guidance": {"type": "string", "minLength": 1},
+    "authorities": {
+      "type": "object", "additionalProperties": false,
+      "required": ["requester_id", "phase_owner_id", "decision_authority_id", "confirming_authority_id", "escalation_owner_id"],
+      "properties": {
+        "requester_id": {"type": "string", "minLength": 1},
+        "phase_owner_id": {"type": "string", "minLength": 1},
+        "decision_authority_id": {"type": "string", "minLength": 1},
+        "confirming_authority_id": {"type": "string", "minLength": 1},
+        "escalation_owner_id": {"type": "string", "minLength": 1}
+      }
+    },
+    "authority_fence": {"type": "string", "minLength": 1},
+    "repair_route": {
+      "type": "object", "additionalProperties": false,
+      "required": ["owner", "invocation"],
+      "properties": {
+        "owner": {"type": "string", "minLength": 1},
+        "invocation": {"type": "string", "minLength": 1}
+      }
+    },
+    "rendered_at": {"type": "string", "format": "date-time"}
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "result": {
+            "properties": {"outcome": {"const": "READY_TO_SEAL"}},
+            "required": ["outcome"]
+          }
+        },
+        "required": ["result"]
+      },
+      "then": {
+        "properties": {
+          "lifecycle_status": {"const": "ACCEPTED"},
+          "readiness_status": {"const": "READY"},
+          "location": {
+            "properties": {
+              "phase": {"const": "P9"},
+              "subphase": {"const": "ready-to-seal"}
+            },
+            "required": ["phase", "subphase"]
+          }
+        }
+      }
+    }
+  ]
+}

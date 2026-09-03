@@ -1,0 +1,44 @@
+# Strict local-development profile. Merge into <repo>/.codex/config.toml.
+# hooks.json remains separate; Codex warns when the same layer defines hooks in
+# both places. Project-local config and hooks load only after the repo is trusted.
+#
+# Producers write inside the run's candidate root and judges read: agents/*.toml
+# carries sandbox_mode = "workspace-write" for red_dev, green_dev and
+# refactor_dev, and "read-only" for smoke_qa and dev_critic. The admitted shell
+# surface is the five model-callable devforgeai operations — status, phase start,
+# phase fail --reason, validate, promote <run> — plus `devforgeai run <key>`,
+# which the sequencer admits only to the producer holding the write lease. The
+# PreToolUse hook, not the sandbox, decides where a write may land: Codex's
+# PreToolUse carries no identity, so the candidate root is the fence.
+
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+allow_login_shell = false
+
+[features]
+hooks = true
+multi_agent = true
+
+[agents]
+enabled = true
+# The workflow is sequential. A second open worker is coordination risk, not speed.
+max_concurrent_threads_per_session = 1
+
+[sandbox_workspace_write]
+network_access = false
+exclude_slash_tmp = true
+exclude_tmpdir_env_var = true
+# These roots are additive. The project workspace itself remains writable, so
+# the dynamic story write_fence is enforced by PreToolUse plus transition/CI.
+writable_roots = []
+
+[shell_environment_policy]
+inherit = "core"
+ignore_default_excludes = false
+
+# Keep external app side effects out of the dev loop. Enable a specific app in
+# a higher-precedence, human-controlled profile only when the story requires it.
+[apps._default]
+enabled = false
+destructive_enabled = false
+open_world_enabled = false

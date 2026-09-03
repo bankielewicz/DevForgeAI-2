@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devforgeai.dev/schemas/research/v1/preflight.schema.json",
+  "title": "Research P0 authority and capability preflight",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "preflight_id", "run_id", "request_id", "request_sha256",
+    "provider_subject", "attestation", "capability_checks", "writer_lock",
+    "gate", "performed_at_utc"
+  ],
+  "properties": {
+    "schema_version": {"const": "research-preflight/v1"},
+    "preflight_id": {"type": "string", "pattern": "^RUN-[0-9]{6}/preflight$"},
+    "run_id": {"type": "string", "pattern": "^RUN-[0-9]{6}$"},
+    "request_id": {"type": "string", "pattern": "^RSR-[0-9]{6}$"},
+    "request_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "provider_subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider_kind", "provider_id", "installed_version", "adapter_path",
+        "adapter_sha256"
+      ],
+      "properties": {
+        "provider_kind": {
+          "enum": ["CLAUDE_CODE", "CODEX", "OFFLINE_TEST_HARNESS"]
+        },
+        "provider_id": {"type": "string", "minLength": 1},
+        "installed_version": {"type": "string", "minLength": 1},
+        "adapter_path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+        },
+        "adapter_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "attestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attestation_id", "path", "sha256", "status"],
+      "properties": {
+        "attestation_id": {"type": "string", "pattern": "^PCA-[0-9]{6}$"},
+        "path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+        },
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "status": {
+          "enum": ["SUPPORTED", "UNSUPPORTED_CAPABILITY", "NOT_EVALUATED", "STALE"]
+        }
+      }
+    },
+    "capability_checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["capability_id", "required", "status", "basis", "reason"],
+        "properties": {
+          "capability_id": {
+            "enum": [
+              "SOURCE_OPEN", "FRESH_ISOLATED_WORKERS", "READ_ONLY_WORKER_FENCE",
+              "RESEARCH_CORE", "SELECTED_CAS", "DOSSIER_WRITER_LOCK"
+            ]
+          },
+          "required": {"type": "boolean"},
+          "status": {
+            "enum": ["SUPPORTED", "UNSUPPORTED_CAPABILITY", "NOT_PROBED"]
+          },
+          "basis": {"enum": ["ATTESTATION", "DETERMINISTIC_LOCAL_CHECK"]},
+          "reason": {"type": "string", "minLength": 1},
+          "evidence_artifact_ids": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1}
+          }
+        },
+        "allOf": [
+          {
+            "if": {"properties": {"basis": {"const": "ATTESTATION"}}, "required": ["basis"]},
+            "then": {
+              "required": ["evidence_artifact_ids"],
+              "properties": {"evidence_artifact_ids": {"minItems": 1}}
+            }
+          }
+        ]
+      }
+    },
+    "writer_lock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "status", "checked_at_utc"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^\\.devforgeai/research-locks/[a-z0-9]+(?:-[a-z0-9]+)*\\.lock$"
+        },
+        "status": {"enum": ["AVAILABLE", "COLLISION"]},
+        "checked_at_utc": {"type": "string", "format": "date-time", "pattern": "Z$"}
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reason_code", "explanation"],
+      "properties": {
+        "status": {"enum": ["PASS", "COULD_NOT_RUN", "BLOCKED"]},
+        "reason_code": {"type": "string", "pattern": "^[A-Z][A-Z0-9_/-]*$"},
+        "explanation": {"type": "string", "minLength": 1}
+      }
+    },
+    "performed_at_utc": {"type": "string", "format": "date-time", "pattern": "Z$"}
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"gate": {"properties": {"status": {"const": "PASS"}}}}
+      },
+      "then": {
+        "properties": {
+          "attestation": {"properties": {"status": {"const": "SUPPORTED"}}},
+          "writer_lock": {"properties": {"status": {"const": "AVAILABLE"}}},
+          "capability_checks": {
+            "not": {
+              "contains": {
+                "type": "object",
+                "properties": {
+                  "required": {"const": true},
+                  "status": {"enum": ["UNSUPPORTED_CAPABILITY", "NOT_PROBED"]}
+                },
+                "required": ["required", "status"]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"gate": {"properties": {"status": {"const": "BLOCKED"}}}}
+      },
+      "then": {
+        "properties": {"writer_lock": {"properties": {"status": {"const": "COLLISION"}}}}
+      }
+    }
+  ]
+}

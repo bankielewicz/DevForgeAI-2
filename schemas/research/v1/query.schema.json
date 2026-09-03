@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devforgeai.dev/schemas/research/v1/query.schema.json",
+  "title": "Research query",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "record_id", "record_version", "run_id", "query_id",
+    "lifecycle_status", "readiness_status", "owner", "decision_authority", "created_at_utc",
+    "source_refs", "evidence_refs", "decision_refs", "supersedes", "stale_if",
+    "question_ids", "lane_id", "worker_envelope_id", "purpose",
+    "query_text", "tool", "status", "executed_at"
+  ],
+  "properties": {
+    "schema_version": {"const": "research-query/v1"},
+    "record_id": {"type": "string", "pattern": "^QRY-[0-9]{6}$"},
+    "record_version": {"type": "integer", "minimum": 1},
+    "run_id": {"type": "string", "pattern": "^RUN-[0-9]{6}$"},
+    "query_id": {"type": "string", "pattern": "^QRY-[0-9]{6}$"},
+    "lifecycle_status": {"enum": ["DRAFT", "PROPOSED", "ACCEPTED", "REJECTED", "SUPERSEDED", "ARCHIVED"]},
+    "readiness_status": {"enum": ["NOT_READY", "READY", "STALE"]},
+    "owner": {"type": "string", "minLength": 1},
+    "decision_authority": {"type": "string", "minLength": 1},
+    "created_at_utc": {"type": "string", "format": "date-time"},
+    "source_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^SRC-[0-9]{6}$"}},
+    "evidence_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^EVD-[0-9]{6}$"}},
+    "decision_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^DEC-[0-9]{6}$"}},
+    "supersedes": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^(RQ|QRY|SRC|EVD|CLM|CTR|VER|SYN|DEC|HND)-[0-9]{6}$"}},
+    "stale_if": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "question_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^RQ-[0-9]{6}$"}
+    },
+    "lane_id": {"type": "string", "pattern": "^LANE-[0-9]{6}$"},
+    "worker_envelope_id": {"type": "string", "pattern": "^ENV-[0-9]{6}$"},
+    "purpose": {"enum": ["DISCOVERY", "CORROBORATION", "CHALLENGE"]},
+    "query_text": {"type": "string", "minLength": 1},
+    "tool": {"type": "string", "minLength": 1},
+    "status": {"enum": ["EXECUTED", "FAILED", "COULD_NOT_RUN"]},
+    "executed_at": {"type": "string", "format": "date-time"},
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidate_id", "locator", "discovery_only", "disposition", "reason"
+        ],
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "pattern": "^QRY-[0-9]{6}-CAND-[0-9]{6}$",
+            "description": "Stable query-local candidate identifier. This compound identifier is not a global record ID and cannot collide with the closed global ID families. Its QRY prefix identifies the owning query record."
+          },
+          "locator": {"type": "string", "minLength": 1},
+          "title": {"type": "string"},
+          "discovery_only": {"const": true},
+          "disposition": {
+            "enum": [
+              "RETRIEVE", "BIBLIOGRAPHY_ONLY", "REJECTED", "UNAVAILABLE",
+              "ACCESS_DENIED", "ERROR"
+            ],
+            "description": "Closed terminal disposition assigned to this discovery candidate before P4 completes."
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Nonempty reason supporting the terminal candidate disposition."
+          }
+        }
+      }
+    },
+    "failure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "message"],
+      "properties": {
+        "kind": {"enum": ["TOOL_UNAVAILABLE", "NETWORK", "AUTH", "TIMEOUT", "OTHER"]},
+        "message": {"type": "string", "minLength": 1}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"enum": ["FAILED", "COULD_NOT_RUN"]}}, "required": ["status"]},
+      "then": {"required": ["failure"]}
+    }
+  ]
+}

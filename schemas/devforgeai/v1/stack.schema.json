@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devforgeai.dev/schemas/devforgeai/v1/stack.schema.json",
+  "title": "DevForgeAI stack.yaml section",
+  "description": "One anchored section of .devforgeai/stack.yaml. The file itself is a mapping of anchor name to a document of this shape; a story's commands.source names one anchor and pins the whole file by hash. This is the only place a literal build, test, lint or format command exists. No worker ever receives one: a phase names a command key and the sequencer resolves and runs it inside the transition oracle.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version", "compiled", "package_manager", "manifests", "commands",
+    "test_glob", "test_layout", "runner_probe", "packages", "extractors",
+    "forbidden_imports"
+  ],
+  "properties": {
+    "version": {"const": 1},
+    "compiled": {
+      "type": "boolean",
+      "description": "true when the stack needs a build before its tests can run. commands.build is then mandatory and the oracle runs it before test on every transition."
+    },
+    "package_manager": {"type": "string", "minLength": 1, "maxLength": 100},
+    "manifests": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/glob"},
+      "description": "Dependency manifests. Only files matching one of these are scanned against packages.allow and packages.deny."
+    },
+    "commands": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["test"],
+      "properties": {
+        "build": {"$ref": "#/$defs/command"},
+        "test": {"$ref": "#/$defs/command"},
+        "lint": {"$ref": "#/$defs/command"},
+        "format": {"$ref": "#/$defs/command"}
+      },
+      "description": "The closed command-key set. A phase may run only the keys its registry entry grants and the run's commands.use authorises."
+    },
+    "ignore_dirs": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/glob"},
+      "uniqueItems": true,
+      "description": "Optional; defaults to an empty list. Root-relative directories that are build or cache output rather than source: excluded when the sequencer copies the project tree into a copy-mode candidate root, excluded from the tree-hash manifest that copy mode uses as base_ref and as each checkpoint, and ignored by the mutation check on a brokered command, which would otherwise read a compiler's own output as an undeclared write. A directory listed here is never promoted and never rewound."
+    },
+    "test_glob": {"$ref": "#/$defs/glob"},
+    "test_layout": {"type": "string", "minLength": 1, "maxLength": 100},
+    "runner_probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["argv", "exit_ok"],
+      "properties": {
+        "argv": {"$ref": "#/$defs/argv"},
+        "exit_ok": {"type": "integer"}
+      },
+      "description": "A cheap liveness check for the runner. A probe that does not return exit_ok is reason_code runner_missing, never a phase failure."
+    },
+    "packages": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allow", "deny"],
+      "properties": {
+        "allow": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "description": "Exact package names, compared case-insensitively against every name an extractor captures. An empty list disables the allowlist check."
+        },
+        "deny": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "description": "Regular expressions matched against manifest text. Any match is a refusal."
+        }
+      }
+    },
+    "extractors": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/extractor"},
+      "description": "How package names are read out of each manifest syntax. A dependency no extractor recognises is not enforced."
+    },
+    "forbidden_imports": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/forbidden_import"},
+      "description": "Source-level bans, scanned on proposed content before application and over the whole tree at every transition."
+    }
+  },
+  "if": {"required": ["compiled"], "properties": {"compiled": {"const": true}}},
+  "then": {"properties": {"commands": {"required": ["build", "test"]}}},
+  "$defs": {
+    "glob": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "argv": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 1},
+      "description": "An exec-form argument vector. It is launched without a shell; no redirect, pipeline, substitution or variable is interpreted."
+    },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["argv"],
+      "properties": {
+        "argv": {"$ref": "#/$defs/argv"},
+        "cwd": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$",
+          "description": "Repository-relative working directory. Defaults to the project root."
+        },
+        "junit_path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$",
+          "description": "Where the runner writes its JUnit XML. Mandatory on the test key: the oracle reads per-test outcomes from this file, not from stdout."
+        },
+        "timeout_s": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 7200,
+          "description": "Wall-clock limit. Defaults to 600. Exceeding it is classification TIMEOUT and reason_code timeout."
+        }
+      }
+    },
+    "extractor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["regex"],
+      "properties": {
+        "paths": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/glob"},
+          "description": "Which manifests this extractor reads. Defaults to the section's manifests."
+        },
+        "regex": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Multiline regular expression whose capture group 1 is the package name. An extractor without a capture group is a policy error, not a silent pass."
+        }
+      }
+    },
+    "forbidden_import": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["paths", "patterns", "reason"],
+      "properties": {
+        "paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/glob"}
+        },
+        "patterns": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "The constitution anchor this ban enforces. It is quoted verbatim in the refusal."
+        }
+      }
+    }
+  }
+}

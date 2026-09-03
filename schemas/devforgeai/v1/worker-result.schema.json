@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devforgeai.dev/schemas/devforgeai/v1/worker-result.schema.json",
+  "title": "DevForgeAI worker result",
+  "description": "The receipt: the single JSON object a phase worker returns as its final message on either provider. It carries no file bodies and no hashes. A producer has already written its files inside the candidate root; a judge has written only its findings under .devforgeai/work/<run>/evidence/<agent>/, which is outside every candidate root, gitignored and never promoted. The sequencer validates this object at the identity-bearing SubagentStop event, diffs the candidate root against the input checkpoint to derive what actually changed, runs the transition oracle inside the root, checkpoints, and advances, retries, or rewinds.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "run", "skill", "phase", "agent", "status", "candidate", "claimed_paths"],
+  "properties": {
+    "schema": {"const": "devforgeai.worker-result/v1"},
+    "run": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "The active run id. Story runs use the story id; document runs use '<skill>-<arg>'. Must equal run.yaml#run."
+    },
+    "skill": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "The active skill, or one of its variants. 'dev-tdd' resolves to 'dev'."
+    },
+    "phase": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "Must equal run.yaml#phase."
+    },
+    "agent": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "The canonical worker name, or a registered alias. Must resolve to the same canonical name as the stop event's agent_type; the model-supplied value is never identity."
+    },
+    "status": {
+      "enum": ["pass", "fail", "needs_user", "could_not_run"],
+      "description": "Closed worker status vocabulary. gate_policy values are never returned here."
+    },
+    "reason_code": {
+      "enum": ["runner_missing", "timeout", "network", "hook_fault"],
+      "description": "Required when status is could_not_run; rejected with any other status."
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "input_checkpoint"],
+      "description": "Which candidate root the worker worked in, and which checkpoint it started from. Required on every status, because a judge that read a checkpoint must name the one it read.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "The candidate id, which is the run id. Must equal run.yaml#run."
+        },
+        "input_checkpoint": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "The checkpoint this phase started from: 'base', or the name of the phase whose checkpoint it read. Must equal run.yaml#candidate.checkpoint at dispatch."
+        }
+      }
+    },
+    "claimed_paths": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/path"},
+      "description": "Every path the worker believes it created, edited or deleted inside the candidate root, root-relative. Empty on any status other than pass, and empty from a judge, whose only write path is .devforgeai/work/<run>/evidence/<agent>/ and lies outside every candidate root. The sequencer derives the truth from the checkpoint diff and refuses the receipt when the derived change set is not a subset of this list (UNCLAIMED_CHANGE). That subset check runs only on status pass: a producer that edited and then failed claims nothing by rule and has changed something in fact, so on a non-pass status the diff is recorded as changed_unchecked and no fence, policy or oracle check runs over it."
+    },
+    "evidence_refs": {
+      "type": "array",
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/path"},
+      "description": "Paths to evidence the sequencer should read: a report inside the candidate root, or an oracle output the sequencer already wrote under .devforgeai/work/<run>/. A report-producing phase names its report here, and the report's own frontmatter carries the verdict that selects the handoff row. A judge names the findings files it wrote under .devforgeai/work/<run>/evidence/<agent>/. Never a file body."
+    },
+    "note": {
+      "type": "string",
+      "maxLength": 16384,
+      "description": "At most three lines of plain summary. Rendered into <phase>-report.md."
+    },
+    "issues": {
+      "type": "array",
+      "maxItems": 10,
+      "description": "One-line findings. Not a repair instruction and not a status.",
+      "items": {"$ref": "#/$defs/issue"}
+    },
+    "next": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "A rewind request naming an earlier phase of the same skill. Legal only with status fail, only from a phase that declares rewind_to, and only when it equals that phase's rewind_to. The sequencer rewinds the candidate root to the checkpoint the named phase started from - its predecessor's, or base when it is the first phase - and re-enters it, because the named phase's own output is what is being redone."
+    }
+  },
+  "allOf": [
+    {
+      "if": {"required": ["status"], "properties": {"status": {"const": "could_not_run"}}},
+      "then": {"required": ["reason_code"]},
+      "else": {"not": {"required": ["reason_code"]}}
+    },
+    {
+      "if": {"required": ["status"], "properties": {"status": {"not": {"const": "pass"}}}},
+      "then": {"properties": {"claimed_paths": {"maxItems": 0}}}
+    },
+    {
+      "if": {"required": ["next"]},
+      "then": {"required": ["status"], "properties": {"status": {"const": "fail"}}}
+    }
+  ],
+  "$defs": {
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$",
+      "description": "A POSIX path relative to the candidate root, or to the project root for an evidence path under .devforgeai/work/<run>/. Must resolve inside the root it is relative to."
+    },
+    "issue": {
+      "anyOf": [
+        {"type": "string", "minLength": 1, "maxLength": 300},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["text"],
+          "properties": {
+            "id": {"type": "string", "minLength": 1, "maxLength": 120},
+            "kind": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+            "text": {"type": "string", "minLength": 1, "maxLength": 300}
+          }
+        }
+      ]
+    }
+  }
+}

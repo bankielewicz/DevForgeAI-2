@@ -1,0 +1,263 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devforgeai.dev/schemas/research/v1/source.schema.json",
+  "title": "Research source",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "record_id", "record_version", "run_id", "source_id",
+    "lifecycle_status", "readiness_status", "owner", "decision_authority", "created_at_utc",
+    "source_refs", "evidence_refs", "decision_refs", "supersedes", "stale_if",
+    "question_ids", "query_ids", "candidate_ids", "title", "publisher",
+    "locator", "source_type", "source_class", "retrieval", "admission", "retention_policy", "custody", "limitations", "freshness"
+  ],
+  "properties": {
+    "schema_version": {"const": "research-source/v1"},
+    "record_id": {"type": "string", "pattern": "^SRC-[0-9]{6}$"},
+    "record_version": {"type": "integer", "minimum": 1},
+    "run_id": {"type": "string", "pattern": "^RUN-[0-9]{6}$"},
+    "source_id": {"type": "string", "pattern": "^SRC-[0-9]{6}$"},
+    "lifecycle_status": {"enum": ["DRAFT", "PROPOSED", "ACCEPTED", "REJECTED", "SUPERSEDED", "ARCHIVED"]},
+    "readiness_status": {"enum": ["NOT_READY", "READY", "STALE"]},
+    "owner": {"type": "string", "minLength": 1},
+    "decision_authority": {"type": "string", "minLength": 1},
+    "created_at_utc": {"type": "string", "format": "date-time"},
+    "source_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^SRC-[0-9]{6}$"}},
+    "evidence_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^EVD-[0-9]{6}$"}},
+    "decision_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^DEC-[0-9]{6}$"}},
+    "supersedes": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^(RQ|QRY|SRC|EVD|CLM|CTR|VER|SYN|DEC|HND)-[0-9]{6}$"}},
+    "stale_if": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "question_ids": {
+      "type": "array", "minItems": 1, "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^RQ-[0-9]{6}$"}
+    },
+    "query_ids": {
+      "type": "array", "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^QRY-[0-9]{6}$"}
+    },
+    "candidate_ids": {
+      "type": "array", "uniqueItems": true,
+      "description": "Exact discovery candidates that caused this source retrieval attempt. Directly supplied sources use an empty array.",
+      "items": {"type": "string", "pattern": "^QRY-[0-9]{6}-CAND-[0-9]{6}$"}
+    },
+    "title": {"type": "string", "minLength": 1},
+    "publisher": {"type": "string", "minLength": 1},
+    "locator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "value"],
+      "properties": {
+        "kind": {"enum": ["URL", "LOCAL_FILE"]},
+        "value": {"type": "string", "minLength": 1}
+      }
+    },
+    "published_or_updated_at": {"type": "string", "format": "date-time"},
+    "source_type": {"enum": ["DOCUMENTATION", "STANDARD", "PAPER", "REPOSITORY", "DATASET", "USER_MATERIAL", "OTHER"]},
+    "source_class": {"enum": ["PRIMARY", "SECONDARY"]},
+    "retrieval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "status", "network_accessed"],
+      "properties": {
+        "method": {"enum": ["WEB", "MCP", "LOCAL_FILE", "SUPPLIED_BYTES"]},
+        "status": {"enum": ["NOT_ATTEMPTED", "RETRIEVED", "PARTIAL", "UNAVAILABLE", "ACCESS_DENIED", "ERROR"]},
+        "retrieved_at": {"type": "string", "format": "date-time"},
+        "network_accessed": {"type": "boolean"},
+        "limitation": {"type": "string", "minLength": 1}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "RETRIEVED"}}, "required": ["status"]},
+          "then": {"required": ["retrieved_at"]}
+        },
+        {
+          "if": {"properties": {"status": {"const": "PARTIAL"}}, "required": ["status"]},
+          "then": {"required": ["retrieved_at", "limitation"]}
+        },
+        {
+          "if": {"properties": {"status": {"enum": ["UNAVAILABLE", "ACCESS_DENIED", "ERROR"]}}, "required": ["status"]},
+          "then": {"required": ["limitation"]}
+        },
+        {
+          "if": {"properties": {"status": {"const": "NOT_ATTEMPTED"}}, "required": ["status"]},
+          "then": {"not": {"required": ["retrieved_at"]}}
+        }
+      ]
+    },
+    "admission": {"enum": ["PENDING", "ADMITTED_EVIDENCE", "ADMITTED_CONTEXT", "BIBLIOGRAPHY_ONLY", "REJECTED"]},
+    "retention_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "retention_permitted", "redistribution_basis", "redistribution_reference",
+        "data_classification", "sensitive_scan"
+      ],
+      "properties": {
+        "retention_permitted": {"type": "boolean"},
+        "redistribution_basis": {"enum": ["SPDX_LICENSE", "PUBLIC_DOMAIN", "OWNER_PERMISSION", "USER_OWNED", "NONE"]},
+        "redistribution_reference": {
+          "oneOf": [
+            {"type": "string", "minLength": 1},
+            {"type": "null"}
+          ]
+        },
+        "data_classification": {"enum": ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "RESTRICTED"]},
+        "sensitive_scan": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "scanner_id", "ruleset_sha256", "findings_count"],
+          "properties": {
+            "status": {"enum": ["PASS", "FAIL", "NOT_RUN", "COULD_NOT_RUN", "INFRA_FAILURE"]},
+            "scanner_id": {"type": "string", "minLength": 1},
+            "ruleset_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "findings_count": {"type": "integer", "minimum": 0}
+          },
+          "allOf": [
+            {
+              "if": {"properties": {"status": {"const": "PASS"}}, "required": ["status"]},
+              "then": {"properties": {"findings_count": {"const": 0}}}
+            },
+            {
+              "if": {"properties": {"status": {"const": "FAIL"}}, "required": ["status"]},
+              "then": {"properties": {"findings_count": {"minimum": 1}}}
+            },
+            {
+              "if": {"properties": {"status": {"enum": ["NOT_RUN", "COULD_NOT_RUN", "INFRA_FAILURE"]}}, "required": ["status"]},
+              "then": {"properties": {"findings_count": {"const": 0}}}
+            }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"redistribution_basis": {"const": "NONE"}}, "required": ["redistribution_basis"]},
+          "then": {"properties": {"redistribution_reference": {"type": "null"}}},
+          "else": {"properties": {"redistribution_reference": {"type": "string", "minLength": 1}}}
+        }
+      ]
+    },
+    "custody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode"],
+      "properties": {
+        "mode": {"enum": ["TRACKED_CAS", "LOCAL_ONLY_CAS", "EXTRACT_ONLY", "NONE"]},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "byte_length": {"type": "integer", "minimum": 0},
+        "object_path": {
+          "type": "string",
+          "pattern": "^(docs/research/_cas/sha256/[a-f0-9]{2}/[a-f0-9]{64}|\\.devforgeai/research-cas/sha256/[a-f0-9]{2}/[a-f0-9]{64})$"
+        },
+        "retention_reason": {"type": "string", "minLength": 1}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"mode": {"enum": ["TRACKED_CAS", "LOCAL_ONLY_CAS"]}}, "required": ["mode"]},
+          "then": {"required": ["sha256", "byte_length", "object_path"]}
+        },
+        {
+          "if": {"properties": {"mode": {"const": "EXTRACT_ONLY"}}, "required": ["mode"]},
+          "then": {
+            "required": ["retention_reason"],
+            "not": {"required": ["object_path"]}
+          }
+        },
+        {
+          "if": {"properties": {"mode": {"const": "NONE"}}, "required": ["mode"]},
+          "then": {
+            "required": ["retention_reason"],
+            "not": {
+              "anyOf": [
+                {"required": ["sha256"]},
+                {"required": ["byte_length"]},
+                {"required": ["object_path"]}
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "relevant_sections": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "limitations": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "freshness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at", "stale_after", "assessment_basis", "rationale"],
+      "properties": {
+        "status": {"enum": ["CURRENT", "AGING", "STALE", "UNKNOWN"]},
+        "checked_at": {"type": "string", "format": "date-time"},
+        "stale_after": {"type": "string", "format": "date-time"},
+        "assessment_basis": {"type": "string", "minLength": 1},
+        "rationale": {"type": "string", "minLength": 1}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"admission": {"const": "ADMITTED_EVIDENCE"}}, "required": ["admission"]},
+      "then": {
+        "properties": {
+          "retrieval": {
+            "properties": {"status": {"const": "RETRIEVED"}},
+            "required": ["status"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"custody": {"properties": {"mode": {"enum": ["TRACKED_CAS", "LOCAL_ONLY_CAS"]}}}},
+        "required": ["custody"]
+      },
+      "then": {
+        "properties": {
+          "retention_policy": {
+            "properties": {"retention_permitted": {"const": true}},
+            "required": ["retention_permitted"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"custody": {"properties": {"mode": {"const": "TRACKED_CAS"}}}},
+        "required": ["custody"]
+      },
+      "then": {
+        "properties": {
+          "custody": {
+            "properties": {
+              "object_path": {"pattern": "^docs/research/_cas/sha256/[a-f0-9]{2}/[a-f0-9]{64}$"}
+            }
+          },
+          "retention_policy": {
+            "properties": {
+              "redistribution_basis": {"enum": ["SPDX_LICENSE", "PUBLIC_DOMAIN", "OWNER_PERMISSION", "USER_OWNED"]},
+              "redistribution_reference": {"type": "string", "minLength": 1},
+              "data_classification": {"const": "PUBLIC"},
+              "sensitive_scan": {
+                "properties": {"status": {"const": "PASS"}, "findings_count": {"const": 0}},
+                "required": ["status", "findings_count"]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"custody": {"properties": {"mode": {"const": "LOCAL_ONLY_CAS"}}}},
+        "required": ["custody"]
+      },
+      "then": {
+        "properties": {
+          "custody": {
+            "properties": {
+              "object_path": {"pattern": "^\\.devforgeai/research-cas/sha256/[a-f0-9]{2}/[a-f0-9]{64}$"}
+            }
+          }
+        }
+      }
+    }
+  ]
+}

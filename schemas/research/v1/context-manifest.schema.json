@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devforgeai.dev/schemas/research/v1/context-manifest.schema.json",
+  "title": "Research selected-context manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "manifest_id", "run_id", "request_id", "request_sha256",
+    "lifecycle_status", "readiness_status", "owner", "decision_authority",
+    "created_at_utc", "context_budget", "entries", "declared_scope_exclusions",
+    "unresolved_ambiguities", "gate_status"
+  ],
+  "properties": {
+    "schema_version": {"const": "research-context-manifest/v1"},
+    "manifest_id": {
+      "type": "string",
+      "pattern": "^RUN-[0-9]{6}/context-manifest$",
+      "description": "Run-local singleton identity; not a dossier-global record ID."
+    },
+    "run_id": {"type": "string", "pattern": "^RUN-[0-9]{6}$"},
+    "request_id": {"type": "string", "pattern": "^RSR-[0-9]{6}$"},
+    "request_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "lifecycle_status": {"const": "ACCEPTED"},
+    "readiness_status": {"enum": ["NOT_READY", "READY", "STALE"]},
+    "owner": {"type": "string", "minLength": 1},
+    "decision_authority": {"type": "string", "minLength": 1},
+    "created_at_utc": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "context_budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["meter_mode", "limit", "used"],
+      "properties": {
+        "meter_mode": {"enum": ["MODEL_TOKENS", "BYTE_PROXY"]},
+        "limit": {"type": "integer", "minimum": 1},
+        "used": {"type": "integer", "minimum": 0}
+      }
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "entry_id", "artifact_kind", "artifact_id", "version", "path",
+          "sha256", "anchors", "applicability", "selection", "resolution_status",
+          "serialized_bytes", "rationale"
+        ],
+        "properties": {
+          "entry_id": {"type": "string", "pattern": "^CTX-ENTRY-[0-9]{6}$"},
+          "artifact_kind": {
+            "enum": [
+              "REQUEST", "SOURCE", "CLAIM", "PACKAGE", "CONTEXT_MANIFEST",
+              "DECISION", "GOVERNANCE", "OTHER"
+            ]
+          },
+          "artifact_id": {"type": "string", "minLength": 1},
+          "version": {"type": "string", "minLength": 1},
+          "path": {
+            "type": "string",
+            "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+          },
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "anchors": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "applicability": {
+            "enum": ["REUSABLE", "STALE", "CONTRADICTED", "OUT_OF_SCOPE"]
+          },
+          "selection": {"enum": ["SELECTED", "EXCLUDED"]},
+          "resolution_status": {"enum": ["RESOLVED", "MISSING", "DIGEST_MISMATCH"]},
+          "serialized_bytes": {"type": "integer", "minimum": 0},
+          "rationale": {"type": "string", "minLength": 1},
+          "exclusion_reason": {"type": "string", "minLength": 1}
+        },
+        "allOf": [
+          {
+            "if": {"properties": {"selection": {"const": "SELECTED"}}},
+            "then": {
+              "properties": {
+                "applicability": {"const": "REUSABLE"},
+                "resolution_status": {"const": "RESOLVED"}
+              },
+              "not": {"required": ["exclusion_reason"]}
+            },
+            "else": {"required": ["exclusion_reason"]}
+          }
+        ]
+      }
+    },
+    "declared_scope_exclusions": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "unresolved_ambiguities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ambiguity_id", "description", "owner", "material"],
+        "properties": {
+          "ambiguity_id": {"type": "string", "pattern": "^AMB-[0-9]{6}$"},
+          "description": {"type": "string", "minLength": 1},
+          "owner": {"type": "string", "minLength": 1},
+          "material": {"type": "boolean"}
+        }
+      }
+    },
+    "gate_status": {"enum": ["PASS", "NEEDS_DECISION", "FAILED"]}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"gate_status": {"const": "PASS"}}},
+      "then": {
+        "properties": {
+          "readiness_status": {"const": "READY"},
+          "unresolved_ambiguities": {
+            "not": {
+              "contains": {
+                "type": "object",
+                "properties": {"material": {"const": true}},
+                "required": ["material"]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

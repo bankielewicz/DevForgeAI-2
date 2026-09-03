@@ -1,0 +1,3 @@
+Synthetic Independent Report B.
+Observed conforming widgets emitted one green pulse for each valid start signal.
+This file is invented solely for offline tests.

@@ -1,0 +1,45 @@
+# Per-run enforcement (D5). Written by `devforgeai phase start` and rewritten at
+# every transition; gitignored, because it is scaffolding for one run and not a
+# project fact. The dispatcher reads this file plus `state.yaml#runs.<run>.status`
+# and nothing else. Every path the sequencer owns is in policy.ALWAYS_DENY.
+run: STORY-001
+canonical: /home/example/tinyapp   # the two-marker rule resolves through this
+skill: dev
+arg: STORY-001
+kind: story
+phase: red                 # dev phases: red | green | refactor | smoke | review
+write_fence:               # copied from the story at the gate
+  - tinyapp/text.py
+  - tests/test_text.py
+  - pyproject.toml
+test_paths:                # every test_plan.file from the story
+  - tests/test_text.py
+test_plan:
+  - criterion: 1
+    file: tests/test_text.py
+    name: test_slugify_basic
+commands:                  # copied from story.commands after the gate verified the hash
+  source: .devforgeai/stack.yaml#python
+  use: [test, lint]
+granted_keys: [test]       # the keys this phase may pass to `devforgeai run`
+gate_policy:
+  test_runner_missing: REQUIRE_HUMAN
+attempts: {red: 0, green: 0, refactor: 0, smoke: 0, review: 0}
+max_attempts: {red: 2, green: 3, refactor: 2, smoke: 2, review: 2}
+bounce_count: 0
+blocked_at: null           # the phase a REQUIRE_HUMAN block stopped in; `phase start`
+                           # with the same skill and argument resumes there
+candidate:                 # the run's one materialised tree
+  mode: worktree
+  root: /home/example/tinyapp/.devforgeai/work/STORY-001/wt
+  base_ref: 9f1c2a7b4d5e6f708192a3b4c5d6e7f809a1b2c3
+  checkpoint: base
+lease:                     # exactly one producer writes in the root at a time
+  session_id: session-1
+  agent: red_dev
+  agent_id: a-red
+  phase: red
+  granted_at: "2026-09-02T09:00:05Z"
+started_at: "2026-09-02T09:00:00Z"  # when the gate passed; quoted, so it is a
+                                    # string and not a YAML timestamp
+session_id: session-1

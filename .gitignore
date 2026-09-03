@@ -1,0 +1,24 @@
+# Evidence copy of bankielewicz/DevForge (zip export) — canonical copy lives on GitHub;
+# referenced by provenance notes (REGISTRY D-19), not vendored into this repo.
+/tmp/
+
+# Editor/OS noise
+.DS_Store
+*.swp
+
+# Local Claude Code activation only (CLAUDE.md): skills, agents, and commands here are
+# copies or symlinks of src/claude/. Committing them would publish a second copy that
+# drifts from source, and the local install is not evidence of validation or acceptance.
+/.claude/
+/.agents/
+/.codex/
+
+# Research runtime scratch and non-redistributable/local-only source objects.
+# Canonical, redistributable dossiers and CAS objects live under docs/research/.
+/.devforgeai/research-staging/
+/.devforgeai/research-cas/
+/.devforgeai/research-locks/
+
+# Python build/test by-products.
+__pycache__/
+*.py[cod]

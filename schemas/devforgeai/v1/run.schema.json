@@ -1,0 +1,423 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devforgeai.dev/schemas/devforgeai/v1/run.schema.json",
+  "title": "DevForgeAI per-run enforcement file",
+  "description": "The gitignored per-run file <canonical>/.devforgeai/work/<run>/run.yaml. It lives on the canonical side, never inside the candidate root, because a per-phase file inside the root would be committed by every worktree-mode checkpoint and promoted with the run. It carries everything a hook needs to decide, and nothing canonical: the phase, the fence, the granted keys, the candidate root, the lease, and the path back to the canonical checkout. The sequencer writes it at phase start and at every transition; promotion and abandonment remove the candidate root but leave this file with the final status, so status and inspection still resolve. Canonical .devforgeai/state.yaml holds story statuses and the runs index only. Nothing in this file is derived at hook time from a Markdown document: the gate resolved every value once and recorded the result, so a hook reads one file and decides.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "run",
+    "skill",
+    "arg",
+    "kind",
+    "phase",
+    "canonical",
+    "candidate",
+    "attempts",
+    "max_attempts",
+    "granted_keys",
+    "started_at",
+    "session_id",
+    "write_fence",
+    "test_paths",
+    "test_plan",
+    "commands",
+    "gate_policy"
+  ],
+  "properties": {
+    "run": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Evidence directory name under .devforgeai/work/. Equal to arg for a story run, '<skill>-<arg>' otherwise."
+    },
+    "skill": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "The canonical skill name. A variant is resolved to its base before the block is written."
+    },
+    "arg": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "The phase start argument: a story id for a story run, a slug or document id otherwise."
+    },
+    "kind": {
+      "enum": [
+        "story",
+        "document"
+      ],
+      "description": "Which gate ran. Kinds none and external never open a run."
+    },
+    "phase": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "The active phase. Only its declared worker may return a result, and only its run_keys may be brokered. The phase's registry writes mode decides the worker's role and therefore its write surface. A worker header declares that role as the closed enum writes: candidate | evidence | none - candidate for a producer, which writes inside candidate.root under the lease; evidence for a judge, which holds no lease and writes only under .devforgeai/work/<run>/evidence/<agent>/; none for a worker that writes nowhere at all."
+    },
+    "attempts": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z][a-z0-9_]*$": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "description": "One counter per phase of this skill, initialised to 0 at the gate."
+    },
+    "max_attempts": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z][a-z0-9_]*$": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "description": "One limit per phase, materialised from the registry at the gate. There is no `default` key in the written block: every phase name carries its own number."
+    },
+    "started_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "session_id": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "The session evidence file the run was opened under. Empty when no SessionStart hook has run."
+    },
+    "write_fence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/pattern"
+      },
+      "description": "For a story run, the story's write_fence verbatim. For a document run, the skill's document fence with {arg} substituted. Root-relative: the only paths inside the candidate root this run may change, checked live by the dispatcher on every write and again at ingest against the derived change set."
+    },
+    "test_paths": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/pattern"
+      },
+      "description": "Every distinct test_plan file. Empty for a document run. A tests-writing phase may write only these; a code-writing phase may write anything in the fence except these."
+    },
+    "test_plan": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/test_plan_row"
+      },
+      "description": "The authoritative criterion-to-test map, copied from the story. Empty for a document run."
+    },
+    "commands": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "type": "string",
+          "pattern": "^[^#]+#[A-Za-z0-9_.-]+$",
+          "description": "path#anchor into the hash-pinned stack.yaml. The hash was verified at the gate and is not re-recorded here."
+        },
+        "use": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "build",
+              "test",
+              "lint",
+              "format"
+            ]
+          },
+          "uniqueItems": true,
+          "description": "The keys this run authorises. A phase may run only the intersection of these and its own run_keys."
+        }
+      },
+      "description": "For a story run, the story's source and use keys. Empty for a document run, unless the skill is story-anchored (qa, review): those runs copy the same {source, use} from the story their argument names, so their phases can broker the keys they declare."
+    },
+    "gate_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z][a-z0-9_]*$": {
+          "enum": [
+            "BLOCK",
+            "REQUIRE_HUMAN",
+            "WARN",
+            "OFF"
+          ]
+        }
+      },
+      "description": "The defect-to-action map, copied from the story or defaulted for a document run. Never a status a worker returns."
+    },
+    "canonical": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "description": "Absolute path to the canonical checkout this run was opened from, and the path this file itself lives under. A candidate root carries its own .devforgeai/ (copied or checked out at base_ref), so the root-resolution rule keys on the two-line marker <root>/.devforgeai/candidate that candidate open writes, never on this file: the marker names the run and repeats this path, and the marker is excluded from the checkpoint diff so it is neither committed nor promoted."
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "root",
+        "base_ref",
+        "checkpoint"
+      ],
+      "description": "The candidate root this run's producers write in. One contract, two materialisations; the sequencer chose the mode at phase start by probing for a git repository at the canonical root.",
+      "properties": {
+        "mode": {
+          "enum": [
+            "worktree",
+            "copy"
+          ],
+          "description": "worktree when the canonical root is a git repository with at least one commit; copy otherwise. Skills, worker prompts, dispatcher checks and the receipt are identical in both."
+        },
+        "root": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096,
+          "description": "Absolute path to the candidate root, .devforgeai/work/<run>/wt under the canonical root. Every producer write must resolve inside it, and devforgeai run executes with this as cwd."
+        },
+        "base_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "What promotion checks the canonical tree against. In worktree mode the canonical HEAD commit pinned at phase start; in copy mode 'sha256:<64 hex>' over the sorted tree-hash manifest. A canonical tree that no longer matches is STALE_BASE."
+        },
+        "checkpoint": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "The most recent checkpoint: 'base' before the first transition, otherwise the phase whose transition created it. In worktree mode it names the tag devforgeai/<run>/<phase>; in copy mode the manifest <phase>.manifest.json and the copy-aside under cp/<phase>/."
+        },
+        "branch": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "worktree mode only: the run branch, devforgeai/<run>."
+        }
+      }
+    },
+    "lease": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "session_id",
+        "agent",
+        "phase",
+        "granted_at"
+      ],
+      "description": "Exactly one producer may hold the write lease at a time. It is bound at SubagentStart, the only identity-bearing pre-write event on both providers, and released at ingest-result. null means no producer holds it: no write tool is allowed anywhere, and judges may still read a checkpoint concurrently. A second grant attempt while it is held is refused with LEASE_HELD.",
+      "properties": {
+        "session_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "agent": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]*$",
+          "description": "The canonical worker name the lease was granted to."
+        },
+        "agent_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "The SubagentStart event's agent identity. Present on Claude, where PreToolUse carries agent_id and the dispatcher compares the two. Absent on Codex, where PreToolUse carries no identity and the candidate root is the fence instead."
+        },
+        "phase": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "granted_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        }
+      }
+    },
+    "granted_keys": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "build",
+          "test",
+          "lint",
+          "format"
+        ]
+      },
+      "description": "The keys the active phase may broker: the intersection of its registry run_keys with commands.use. The dispatcher admits `devforgeai run <key>` from the lease holder for exactly these, and the status block the primary pastes into a dispatch prompt names them."
+    },
+    "gate_warnings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1000
+      },
+      "description": "Optional; written only when the gate downgraded a defect instead of refusing. Today the one downgradable class is unresolvable-source, downgraded by gate_policy.unresolvable_source on a scope: hotfix story or by `devforgeai phase start --lenient` on a stand-alone story outside docs/plan/. Absent means the gate refused every defect it found."
+    },
+    "bounce_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "How many times this run has been rewound to an earlier checkpoint. Distinct from attempts, which counts dispatches per phase; a bounce costs an attempt at the rewind target as well."
+    },
+    "red_hashes": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[^\\\\]+$": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "description": "Recorded when a tests-writing phase passes: the hash of each test file inside the candidate root at that moment. Later phases fail if any of them changes. Cleared on rewind."
+    },
+    "last_oracle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "classification",
+        "exit"
+      ],
+      "properties": {
+        "key": {
+          "enum": [
+            "build",
+            "test",
+            "lint",
+            "format"
+          ]
+        },
+        "classification": {
+          "enum": [
+            "PASS",
+            "EXPECTED_TEST_FAILURE",
+            "TEST_FAILURE",
+            "NO_TESTS",
+            "COLLECTION_ERROR",
+            "INFRA_FAILURE",
+            "TIMEOUT"
+          ]
+        },
+        "exit": {
+          "type": "integer"
+        }
+      },
+      "description": "The most recent brokered command outcome, for the report renderer. Advisory; every transition rescans the tree rather than trusting it."
+    },
+    "blocked_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Phase the run is blocked at after a REQUIRE_HUMAN outcome (needs_user or attempt limit); null while a phase is running or no block exists. `devforgeai phase start` with the same skill and argument resumes at this phase with attempts reset."
+    },
+    "fix_report": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Root-relative path of the qa or review report that routed a `/dev <story> --fix` run here; null otherwise. Narrows the red oracle's required-fail set (10 section 11, Fix mode)."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "kind": {
+            "const": "story"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "commands": {
+            "required": [
+              "source",
+              "use"
+            ]
+          },
+          "test_paths": {
+            "minItems": 1
+          },
+          "test_plan": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "kind",
+          "commands"
+        ],
+        "properties": {
+          "kind": {
+            "const": "document"
+          },
+          "commands": {
+            "minProperties": 1
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "commands": {
+            "required": [
+              "source",
+              "use"
+            ]
+          }
+        },
+        "required": [
+          "test_plan"
+        ],
+        "description": "A story-anchored document run (qa, review) carries the story's commands and test rows. Any other document run carries an empty commands mapping and no test rows."
+      }
+    }
+  ],
+  "$defs": {
+    "pattern": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "test_plan_row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "criterion",
+        "file",
+        "name"
+      ],
+      "properties": {
+        "criterion": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "file": {
+          "$ref": "#/$defs/pattern"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        }
+      }
+    }
+  }
+}

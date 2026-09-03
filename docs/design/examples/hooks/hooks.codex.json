@@ -1,0 +1,98 @@
+{
+  "description": "DevForgeAI phase, candidate-root, lease, command, worker and tech-stack policy. Install as <repo>/.codex/hooks.json and review it with /hooks. Codex has no ConfigChange event; that row exists on Claude only.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.devforgeai/hooks/dispatch.py\" --provider codex",
+            "timeout": 15,
+            "statusMessage": "Writing DevForgeAI session evidence"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "_matcher_comment": "Matches every agent: the write lease is bound here, the only identity-bearing pre-write event on either provider. The sequencer refuses an agent that is not the active phase's worker, and refuses a second producer with LEASE_HELD.",
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.devforgeai/hooks/dispatch.py\" --provider codex",
+            "timeout": 10,
+            "statusMessage": "Binding worker to the active DevForgeAI phase"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "_shell_allowlist_comment": "Codex declares no permission vocabulary in hooks.json; the admitted shell surface is stated in config.codex.toml and enforced by this hook. That surface is: the five model-callable `devforgeai` operations (status, phase start, phase fail --reason, validate, promote <run>), `devforgeai run <key>` for the producer holding the run's write lease, and the provider-external Research Core runner `devforgeai-research` with exactly these ten subcommands: normalize-request, open-run, append-record, put-source, transition-run, validate-run, seal-run, render, render-handoff, resume-run. Research Core is the sole writer inside its own fence and opens no framework run, so no run need be active; any other subcommand, any call from a phase worker, and any redirect or pipeline around it are refused. Every write tool is checked against the run's candidate root and phase fence.",
+        "matcher": "^(Bash|apply_patch|Edit|Write|Agent|mcp__.*)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.devforgeai/hooks/dispatch.py\" --provider codex",
+            "timeout": 10,
+            "statusMessage": "Checking phase and write policy"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "^(Bash|apply_patch|mcp__.*)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.devforgeai/hooks/dispatch.py\" --provider codex",
+            "timeout": 10,
+            "statusMessage": "Checking escalation policy"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "^(apply_patch|Edit|Write)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.devforgeai/hooks/dispatch.py\" --provider codex",
+            "timeout": 10,
+            "statusMessage": "Checking a completed write against the candidate root and fence"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "_matcher_comment": "Matches every agent: the dispatcher answers 0 when no run is active, and the sequencer refuses a result whose agent_type is not the active phase's worker. A narrow list would silently skip the other 17 skills' workers.",
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.devforgeai/hooks/dispatch.py\" --provider codex",
+            "timeout": 660,
+            "statusMessage": "Reading the phase worker receipt"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.devforgeai/hooks/dispatch.py\" --provider codex",
+            "timeout": 10,
+            "statusMessage": "Checking workflow handoff"
+          }
+        ]
+      }
+    ]
+  }
+}

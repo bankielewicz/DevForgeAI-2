@@ -1,0 +1,3 @@
+Synthetic Standard A, revision 1.
+Widgets emit exactly one green pulse after a valid start signal.
+This file is invented solely for offline tests.

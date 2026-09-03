@@ -1,0 +1,354 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devforgeai.dev/schemas/research/v1/plan.schema.json",
+  "title": "Research P3 evidence and delegation plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "plan_id", "run_id", "request_id", "request_sha256",
+    "context_manifest", "risk_tier", "owner", "decision_authority",
+    "question_plans", "lanes", "worker_envelopes", "barriers", "budget",
+    "retry_policy", "partial_result_policy", "reconciliation_rule",
+    "plan_status", "created_at_utc"
+  ],
+  "properties": {
+    "schema_version": {"const": "research-plan/v1"},
+    "plan_id": {"type": "string", "pattern": "^RUN-[0-9]{6}/plan$"},
+    "run_id": {"type": "string", "pattern": "^RUN-[0-9]{6}$"},
+    "request_id": {"type": "string", "pattern": "^RSR-[0-9]{6}$"},
+    "request_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "context_manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manifest_id", "sha256"],
+      "properties": {
+        "manifest_id": {"type": "string", "pattern": "^RUN-[0-9]{6}/context-manifest$"},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "risk_tier": {"enum": ["LOW", "MATERIAL", "CRITICAL"]},
+    "owner": {"type": "string", "minLength": 1},
+    "decision_authority": {"type": "string", "minLength": 1},
+    "question_plans": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "question_id", "direct_lane_ids", "contrary_lane_ids",
+          "required_source_classes", "admission_criteria", "freshness_requirements",
+          "stop_conditions"
+        ],
+        "properties": {
+          "question_id": {"type": "string", "pattern": "^RQ-[0-9]{6}$"},
+          "direct_lane_ids": {
+            "type": "array", "minItems": 1, "uniqueItems": true,
+            "items": {"type": "string", "pattern": "^LANE-[0-9]{6}$"}
+          },
+          "contrary_lane_ids": {
+            "type": "array", "minItems": 1, "uniqueItems": true,
+            "items": {"type": "string", "pattern": "^LANE-[0-9]{6}$"}
+          },
+          "required_source_classes": {
+            "type": "array", "minItems": 1, "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "admission_criteria": {
+            "type": "array", "minItems": 1,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "freshness_requirements": {
+            "type": "array", "minItems": 1,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "stop_conditions": {
+            "type": "array", "minItems": 1,
+            "items": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    },
+    "lanes": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "lane_id", "question_ids", "kind", "objective", "query_limit",
+          "required_source_classes", "admission_criteria", "freshness_requirements",
+          "stop_conditions", "worker_envelope_ids", "barrier_id"
+        ],
+        "properties": {
+          "lane_id": {"type": "string", "pattern": "^LANE-[0-9]{6}$"},
+          "question_ids": {
+            "type": "array", "minItems": 1, "uniqueItems": true,
+            "items": {"type": "string", "pattern": "^RQ-[0-9]{6}$"}
+          },
+          "kind": {"enum": ["DIRECT", "CONTRARY"]},
+          "objective": {"type": "string", "minLength": 1},
+          "query_limit": {"type": "integer", "minimum": 1},
+          "required_source_classes": {
+            "type": "array", "minItems": 1, "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "admission_criteria": {
+            "type": "array", "minItems": 1,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "freshness_requirements": {
+            "type": "array", "minItems": 1,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "stop_conditions": {
+            "type": "array", "minItems": 1,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "worker_envelope_ids": {
+            "type": "array", "minItems": 1, "maxItems": 1, "uniqueItems": true,
+            "items": {"type": "string", "pattern": "^ENV-[0-9]{6}$"}
+          },
+          "barrier_id": {"type": "string", "pattern": "^BAR-[0-9]{6}$"}
+        }
+      }
+    },
+    "worker_envelopes": {
+      "type": "array",
+      "minItems": 2,
+      "items": {"$ref": "#/$defs/workerEnvelope"}
+    },
+    "barriers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["barrier_id", "lane_ids", "release_when", "on_incomplete"],
+        "properties": {
+          "barrier_id": {"type": "string", "pattern": "^BAR-[0-9]{6}$"},
+          "lane_ids": {
+            "type": "array", "minItems": 1, "uniqueItems": true,
+            "items": {"type": "string", "pattern": "^LANE-[0-9]{6}$"}
+          },
+          "release_when": {"const": "ALL_LANES_TERMINAL"},
+          "on_incomplete": {"enum": ["BLOCK", "RETRY_WITHIN_LIMIT", "RECONCILE_PARTIAL"]}
+        }
+      }
+    },
+    "budget": {"$ref": "#/$defs/budget"},
+    "retry_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maximum_per_failed_lane", "retryable_results"],
+      "properties": {
+        "maximum_per_failed_lane": {"type": "integer", "minimum": 0, "maximum": 2},
+        "retryable_results": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"enum": ["FAILED", "TIMED_OUT", "INVALID"]}
+        }
+      }
+    },
+    "partial_result_policy": {
+      "enum": ["REJECT", "ACCEPT_WITH_LIMITATIONS", "SEAL_NONPUBLISHABLE"]
+    },
+    "reconciliation_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method", "stable_sort_keys", "duplicate_key", "conflict_rule",
+        "missing_lane_rule", "majority_vote_permitted"
+      ],
+      "properties": {
+        "method": {"const": "CENTRAL_SCHEMA_AND_EVIDENCE_RECONCILIATION"},
+        "stable_sort_keys": {
+          "type": "array", "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "duplicate_key": {"type": "string", "minLength": 1},
+        "conflict_rule": {"const": "PRESERVE_AND_ROUTE"},
+        "missing_lane_rule": {"const": "RECORD_AND_FAIL_GATE"},
+        "majority_vote_permitted": {"const": false}
+      }
+    },
+    "plan_status": {"enum": ["READY", "NEEDS_DECISION"]},
+    "created_at_utc": {"type": "string", "format": "date-time", "pattern": "Z$"}
+  },
+  "$defs": {
+    "artifactRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_id", "version", "path", "sha256"],
+      "properties": {
+        "artifact_id": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1},
+        "path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+        },
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "queries", "sources", "tool_calls", "model_tokens_or_bytes",
+        "elapsed_minutes", "retries"
+      ],
+      "properties": {
+        "queries": {"type": "integer", "minimum": 0},
+        "sources": {"type": "integer", "minimum": 0},
+        "tool_calls": {"type": "integer", "minimum": 0},
+        "model_tokens_or_bytes": {"type": "integer", "minimum": 0},
+        "elapsed_minutes": {"type": "integer", "minimum": 0},
+        "retries": {"type": "integer", "minimum": 0}
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile", "limits", "current_use", "meter_mode"],
+      "properties": {
+        "profile": {"enum": ["quick", "standard", "deep"]},
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "atomic_questions", "research_lanes", "concurrent_workers",
+            "discovery_queries", "admitted_sources", "external_tool_calls",
+            "aggregate_model_tokens", "context_bytes", "elapsed_minutes", "retry_per_failed_lane"
+          ],
+          "properties": {
+            "atomic_questions": {"type": "integer", "minimum": 1, "maximum": 24},
+            "research_lanes": {"type": "integer", "minimum": 2, "maximum": 10},
+            "concurrent_workers": {"type": "integer", "minimum": 1, "maximum": 5},
+            "discovery_queries": {"type": "integer", "minimum": 2, "maximum": 150},
+            "admitted_sources": {"type": "integer", "minimum": 1, "maximum": 100},
+            "external_tool_calls": {"type": "integer", "minimum": 1, "maximum": 450},
+            "aggregate_model_tokens": {"type": "integer", "minimum": 1, "maximum": 750000},
+            "context_bytes": {"type": "integer", "minimum": 1, "maximum": 262144},
+            "elapsed_minutes": {"type": "integer", "minimum": 1, "maximum": 240},
+            "retry_per_failed_lane": {"type": "integer", "minimum": 0, "maximum": 2}
+          }
+        },
+        "current_use": {"$ref": "#/$defs/usage"},
+        "meter_mode": {"enum": ["MODEL_TOKENS", "BYTE_PROXY"]}
+      }
+    },
+    "workerEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "envelope_id", "trace_id", "run_id", "task_id", "lane_id", "objective",
+        "delegation_reason", "scope", "input_artifacts", "context_manifest",
+        "unresolved_ambiguities", "runtime", "allowed_tools", "network_policy",
+        "secret_access", "trust_class", "write_fence", "expected_result",
+        "success_conditions", "stop_conditions", "escalation_conditions",
+        "budgets", "partial_result_policy", "dependencies", "barrier_id",
+        "conflict_reconciliation_policy"
+      ],
+      "properties": {
+        "envelope_id": {"type": "string", "pattern": "^ENV-[0-9]{6}$"},
+        "trace_id": {"type": "string", "pattern": "^TRACE-[0-9]{6}$"},
+        "run_id": {"type": "string", "pattern": "^RUN-[0-9]{6}$"},
+        "task_id": {"type": "string", "pattern": "^TASK-[0-9]{6}$"},
+        "lane_id": {"type": "string", "pattern": "^LANE-[0-9]{6}$"},
+        "objective": {"type": "string", "minLength": 1},
+        "delegation_reason": {"type": "string", "minLength": 1},
+        "scope": {
+          "type": "object", "additionalProperties": false,
+          "required": ["include", "exclude"],
+          "properties": {
+            "include": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+            "exclude": {"type": "array", "items": {"type": "string", "minLength": 1}}
+          }
+        },
+        "input_artifacts": {
+          "type": "array", "minItems": 1, "items": {"$ref": "#/$defs/artifactRef"}
+        },
+        "context_manifest": {
+          "type": "object", "additionalProperties": false,
+          "required": ["manifest_id", "sha256"],
+          "properties": {
+            "manifest_id": {"type": "string", "pattern": "^RUN-[0-9]{6}/context-manifest$"},
+            "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+          }
+        },
+        "unresolved_ambiguities": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "runtime": {
+          "type": "object", "additionalProperties": false,
+          "required": [
+            "provider", "provider_version", "model", "agent", "agent_version",
+            "skill", "skill_version", "harness", "harness_version"
+          ],
+          "properties": {
+            "provider": {"type": "string", "minLength": 1},
+            "provider_version": {"type": "string", "minLength": 1},
+            "model": {"type": "string", "minLength": 1},
+            "agent": {"type": "string", "minLength": 1},
+            "agent_version": {"type": "string", "minLength": 1},
+            "skill": {"type": "string", "minLength": 1},
+            "skill_version": {"type": "string", "minLength": 1},
+            "harness": {"type": "string", "minLength": 1},
+            "harness_version": {"type": "string", "minLength": 1}
+          }
+        },
+        "allowed_tools": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "network_policy": {
+          "type": "object", "additionalProperties": false,
+          "required": ["mode", "allowlist"],
+          "properties": {
+            "mode": {"enum": ["DENY", "ALLOWLIST", "OPEN"]},
+            "allowlist": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+          }
+        },
+        "secret_access": {
+          "type": "object", "additionalProperties": false,
+          "required": ["mode", "secret_ids"],
+          "properties": {
+            "mode": {"enum": ["NONE", "NAMED"]},
+            "secret_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+          },
+          "allOf": [
+            {"if": {"properties": {"mode": {"const": "NONE"}}}, "then": {"properties": {"secret_ids": {"maxItems": 0}}}},
+            {"if": {"properties": {"mode": {"const": "NAMED"}}}, "then": {"properties": {"secret_ids": {"minItems": 1}}}}
+          ]
+        },
+        "trust_class": {"enum": ["TRUSTED_LOCAL", "UNTRUSTED_REPOSITORY", "UNTRUSTED_EXTERNAL"]},
+        "write_fence": {
+          "type": "array", "maxItems": 1, "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^\\.devforgeai/research-staging/[a-z0-9]+(?:-[a-z0-9]+)*/RUN-[0-9]{6}/workers/[A-Za-z0-9._/-]+$"}
+        },
+        "expected_result": {
+          "type": "object", "additionalProperties": false,
+          "required": ["schema_id", "schema_sha256", "evidence_requirements"],
+          "properties": {
+            "schema_id": {"type": "string", "minLength": 1},
+            "schema_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "evidence_requirements": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+          }
+        },
+        "success_conditions": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "stop_conditions": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "escalation_conditions": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "budgets": {
+          "type": "object", "additionalProperties": false,
+          "required": ["queries", "tool_calls", "retries", "model_tokens_or_bytes", "deadline_utc"],
+          "properties": {
+            "queries": {"type": "integer", "minimum": 0},
+            "tool_calls": {"type": "integer", "minimum": 0},
+            "retries": {"type": "integer", "minimum": 0},
+            "model_tokens_or_bytes": {"type": "integer", "minimum": 1},
+            "deadline_utc": {"type": "string", "format": "date-time", "pattern": "Z$"}
+          }
+        },
+        "partial_result_policy": {"enum": ["REJECT", "ACCEPT_WITH_LIMITATIONS", "SEAL_NONPUBLISHABLE"]},
+        "dependencies": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^TASK-[0-9]{6}$"}},
+        "barrier_id": {"type": "string", "pattern": "^BAR-[0-9]{6}$"},
+        "conflict_reconciliation_policy": {"const": "PRESERVE_AND_ROUTE"}
+      }
+    }
+  }
+}
