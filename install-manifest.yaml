@@ -1,0 +1,32 @@
+# DevForgeAI install manifest. Draft, 2026-09-03.
+# Destinations are explicit; folder names are not a destination map.
+# `devforgeai init` copies each source into the target project at the destination,
+# preserving the subtree. `flatten: true` copies a tree's files one level deep into
+# the destination, as the Agent Skills specification recommends for references/.
+manifest_version: 1
+entries:
+  # provider-neutral framework material -> .devforgeai/
+  - source: framework/skills
+    destination: .devforgeai/skills
+  # Claude Code adapters -> .claude/
+  - source: providers/claude/skills
+    destination: .claude/skills
+  - source: providers/claude/agents
+    destination: .claude/agents
+  # Codex adapters: skills -> .agents/, agent profiles and hooks -> .codex/
+  - source: providers/codex/skills
+    destination: .agents/skills
+  - source: providers/codex/agents
+    destination: .codex/agents
+  # derived copies: each adapter's references/ is produced from the neutral source,
+  # never hand-maintained; skill-validator diffs them against framework/skills/<name>/
+  - source: framework/skills/research
+    destination: .claude/skills/research/references
+    flatten: true
+    derived: true
+  - source: framework/skills/research
+    destination: .agents/skills/research/references
+    flatten: true
+    derived: true
+# Not installed by this manifest: components/research-core/ is the Python package,
+# distributed as a wheel and required on PATH (devforgeai-research) at runtime.

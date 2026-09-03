@@ -2,6 +2,16 @@
 
 Updated at the end of every wave. Newest entry first. Each entry says what exists, what is verified, what is open, and the decision the owner is asked to make at that check-in.
 
+## Check-in 8 — 2026-09-03, hook cookbook proof of concept
+
+**Made**: `poc/hooks/` — one dispatcher (`hookd.py`) registered once per event, an explicit check registry, five checks (SessionStart self-test, protected-path fence with symlink and redirect handling, Bash deny/ask guard, PostToolUse audit, SubagentStop receipt bounce), `policy.json`, a check template, `install.sh` (idempotent merge into `.claude/settings.json`, gitignores runtime files), `settings.claude.json` snippet and `COOKBOOK.md` (protocol per event, failure policy, add-a-check recipe, twelve best practices tied to doc facts and claim IDs, live smoke test).
+
+**Verified**: `python3 poc/hooks/tests/run_tests.py` 16/16 (pass-through, path deny, symlink deny, redirect deny, outside-project deny, command deny, `ask`, SessionStart context, receipt accept/reject/ignore, critical exception fails closed, malformed stdin fails closed, alarm beats host timeout, log without bodies); install tested on an empty-settings scratch project. Doc facts re-read 2026-09-03: `permissionDecision` is `allow|deny|ask` and `allow` bypasses the permission prompt; `last_assistant_message` on SubagentStop; `agent_id`/`agent_type` on PreToolUse inside subagents; exit 2 keeps a subagent working; only `Edit(path)`/`Read(path)` permission rules are consulted; bare relative rule paths anchor at the session cwd.
+
+**Defects found in the older prototype** (`docs/design/examples/hooks/`): `dispatch.py` emits `hookSpecificOutput.decision.behavior`, a form not in the current hooks reference; `settings.claude.json` carries `Write(...)` rules the host ignores and bare relative deny paths. Not yet fixed.
+
+**Not done**: nothing has fired from a live session. Installing hookd into this repository is the live proof and awaits the owner's go; this repo's `.claude/settings.json` is currently zero bytes, so install replaces it with valid JSON.
+
 ## Check-in 7 — 2026-09-03, write-model revision wave complete, wave 4 complete
 
 **Made**: the candidate-root write model is applied everywhere. Docs 00-12 and the 29 templates describe per-role writes (`candidate | evidence | none`), one sequencer-owned candidate root per run (git worktree when the project is a repository, copied root otherwise, same contract), linear red → green → refactor checkpoints, receipts instead of file bodies, a lease bound at SubagentStart, explicit promotion (`devforgeai promote <run>`, never automatic, every run ends in two handoff blocks), dev → promote → review → qa per story, rewind to the checkpoint a phase started from, and blocked-run resume via `run.yaml#blocked_at`. Doc 10 gained section 12 (the candidate root); the enforcement schema became `run.schema.json`. The example sequencer implements all of it, including `candidate open|lease|checkpoint|promote|abandon`, and the demo runs the dev story green in copy mode and in worktree mode. Decision register for the wave: `docs/design/specs/WRITE-MODEL-REVISION.md` (D1-D12). All 18 specs revised, persona definitions made compilable, `depends_on` excerpts refreshed verbatim and hashes recomputed. Stale example spec and the cards directory deleted.
@@ -61,7 +71,7 @@ Updated at the end of every wave. Newest entry first. Each entry says what exist
 
 1. Recompute every `depends_on` hash (V3) after the cross-review lands; nothing may edit 00-11 or templates after that without a re-hash.
 2. Delete `docs/design/examples/SKILL-SPEC-001-dev-tdd.md` (absorbed into SKILL-SPEC-001-dev).
-3. Full battery: verify.py V1-V4, V8; conformance; `PYTHONPATH=python python3 -m pytest tests/research -q`.
+3. Full battery: verify.py V1-V4, V8; conformance; `PYTHONPATH=components/research-core/src python3 -m pytest tests/research -q`.
 4. Update this file and memory.
 
 **Open decisions for the owner**

@@ -1,7 +1,7 @@
 # Skill Anatomy
 
 Every DevForgeAI skill except Research follows the spine in this document.
-Research is governed instead by `src/devforgeai/skills/research/`: its P0-P9 state
+Research is governed instead by `framework/skills/research/`: its P0-P9 state
 machine and typed JSON/JSONL records are normative, it defines contracts for
 four worker roles that write nothing, and deterministic Research Core is its
 sole canonical writer. The current provider templates do not execute those workers.
@@ -73,11 +73,11 @@ The schema is normative in `schemas/devforgeai/v1/worker-result.schema.json`. Bo
 
 At `ingest-result` the sequencer derives `changed[{path, blob_sha256, kind}]` from the candidate's checkpoint diff, refuses the result when `changed` is not a subset of `claimed_paths` or a path falls outside the run's fence, runs the transition oracle inside the candidate root, records the result and the checkpoint, releases the lease, and advances. A worker's claim is never why a phase advances; the diff is.
 
-Status vocabulary, closed: `pass | fail | needs_user | could_not_run`, with `reason_code` in `runner_missing | timeout | network | hook_fault` whenever the status is `could_not_run`. `gate_policy` (`BLOCK | REQUIRE_HUMAN | WARN | OFF`) is a defect-to-action map declared per artifact, never a returned status. Research keeps its own typed set under `src/devforgeai/skills/research/`.
+Status vocabulary, closed: `pass | fail | needs_user | could_not_run`, with `reason_code` in `runner_missing | timeout | network | hook_fault` whenever the status is `could_not_run`. `gate_policy` (`BLOCK | REQUIRE_HUMAN | WARN | OFF`) is a defect-to-action map declared per artifact, never a returned status. Research keeps its own typed set under `framework/skills/research/`.
 
 The primary window forwards the changed paths and `issues` to the next worker by path and id. It does not open them.
 
-Enforcement. For anatomy-governed skills, skill-validator rejects a compiled SKILL.md that contains a direct file read of anything except `state.yaml`, an inline prompt longer than a dispatch instruction, an LLM sub-phase without a named worker, or a Bash grammar wider than the model-callable operations above. Research is validated against `src/devforgeai/skills/research/` instead.
+Enforcement. For anatomy-governed skills, skill-validator rejects a compiled SKILL.md that contains a direct file read of anything except `state.yaml`, an inline prompt longer than a dispatch instruction, an LLM sub-phase without a named worker, or a Bash grammar wider than the model-callable operations above. Research is validated against `framework/skills/research/` instead.
 
 Why this matters. The primary window persists across the whole skill run and across user conversation. Anything read into it stays there. A worker keeps its intermediate work outside the parent context and returns only its receipt, but still consumes provider tokens and its returned receipt consumes parent context.
 
@@ -282,7 +282,7 @@ There is one home for a run's evidence. The sequencer writes every file below ex
 
 Every anatomy-governed skill run ends with a handoff. The sequencer writes `.devforgeai/work/<run>/handoff.json` at `phase next` and at `phase fail`; the block below is that file's rendering, and it is the only handoff the primary window prints. The envelope's field groups and schema are normative in `10-sequencer-and-contracts.md`.
 
-Research follows its own typed handoff contract in `src/devforgeai/skills/research/contracts/handoff.md` on the successful path. A Research failure returns a typed error and leaves staging evidence unsealed: it creates no canonical Research Handoff or receipt, and the sequencer renders the framework handoff from that typed error, taking its next steps from the error's repair route. Rule 1 therefore holds on every path. The user is never left asking "what's next?".
+Research follows its own typed handoff contract in `framework/skills/research/contracts/handoff.md` on the successful path. A Research failure returns a typed error and leaves staging evidence unsealed: it creates no canonical Research Handoff or receipt, and the sequencer renders the framework handoff from that typed error, taking its next steps from the error's repair route. Rule 1 therefore holds on every path. The user is never left asking "what's next?".
 
 Rules enforced by the sequencer's renderer and checked by skill-validator:
 

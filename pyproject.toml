@@ -14,7 +14,7 @@ classifiers = ["Operating System :: POSIX :: Linux"]
 devforgeai-research = "devforgeai.research.cli:main"
 
 [tool.setuptools.packages.find]
-where = ["python"]
+where = ["components/research-core/src"]
 
 [tool.setuptools.data-files]
 "share/devforgeai/schemas/research/v1" = ["schemas/research/v1/*.schema.json"]

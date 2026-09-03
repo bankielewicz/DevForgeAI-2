@@ -53,7 +53,7 @@ fixture.
 The current wheel installs the Python Core and the versioned v1 schema set.
 Core 0.1.0 is Linux-only and fails construction on any other platform with
 `E_PLATFORM_UNSUPPORTED` before workspace mutation.
-The files under `src/claude/`, `src/agents/`, and `src/codex/` are manual,
+The files under `providers/claude/`, `providers/codex/`, and `providers/codex/` are manual,
 uninstalled source templates: this repository has no provider-asset installer
 or sync manifest. Therefore their presence does not make `/research`,
 `$research`, or any named worker available in a provider runtime. Accepted

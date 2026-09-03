@@ -533,7 +533,15 @@ class ResearchStore:
         candidates = [
             Path(schema_root).resolve() if schema_root is not None else None,
             self.workspace / "schemas" / "research" / "v1",
-            Path(__file__).resolve().parents[3] / "schemas" / "research" / "v1",
+            # repository checkout: the nearest ancestor of this file that holds schemas/
+            next(
+                (
+                    ancestor / "schemas" / "research" / "v1"
+                    for ancestor in Path(__file__).resolve().parents
+                    if (ancestor / "schemas" / "research" / "v1" / "request.schema.json").is_file()
+                ),
+                None,
+            ),
             Path(sysconfig.get_path("data"))
             / "share"
             / "devforgeai"

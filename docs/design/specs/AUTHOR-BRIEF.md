@@ -20,7 +20,7 @@ Also read `docs/design/specs/ANTI-CEREMONY.md` before you write section 7 or any
 `agents/<role>.md` body. It is short and it is a hard rule, not advice.
 
 **The research author substitutes for source 1.** Instead of `01-skill-anatomy.md`, read
-`src/devforgeai/skills/research/capability.md`, `src/devforgeai/skills/research/workflow.md`, and
+`framework/skills/research/capability.md`, `framework/skills/research/workflow.md`, and
 `docs/reviews/2026-09-02-research-core-0.1.0-review.md` section 7. Research is exempt from
 the seven sub-phases and from the `devforgeai.worker-result/v1` receipt; it keeps its own
 typed status set and its own handoff contract. Sources 2, 3, 4, 5 and 6 still apply, and
@@ -46,7 +46,7 @@ paraphrasable.
 - Terminal-only on a Max plan. Claude Code and Codex, in a terminal, and nothing else.
 - No provider API. No HTTP call to a model provider from anywhere in the framework.
 - Nothing aspirational. If the behaviour does not exist in `examples/hooks/`, in
-  `src/devforgeai/skills/research/`, or as a contract in `10`/`11`, the spec says so plainly and
+  `framework/skills/research/`, or as a contract in `10`/`11`, the spec says so plainly and
   does not describe it as though it runs.
 - Full fidelity. The 500-line ceiling on `SKILL.md` is met by splitting content into more
   reference files, never by cutting content or watering it down.

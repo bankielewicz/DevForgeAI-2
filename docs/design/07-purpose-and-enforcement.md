@@ -96,7 +96,7 @@ Status: external and unimplemented. Rung 4 runs where the agent has no settings 
 
 | Question | Decision |
 |---|---|
-| Is Research exempt from the anatomy? | Yes. It is specified against `src/devforgeai/skills/research/`, keeps its own typed status set, and is not governed by the seven sub-phases. Which rungs apply to it is still open; see the review, section 5. |
+| Is Research exempt from the anatomy? | Yes. It is specified against `framework/skills/research/`, keeps its own typed status set, and is not governed by the seven sub-phases. Which rungs apply to it is still open; see the review, section 5. |
 | Is rung 4 in scope for the first release? | No. It is external and unimplemented; `12-post-mvp.md#pm-10`. Until it lands, every rung 3 refusal is disableable and the design says so rather than claiming otherwise. |
 | Which rung 3 refusals are BLOCK versus REQUIRE_HUMAN by default? | The artifact's `gate_policy` map decides per defect class. The story template's defaults are in `templates/story.md`; a story may only tighten them. |
 | Does `stack.yaml` come before the dev skills? | Yes. Its contract is written in `10-sequencer-and-contracts.md` before any skill specification is authored. No dev skill is language-specific. |

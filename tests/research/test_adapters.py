@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[2]
 class ResearchAdapterContractTests(unittest.TestCase):
     def test_claude_adapter_is_manual_only_until_work_orders_are_validated(self) -> None:
         skill = (
-            ROOT / "src" / "claude" / "skills" / "research" / "SKILL.md"
+            ROOT / "providers" / "claude" / "skills" / "research" / "SKILL.md"
         ).read_text(encoding="utf-8")
         frontmatter = skill.split("---", 2)[1]
         normalized_text = " ".join(skill.split())
@@ -30,12 +30,12 @@ class ResearchAdapterContractTests(unittest.TestCase):
 
     def test_codex_adapter_is_manual_only_until_work_orders_are_validated(self) -> None:
         skill = (
-            ROOT / "src" / "agents" / "skills" / "research" / "SKILL.md"
+            ROOT / "providers" / "codex" / "skills" / "research" / "SKILL.md"
         ).read_text(encoding="utf-8")
         policy = (
             ROOT
-            / "src"
-            / "agents"
+            / "providers"
+            / "codex"
             / "skills"
             / "research"
             / "agents"
@@ -51,9 +51,9 @@ class ResearchAdapterContractTests(unittest.TestCase):
 
     def test_codex_dispatch_names_match_profile_identifiers(self) -> None:
         skill = (
-            ROOT / "src" / "agents" / "skills" / "research" / "SKILL.md"
+            ROOT / "providers" / "codex" / "skills" / "research" / "SKILL.md"
         ).read_text(encoding="utf-8")
-        profiles = ROOT / "src" / "codex" / "agents"
+        profiles = ROOT / "providers" / "codex" / "agents"
 
         for path in sorted(profiles.glob("research-*.toml")):
             profile = tomllib.loads(path.read_text(encoding="utf-8"))

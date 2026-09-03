@@ -81,7 +81,7 @@ The generator produces provider-neutral workflow resources and a provider adapte
   evals/evals.json  # quick and full modes only
 ```
 
-For a non-Research anatomy skill, skill-creator emits one `agents/` file per skill-owned worker and no others, so the generated set matches `05-subagent-sets.md` exactly. It emits no agent file for Gate, Slice, Record or Handoff: those four are sequencer operations, and Slice is written by `devforgeai phase start` into `.devforgeai/work/<run>/context.json`. Research instead uses the worker contracts and Core contract under `src/devforgeai/skills/research/`; current Core does not launch provider workers.
+For a non-Research anatomy skill, skill-creator emits one `agents/` file per skill-owned worker and no others, so the generated set matches `05-subagent-sets.md` exactly. It emits no agent file for Gate, Slice, Record or Handoff: those four are sequencer operations, and Slice is written by `devforgeai phase start` into `.devforgeai/work/<run>/context.json`. Research instead uses the worker contracts and Core contract under `framework/skills/research/`; current Core does not launch provider workers.
 
 Provider-neutral resources may be packaged for every target. Installation is a separate release action after provider-specific adapters and native agent profiles are compiled and validated; unsupported required isolation fails closed rather than degrading inline. Target-specific invocation fields remain in the provider adapter or its supported target-side policy file, not a shared frontmatter block.
 

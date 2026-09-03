@@ -10,7 +10,7 @@ Three rules govern every row:
 
 ## 1. Template registry
 
-Every anatomy-governed non-Research skill owns its templates under `.devforgeai/skills/<name>/templates/`. Research uses the typed schemas and contracts under `src/devforgeai/skills/research/` instead and owns no template in this registry.
+Every anatomy-governed non-Research skill owns its templates under `.devforgeai/skills/<name>/templates/`. Research uses the typed schemas and contracts under `framework/skills/research/` instead and owns no template in this registry.
 
 Header keys are the machine-readable block the gate reads without a model. Every header carries `template`, `template_version`, `accepts_versions`, `required_frontmatter`, `required_sections`, `id_pattern` and `forbidden_text`; the table records the values that differ per template. `forbidden_text` is `["TODO", "TBD", "{{", "}}", "<fill in>"]` everywhere.
 

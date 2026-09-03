@@ -2,7 +2,7 @@
 
 This document is authoritative for worker names. Where `02-skill-roster.md` names workers, that column is a strict subset of the table below.
 
-Every anatomy-governed non-Research skill owns a dedicated set of workers. Research is the explicit exception governed by `src/devforgeai/skills/research/`; it defines contracts for four bounded worker roles that write nothing and deterministic Research Core as sole canonical writer. Current provider templates do not execute those workers. This document lists the sets and gives `dev-tdd` as the worked example.
+Every anatomy-governed non-Research skill owns a dedicated set of workers. Research is the explicit exception governed by `framework/skills/research/`; it defines contracts for four bounded worker roles that write nothing and deterministic Research Core as sole canonical writer. Current provider templates do not execute those workers. This document lists the sets and gives `dev-tdd` as the worked example.
 
 Write permission is per role, and every worker header declares it as `writes: candidate | evidence | none`.
 

@@ -124,5 +124,5 @@ deleted heuristically by a provider adapter.
 Run the complete offline slice from the repository root with:
 
 ```bash
-PYTHONPATH=python python3 -m unittest discover -s tests/research -v
+PYTHONPATH=components/research-core/src python3 -m unittest discover -s tests/research -v
 ```
