@@ -37,10 +37,12 @@ phase_outcomes:
 
 # Process exit codes of the `devforgeai` command (10 section 2). Fixed.
 exit_codes:
-  0: {meaning: "done, or no decision", protocol: "exit"}
-  1: {meaning: "refused: a precondition or invariant did not hold; the reason row on stderr names a sequencer_refusal", protocol: "exit + stderr"}
-  2: {meaning: "usage: unknown operation, bad arguments, malformed stdin", protocol: "exit + stderr"}
-  3: {meaning: "could not run: a runner, git, or a hook prerequisite is missing", protocol: "exit + stderr", outcome: COULD_NOT_RUN}
+  # keys are quoted: the schema requires string property names, and a YAML
+  # loader in any language would otherwise read them as integers
+  "0": {meaning: "done, or no decision", protocol: "exit"}
+  "1": {meaning: "refused: a precondition or invariant did not hold; the reason row on stderr names a sequencer_refusal", protocol: "exit + stderr"}
+  "2": {meaning: "usage: unknown operation, bad arguments, malformed stdin", protocol: "exit + stderr"}
+  "3": {meaning: "could not run: a runner, git, or a hook prerequisite is missing", protocol: "exit + stderr", outcome: COULD_NOT_RUN}
 
 # Provider hook layer (components/hook-runtime). What a hook may say back.
 hook_decisions:

@@ -5,10 +5,12 @@ Machine-readable contracts the runtime reads and the documents cite. Nothing und
 | File | Purpose | Validated by |
 |---|---|---|
 | `error-taxonomy.yaml` | The closed vocabulary of every outcome the framework reports, with emitter, protocol, roll-up and recovery route per code | `schemas/devforgeai/v1/error-taxonomy.schema.json` |
+| `PROMOTION-CANDIDATE.md` | What a human reviews and promotes into the protected DevForge repository as contract v1, with the verification commands | reviewer |
+| `MANIFEST.sha256` | Digests of the candidate files plus the two pinned document sections; `sha256sum -c` verifies | `sha256sum -c`, `verify.py --only v3` |
 
 ## Install guidance for the future installer
 
-`install-manifest.yaml` does not yet list this directory; adding it is a manifest decision, not made here. When it is added, the entry is:
+`install-manifest.yaml` lists this directory as its first entry (`order: 1`, `verbatim: true`, `pin_digest: true`):
 
 ```yaml
 - source: framework/contracts

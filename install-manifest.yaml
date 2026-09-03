@@ -5,6 +5,16 @@
 # the destination, as the Agent Skills specification recommends for references/.
 manifest_version: 1
 entries:
+  # machine-readable contracts -> .devforgeai/contracts. Installed first: the hook
+  # runtime and the sequencer read error-taxonomy.yaml at start. Copied verbatim,
+  # never templated or merged; the installer records each file's sha256 in
+  # state.yaml#contracts so `devforgeai validate` can detect a hand-edited copy.
+  # See framework/contracts/README.md for the full rule set.
+  - source: framework/contracts
+    destination: .devforgeai/contracts
+    verbatim: true
+    pin_digest: true
+    order: 1
   # provider-neutral framework material -> .devforgeai/
   - source: framework/skills
     destination: .devforgeai/skills
