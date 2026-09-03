@@ -58,7 +58,7 @@ Test 13, 14 and 15 in `tests/run_tests.py` prove each row.
 3. Implement `run(ev) -> Decision`. Use `ev.rel_path()` for any path; it resolves symlinks and returns `None` outside the project.
 4. Add the class to `REGISTRY` in `checks/__init__.py`.
 5. Add a fixture case to `tests/run_tests.py` for the pass path and the deny path.
-6. `python3 poc/hooks/tests/run_tests.py`, then `./install.sh` in the target project. Settings edits are picked up live by the file watcher; `/hooks` shows the entries.
+6. `python3 components/hook-runtime/reference/claude-python/tests/run_tests.py`, then `./install.sh` in the target project. Settings edits are picked up live by the file watcher; `/hooks` shows the entries.
 
 Policy values live in `policy.json`, read once per event. A check that needs new data adds a key there, never an environment variable.
 
@@ -91,7 +91,7 @@ Policy values live in `policy.json`, read once per event. A check that needs new
 
 ```bash
 cd <project>
-poc/hooks/install.sh          # copies to .claude/hooks, merges settings, gitignores runtime files
+components/hook-runtime/reference/claude-python/install.sh          # copies to .claude/hooks, merges settings, gitignores runtime files
 ```
 
 Then, in Claude Code inside that project:
