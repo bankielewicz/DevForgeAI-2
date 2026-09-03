@@ -11,6 +11,11 @@
     "**/.env"
   ],
   "deny_outside_project": true,
+  "_allowed_outside_note": "absolute-path fnmatch globs, ~ expands; the only outside-project writes protect_paths lets through. Claude Code auto-memory lives under ~/.claude/projects/PROJECT-SLUG/memory/.",
+  "allowed_outside_project": [
+    "~/.claude/projects/*/memory/*",
+    "~/.claude/projects/*/memory/**"
+  ],
   "denied_commands": [
     "rm\\s+-[a-zA-Z]*r[a-zA-Z]*f\\s+/(\\s|$)",
     "git\\s+push\\b.*(--force|-f)\\b",

@@ -72,21 +72,25 @@ class Event:
         return str(self.raw.get("last_assistant_message", "") or "")
 
     # ---- path helpers --------------------------------------------------
-    def rel_path(self, path: str) -> str | None:
-        """Repo-relative POSIX path if `path` resolves under the project dir, else None.
-
-        Resolves symlinks with realpath. A path outside the project returns None so
-        a check can decide what to do with it (the protect-paths check denies).
-        """
+    def real_path(self, path: str) -> str:
+        """Absolute path with symlinks resolved through the nearest existing ancestor,
+        so a file that does not exist yet still resolves to where it would land."""
         abs_path = path if os.path.isabs(path) else os.path.join(self.cwd, path)
-        # realpath of the nearest existing ancestor, so new files resolve too
         probe = abs_path
         while not os.path.exists(probe):
             parent = os.path.dirname(probe)
             if parent == probe:
                 break
             probe = parent
-        real = os.path.realpath(probe) + abs_path[len(probe):]
+        return os.path.realpath(probe) + abs_path[len(probe):]
+
+    def rel_path(self, path: str) -> str | None:
+        """Repo-relative POSIX path if `path` resolves under the project dir, else None.
+
+        Resolves symlinks with realpath. A path outside the project returns None so
+        a check can decide what to do with it (the protect-paths check denies).
+        """
+        real = self.real_path(path)
         try:
             rel = os.path.relpath(real, self.project_dir)
         except ValueError:

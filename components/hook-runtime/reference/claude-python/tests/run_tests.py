@@ -76,6 +76,18 @@ def main() -> int:
     code, out, err = run(event("PreToolUse", tool_name="Write", tool_input={"file_path": str(outside / "x.txt")}), root)
     check("write outside project denied", code == 2 and "outside" in err, f"{code} {err!r}")
 
+    # 5b Claude Code auto-memory under a fake HOME passes through; a sibling path does not
+    home = Path(tempfile.mkdtemp(prefix="hookd-home-"))
+    memory = home / ".claude" / "projects" / "-home-user-proj" / "memory"
+    memory.mkdir(parents=True)
+    code, out, err = run(event("PreToolUse", tool_name="Write", tool_input={"file_path": str(memory / "note.md")}), root, {"HOME": str(home)})
+    check("auto-memory write passes through", code == 0 and out.strip() == "", f"{code} {out!r} {err!r}")
+    code, out, err = run(event("PreToolUse", tool_name="Bash", tool_input={"command": f"echo x >> {memory}/MEMORY.md"}), root, {"HOME": str(home)})
+    check("auto-memory bash redirect passes through", code == 0, f"{code} {err!r}")
+    code, out, err = run(event("PreToolUse", tool_name="Write", tool_input={"file_path": str(memory.parent / "settings.json")}), root, {"HOME": str(home)})
+    check("sibling of memory dir still denied", code == 2 and "outside" in err, f"{code} {err!r}")
+    shutil.rmtree(home, ignore_errors=True)
+
     # 6 denied command
     code, out, err = run(event("PreToolUse", tool_name="Bash", tool_input={"command": "git push --force origin main"}), root)
     check("git push --force denied", code == 2 and "denied pattern" in err, f"{code} {err!r}")

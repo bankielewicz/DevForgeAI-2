@@ -22,3 +22,6 @@
 # Python build/test by-products.
 __pycache__/
 *.py[cod]
+
+# Manually created contributor worktrees (see CLAUDE.md, Worktrees). Claude Code's own live under the ignored .claude/.
+/worktrees/
