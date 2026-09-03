@@ -24,7 +24,7 @@ depends_on:
     hash: sha256:ffa41b5d270dc260e28fa9f6bdbc855069a6e922d1148c74b25860dba63484dc
     excerpt: "the phase declared `writes: docs` and `changed[]` is non-empty, unless it is marked conditional, in which case an empty change set needs a non-empty `note`; every changed path exists in the root with the bytes the checkpoint will hold"
   - source: docs/design/11-artifact-registry.md#1-template-registry
-    hash: sha256:09607ea79839ab215871d87e8221166e14eeb6ca26f8372e4ead4173f1d92907
+    hash: sha256:fabb8d2f142dcde1a31bc53768f8a46d01cac3ea4a7f6b73db22479cc89b5553
     excerpt: "| `brainstorm` | `.devforgeai/skills/brainstorm/templates/brainstorm.md` | 1 | `^IDEA-[0-9]{3}$` | slug, template, template_version, status, provenance | Problem, Ideas, Clusters, Open Questions |"
   - source: docs/design/11-artifact-registry.md#4-upstream-and-downstream-per-skill
     hash: sha256:cfcaef76005176490e96b9e67c8fa4f0b7a6a2e13b6badf856468881fbe25200

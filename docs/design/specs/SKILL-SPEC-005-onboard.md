@@ -27,7 +27,7 @@ depends_on:
     hash: sha256:f51716b6cfb1f4a48f4efbcff03947b3adab879dac1b6de7720564c85c87c43c
     excerpt: "Producers: `architect`'s `techstack` phase emits the INTENDED sections beside `techstack.md`; `onboard`'s `code_map` phase emits the OBSERVED sections."
   - source: docs/design/11-artifact-registry.md#1-template-registry
-    hash: sha256:09607ea79839ab215871d87e8221166e14eeb6ca26f8372e4ead4173f1d92907
+    hash: sha256:fabb8d2f142dcde1a31bc53768f8a46d01cac3ea4a7f6b73db22479cc89b5553
     excerpt: "| `observed-constraints` | `.devforgeai/skills/onboard/templates/observed-constraints.md` | 1 | `^OBS-[0-9]{3}$` | id, template, template_version, status, scope, evidence | Constraint, Evidence, Why It Is Not Derivable |"
   - source: docs/design/11-artifact-registry.md#2-artifact-path-patterns
     hash: sha256:2d2e97afff50edf6b35bf674b1de217c684d5091361e5f1deae12de52b95fb51

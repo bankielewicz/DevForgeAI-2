@@ -37,7 +37,7 @@ depends_on:
     hash: sha256:f5dc9ad016c382d9d033b25878267bd8e1ef240cb0ecaafeff33af16637e906e
     excerpt: "Every skill specification fills this table in its section 7, one row per phase, in phase order:"
   - source: docs/design/11-artifact-registry.md#1-template-registry
-    hash: sha256:09607ea79839ab215871d87e8221166e14eeb6ca26f8372e4ead4173f1d92907
+    hash: sha256:fabb8d2f142dcde1a31bc53768f8a46d01cac3ea4a7f6b73db22479cc89b5553
     excerpt: "| `skill-yaml` | `.devforgeai/skills/skill-generator/templates/skill.yaml` | 1 | `^[a-z][a-z0-9-]*$` | name, version, target, handoff, workers | not a Markdown artifact; the neutral skill definition |"
   - source: docs/design/11-artifact-registry.md#2-artifact-path-patterns
     hash: sha256:2d2e97afff50edf6b35bf674b1de217c684d5091361e5f1deae12de52b95fb51

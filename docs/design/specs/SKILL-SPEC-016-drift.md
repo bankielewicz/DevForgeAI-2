@@ -33,7 +33,7 @@ depends_on:
     hash: sha256:747b6340fc5c2348aad33ca5488012808670b3503b311d7b7d0f1204625afd4c
     excerpt: "| document run, promoted, no verdict or `verdict: pass` | `/status` |"
   - source: docs/design/11-artifact-registry.md#1-template-registry
-    hash: sha256:09607ea79839ab215871d87e8221166e14eeb6ca26f8372e4ead4173f1d92907
+    hash: sha256:fabb8d2f142dcde1a31bc53768f8a46d01cac3ea4a7f6b73db22479cc89b5553
     excerpt: "| `drift-report` | `.devforgeai/skills/drift/templates/drift-report.md` | 1 | `^DRIFT-[0-9]{3}$` | slug, template, template_version, status, depends_on | Sourcetree Drift, Techstack Drift, Architecture Drift, Actions |"
   - source: docs/design/11-artifact-registry.md#6-known-divergences
     hash: sha256:8a78656458735ce54ac73010da3b8fc87bbb7017a5a9268f85b210249736b82a

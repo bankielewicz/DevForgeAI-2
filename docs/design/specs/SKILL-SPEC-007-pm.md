@@ -27,7 +27,7 @@ depends_on:
     hash: sha256:747b6340fc5c2348aad33ca5488012808670b3503b311d7b7d0f1204625afd4c
     excerpt: "| document run, promoted, no verdict or `verdict: pass` | `/status` |"
   - source: docs/design/11-artifact-registry.md#1-template-registry
-    hash: sha256:09607ea79839ab215871d87e8221166e14eeb6ca26f8372e4ead4173f1d92907
+    hash: sha256:fabb8d2f142dcde1a31bc53768f8a46d01cac3ea4a7f6b73db22479cc89b5553
     excerpt: "| `prd` | `.devforgeai/skills/pm/templates/prd.md` | 1 | `^REQ-[0-9]{3}$` | slug, template, template_version, status, scope, provenance, depends_on | Goal, Users, Requirements, Non-Goals, Success Measures |"
   - source: docs/design/11-artifact-registry.md#3-depends-on-edges
     hash: sha256:f3c304ff840d2027432f743288bccec0ea5bc5d7b99b7f41c8d524b1c3591da2
