@@ -1,0 +1,19 @@
+{
+  "result": "PASS",
+  "agent_type": "red_dev",
+  "receipt_file": "d983725b4536873bfcf8e5d464b6e3bd4827378f3dd0e7d68aa91034482bdc06.json",
+  "bytes": 210,
+  "sha256": "566fbdcd79224ccd1b53d9b02a97d9a8f651355b2d56fe46e5e286748b19be7a",
+  "assistant_output_sha256": "566fbdcd79224ccd1b53d9b02a97d9a8f651355b2d56fe46e5e286748b19be7a",
+  "stored_byte_for_byte": true,
+  "continuations": 1,
+  "audit_contains_receipt_body": false,
+  "audit_contains_only_filename_and_sha256_for_receipt": true,
+  "invalid_worker": {
+    "agent_type": "green_dev",
+    "assistant_outputs": 2,
+    "hook_stops": 2,
+    "third_output": false,
+    "receipt_created": false
+  }
+}

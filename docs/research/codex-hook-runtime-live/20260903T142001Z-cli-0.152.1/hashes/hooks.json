@@ -1,0 +1,54 @@
+{
+  "description": "DevForgeAI Codex hook dispatcher proof of concept.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.codex/hooks/hookd.py\" --expect-event SessionStart --deadline-ms 6000",
+            "timeout": 10,
+            "statusMessage": "Checking DevForgeAI hook health",
+            "additionalContextLimit": 1000
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.codex/hooks/hookd.py\" --expect-event PreToolUse --deadline-ms 6000",
+            "timeout": 10,
+            "statusMessage": "Checking DevForgeAI hook policy"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.codex/hooks/hookd.py\" --expect-event PostToolUse --deadline-ms 6000",
+            "timeout": 10,
+            "statusMessage": "Recording DevForgeAI hook event"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.codex/hooks/hookd.py\" --expect-event SubagentStop --deadline-ms 6000",
+            "timeout": 10,
+            "statusMessage": "Validating DevForgeAI worker receipt"
+          }
+        ]
+      }
+    ]
+  }
+}

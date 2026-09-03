@@ -1,0 +1,7 @@
+5adee3cefa6f6b79cdd26478ec24a3e435b8f61f84f5fd97404aacd0a165e543  hook-proof/protected.txt@baseline
+d93cf9822449457fa93c552c087d3fc771e42b991c226c8b5842f831654461d6  hook-proof/allowed.txt@baseline
+66ecadf29fb4b40006eebdbf4aaedc12a7d2fe7fd40debf73c937d596a7df5fd  hook-poc-observe/hook-proof/protected.txt@final
+74c1551f1e04eb39778a907f13723772efcbcad6035c35519c5aef1a8fd09e5e  hook-poc-observe/hook-proof/allowed.txt@final
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  hook-poc-observe/hook-proof/command-ran@final
+5adee3cefa6f6b79cdd26478ec24a3e435b8f61f84f5fd97404aacd0a165e543  hook-poc-enforce/hook-proof/protected.txt@final
+74c1551f1e04eb39778a907f13723772efcbcad6035c35519c5aef1a8fd09e5e  hook-poc-enforce/hook-proof/allowed.txt@final

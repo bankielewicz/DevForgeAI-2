@@ -1,0 +1,52 @@
+PASS: apply_patch pass and protected-path deny JSON
+PASS: apply_patch malformed, traversal and symlink paths
+PASS: apply_patch move validates destination
+PASS: apply_patch accepts add/delete and checks every file
+PASS: Bash real force-push differs from quoted and heredoc mentions
+PASS: Bash chained force-push commands are denied
+PASS: Bash wrapped force-push forms fail closed
+PASS: Bash quoted/commented heredoc tokens cannot hide denials
+PASS: Bash nested execution forms fail closed without side effects
+PASS: Bash redirect forms enforce literal path boundaries
+PASS: observe mode suppresses and records would-deny
+PASS: observe mode surfaces critical check failure
+PASS: SessionStart returns bounded health context
+PASS: SessionStart preserves selftest context with advisory failure
+PASS: PostToolUse audit is JSONL and redacted
+PASS: SubagentStop stores a valid exact receipt
+PASS: SubagentStop invalid receipt continues once only
+PASS: SubagentStop rejects top-level and nested duplicate receipt keys
+PASS: SubagentStop null message uses receipt retry/stop wording
+PASS: SubagentStop rejects fenced receipts but skips unlisted agents
+PASS: SubagentStop refuses an oversized receipt
+PASS: corrupt policy fails closed
+PASS: unknown policy key fails closed
+PASS: altered receipt-schema policy fails closed
+PASS: max receipt bytes above event budget fails closed
+PASS: noncanonical external redirect policy fails closed
+PASS: dead protected-path spellings fail closed
+PASS: empty protected paths rejected by schema and engine
+PASS: broken local registry fails closed
+PASS: local registry extension is loaded
+PASS: local registry extension owns validated check_config
+PASS: unregistered check_config name fails closed
+PASS: generic tool_input is opaque while guarded tools stay strict
+PASS: malformed and oversized stdin fail closed
+PASS: SubagentStop supervisor input faults are terminal
+PASS: expected-event mismatch fails closed
+PASS: internal deadline fails closed before host timeout
+PASS: installer merges, stages mode, preserves local checks and is idempotent
+PASS: installer dry-run makes no project writes
+PASS: installer check distinguishes drift from current
+PASS: installer rejects inline config hooks without writes
+PASS: installer rejects duplicate owned handlers without writes
+PASS: installer distinguishes hook mentions from quoted managed handler
+PASS: installer rejects unanchored command rules without writes
+PASS: installer rejects malformed preserved hooks without writes
+PASS: installer check validates registered local config without writes
+PASS: installer check rejects unregistered config without writes
+PASS: installer check rejects oversized policy without writes
+PASS: installer rejects noncanonical external redirects without writes
+PASS: installer and configured handler support a project root with spaces
+50/50 Codex hook subprocess cases passed
+Evidence classification: SIMULATED; live Codex behavior remains NOT_OBSERVED_LIVE

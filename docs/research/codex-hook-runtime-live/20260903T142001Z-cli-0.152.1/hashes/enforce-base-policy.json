@@ -1,0 +1,48 @@
+{
+  "schema": "devforgeai.hookd-policy/v1",
+  "mode": "enforce",
+  "protected_paths": [
+    "hook-proof/protected.txt"
+  ],
+  "deny_outside_project": true,
+  "allowed_external_redirects": [
+    "/dev/null"
+  ],
+  "denied_commands": [
+    {
+      "id": "GIT_FORCE_PUSH",
+      "pattern": "^git\\s+push\\b.*(?:--force(?:-with-lease)?|-f)(?:\\s|$)"
+    },
+    {
+      "id": "GIT_RESET_HARD",
+      "pattern": "^git\\s+reset\\s+--hard(?:\\s|$)"
+    },
+    {
+      "id": "GIT_CLEAN",
+      "pattern": "^git\\s+clean(?:\\s|$)"
+    },
+    {
+      "id": "RECURSIVE_FORCE_ROOT_DELETE",
+      "pattern": "^rm\\s+-(?:[A-Za-z]*r[A-Za-z]*f[A-Za-z]*|[A-Za-z]*f[A-Za-z]*r[A-Za-z]*)\\s+/(?:\\s|$)"
+    },
+    {
+      "id": "POC_TOUCH",
+      "pattern": "^touch\\s+hook-proof/command-ran$"
+    }
+  ],
+  "receipt_agents": [
+    "red_dev",
+    "green_dev",
+    "refactor_dev"
+  ],
+  "receipt_schema": "devforgeai.worker-result/v1",
+  "receipt_statuses": [
+    "pass",
+    "fail",
+    "needs_user",
+    "could_not_run"
+  ],
+  "max_receipt_bytes": 65536,
+  "max_context_chars": 2000,
+  "check_config": {}
+}

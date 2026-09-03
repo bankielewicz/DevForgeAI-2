@@ -1,0 +1,106 @@
+{
+  "schema": "devforgeai.codex-hook-runtime-live-verification/v1",
+  "run_id": "20260903T142001Z-cli-0.152.1",
+  "result": "PASS",
+  "acceptance_gate": {
+    "observe_declared_denies_detected": {
+      "pass": true,
+      "actual": 2,
+      "expected": 2
+    },
+    "enforce_in_scope_denies_prevented": {
+      "pass": true,
+      "actual": 2,
+      "expected": 2
+    },
+    "allowed_controls_succeeded": {
+      "pass": true,
+      "actual": 4,
+      "expected": 4
+    },
+    "denied_side_effects": {
+      "pass": true,
+      "actual": 0,
+      "expected": 0
+    },
+    "unexpected_tree_changes": {
+      "pass": true,
+      "actual": 0,
+      "expected": 0,
+      "note": "Expected fixture mutations, lab configuration, audit/receipt output, extension files, and Python bytecode caches are enumerated in diffs/*-status.txt."
+    },
+    "audit_secret_or_content_canaries": {
+      "pass": true,
+      "actual": 0,
+      "expected": 0
+    },
+    "max_receipt_continuations": {
+      "pass": true,
+      "actual": 1,
+      "maximum": 1
+    },
+    "phase_policy_and_runtime_hashes_match": {
+      "pass": true,
+      "runtime_sha256": "dc97c4197d30e29e90ddf5dfed6bfe7009f5d70fadb022fee222b464809827f5",
+      "observe_policy_sha256": "2461de8334c7d5ff164b8808915112ff94c7198ae5009410ce28774aee6019e0",
+      "enforce_policy_sha256": "60a61df50bca5e45d10e561f8ad9c587a1e9efa1c1016ea435ca64b03f9562bb",
+      "extension_policy_sha256": "763935dbe6a3f52df1fd0b7025de3ec39974748efb7b19abc519d4f3e2bbd0f0"
+    }
+  },
+  "handler_contract": {
+    "pass": true,
+    "handler_count": 4,
+    "events": [
+      "SessionStart",
+      "PreToolUse",
+      "PostToolUse",
+      "SubagentStop"
+    ],
+    "timeout_seconds": 10,
+    "deadline_ms": 6000,
+    "hooks_sha256_before_extension": "6bfdd2ad0583d04bb5f5079a56979542ccf6d8dc5af2f332f4a7d6cf48791d05",
+    "hooks_sha256_after_extension": "6bfdd2ad0583d04bb5f5079a56979542ccf6d8dc5af2f332f4a7d6cf48791d05"
+  },
+  "extensibility": {
+    "pass": true,
+    "synthetic_trigger": true,
+    "fresh_live_trigger": true,
+    "declared_input_changes": [
+      ".codex/hooks/checks/local_command_probe.py added",
+      ".codex/hooks/checks/local_registry.py changed",
+      ".codex/hooks/policy.json changed"
+    ],
+    "unexpected_declared_input_changes": []
+  },
+  "subagent_stop": {
+    "pass": true,
+    "red_dev_actual_agent_type": true,
+    "red_dev_continuations": 1,
+    "red_dev_receipt_exact": true,
+    "green_dev_stops": 2,
+    "green_dev_third_stop": false,
+    "receipt_body_in_audit": false
+  },
+  "automated_checks": {
+    "reference_subprocess_suite": "50/50 PASS",
+    "observe_installer_check": "PASS",
+    "enforce_installer_check_after_extension": "PASS",
+    "extension_closed_config_cases": "4/4 PASS",
+    "hooks_json_cross_root_cmp": "PASS",
+    "hooks_json_contract_assertion": "PASS",
+    "audit_canary_scan": "PASS",
+    "unexpected_status_path_check": "PASS",
+    "design_spec_verifier": "EXIT 1 outside this run's scope: 85 V3 stale-reference findings in unchanged docs/design and docs/reviews; V1, V2, V4, V8, and V9 passed"
+  },
+  "optional_fault_probe": {
+    "gate_required": false,
+    "ui_failed_closed": true,
+    "target_unchanged": true,
+    "supervisor_audit_row": "NOT_OBSERVABLE"
+  },
+  "evidence_limitations": [
+    "No PreToolUse row contains tool_use_id. One stimulus per turn was used, and UI results were correlated with session id, turn id, and filesystem hashes.",
+    "The enforce protected-path probe's first attempt is NOT_EVALUATED for PROTECTED_PATH because the generated absolute patch header hit PATH_ESCAPE. The immediately following relative-header probe exercised PROTECTED_PATH and passed.",
+    "The optional corrupt-policy UI/filesystem result is retained, but its missing supervisor audit row is reported as NOT_OBSERVABLE."
+  ]
+}

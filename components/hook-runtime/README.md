@@ -9,6 +9,8 @@ There are two provider-specific Python reference proofs of concept:
 - `reference/claude-python/` contains the Claude event adapter, explicit check registry, policy, settings fixture, installer, tests and cookbook.
 - `reference/codex-python/` contains the Codex event adapter, a supervisor-isolated policy engine, explicit built-in and project registries, policy schema, `.codex/hooks.json` fixture, non-destructive installer, tests and cookbook.
 
+The Codex reference's first attended observe/enforce run is preserved under `docs/research/codex-hook-runtime-live/20260903T142001Z-cli-0.152.1/`. Its declared acceptance gate passed for the enumerated Codex CLI 0.152.1 probes; the report's qualifications and containment boundary remain part of that result.
+
 They reuse an architectural pattern, not a wire protocol. Claude and Codex expose different event fields, decision JSON, identity surfaces, configuration files and trust behavior. Neither reference may be described as provider-neutral or as evidence for the other provider.
 
 The Codex reference registers one handler for each of four lifecycle events and routes every handler to the same dispatcher. Its ordered registry is the extension seam: adding a check for an already registered event does not add a hook entry. A genuinely new event still needs one configuration entry and a tested event adapter because Codex has no all-events registration.

@@ -1715,7 +1715,10 @@ def main() -> int:
     passed = sum(result.passed for result in results)
     print(f"{passed}/{len(results)} Codex hook subprocess cases passed")
     if passed == len(results):
-        print("Evidence classification: SIMULATED; live Codex behavior remains NOT_OBSERVED_LIVE")
+        print(
+            "Evidence classification: SIMULATED; this suite neither establishes nor "
+            "invalidates separate OBSERVED_LIVE evidence records"
+        )
         return 0
     return 1
 

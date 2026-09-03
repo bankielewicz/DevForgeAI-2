@@ -1,0 +1,15 @@
+{
+  "hooks_file_sha256": "6bfdd2ad0583d04bb5f5079a56979542ccf6d8dc5af2f332f4a7d6cf48791d05",
+  "project_paths": [
+    "/tmp/hook-poc-observe",
+    "/tmp/hook-poc-enforce"
+  ],
+  "trust_level": "trusted",
+  "handlers": {
+    "PreToolUse": "sha256:1b021c198d9e105e39baa7fa4befb80319c98ab8a5eea73ff03789ee4cee213d",
+    "PostToolUse": "sha256:64a1014401b6a347f896b2eafe7c6d117d7ee0a3b7a4830f86ed5425b785a633",
+    "SessionStart": "sha256:1f2123d4a2975a6154422f0e3f04c59d9c1eca6787593f5a58f0fd4cb0eedd0f",
+    "SubagentStop": "sha256:936c0ac4ac2ca557033ef49bd26299d7d04c6ed0f4496a13c0030fd3c4a3037c"
+  },
+  "source": "Persisted Codex hook trust state after individual attended trust; /hooks itself did not render hashes."
+}

@@ -14,7 +14,7 @@ Use these evidence labels literally:
 | `NOT_OBSERVED_LIVE` | No live Codex session has supplied that evidence. Documentation and fixtures do not upgrade this label. |
 | `UNSUPPORTED` | The current Codex contract does not provide the required event field or decision. |
 
-Unless a checked-in evidence record says otherwise, every Codex runtime statement in this component is `DOCUMENTED` or `SIMULATED`, and live behavior is `NOT_OBSERVED_LIVE`.
+Unless a checked-in evidence record says otherwise, every Codex runtime statement in this component is `DOCUMENTED` or `SIMULATED`, and live behavior is `NOT_OBSERVED_LIVE`. The checked-in [Codex CLI 0.152.1 live record](../../../../docs/research/codex-hook-runtime-live/20260903T142001Z-cli-0.152.1/report.md) upgrades only the events and outcomes enumerated in that record; it does not establish untested hook paths or complete containment.
 
 Current evidence on 2026-09-03:
 
@@ -22,7 +22,7 @@ Current evidence on 2026-09-03:
 |---|---|---|
 | Official event/input/output contract | Re-read from the linked Codex documentation | `DOCUMENTED` |
 | `python3 components/hook-runtime/reference/codex-python/tests/run_tests.py` | 50 of 50 subprocess cases passed | `SIMULATED` |
-| Codex discovery, trust, matcher firing, blocking, feedback, and continuation | No live session record exists in this component | `NOT_OBSERVED_LIVE` |
+| Codex discovery, trust, matcher firing, blocking, feedback, and bounded `SubagentStop` continuation | Declared acceptance gate passed in disposable repositories with Codex CLI 0.152.1; see the linked live record and its preserved qualifications | `OBSERVED_LIVE` for the enumerated probes only |
 
 ## 1. Why there is one dispatcher per event
 
@@ -247,7 +247,7 @@ Changing modes is an explicit local policy operation. It does not change a hook 
 
 The policy file is capped at 1 MiB before parsing. The runtime and installer also apply aggregate nesting and node-count bounds, so an extension cannot use `check_config` to smuggle an unbounded JSON structure into the hook path.
 
-This Codex sibling has not been installed in a live session or released as a compatibility surface. Its v1 policy therefore includes `check_config` from the first releasable POC. If an out-of-tree copy of an earlier draft used the same v1 identifier without that key, it requires an explicit migration; silently treating the two shapes as compatible is forbidden.
+This Codex sibling was installed and exercised in the disposable sessions recorded by the linked live proof, but it has not been released as a compatibility surface. Its v1 policy therefore includes `check_config` from the first releasable POC. If an out-of-tree copy of an earlier draft used the same v1 identifier without that key, it requires an explicit migration; silently treating the two shapes as compatible is forbidden.
 
 | Key | Accepted value |
 |---|---|

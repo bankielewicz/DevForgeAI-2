@@ -1,0 +1,6 @@
+installation_validation={"context":"","kind":"pass","message":"","reason_code":"","schema":"devforgeai.hookd-outcome/v1"}
+valid_config=PASS
+closed_invalid_configs=4/4 PASS
+synthetic_render={"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"project-local extension denied the configured command"}}
+synthetic_audit_lines=21-23
+synthetic_final_reason_code=LOCAL_CHECK_TRIGGERED

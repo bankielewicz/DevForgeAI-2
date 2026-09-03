@@ -1,0 +1,14 @@
+ M hook-proof/allowed.txt
+ M hook-proof/protected.txt
+?? .codex/hooks/__pycache__/protocol.cpython-312.pyc
+?? .codex/hooks/checks/__pycache__/__init__.cpython-312.pyc
+?? .codex/hooks/checks/__pycache__/audit_event.cpython-312.pyc
+?? .codex/hooks/checks/__pycache__/base.cpython-312.pyc
+?? .codex/hooks/checks/__pycache__/builtin_registry.cpython-312.pyc
+?? .codex/hooks/checks/__pycache__/command_guard.cpython-312.pyc
+?? .codex/hooks/checks/__pycache__/local_registry.cpython-312.pyc
+?? .codex/hooks/checks/__pycache__/protect_paths.cpython-312.pyc
+?? .codex/hooks/checks/__pycache__/session_selftest.cpython-312.pyc
+?? .codex/hooks/checks/__pycache__/subagent_receipt.cpython-312.pyc
+?? .codex/hooks/hookd.log.jsonl
+?? hook-proof/command-ran

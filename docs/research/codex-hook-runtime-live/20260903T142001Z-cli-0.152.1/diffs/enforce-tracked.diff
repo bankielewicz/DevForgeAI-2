@@ -1,0 +1,32 @@
+diff --git a/.codex/hooks/checks/local_registry.py b/.codex/hooks/checks/local_registry.py
+index 883a6ac..6c95c62 100644
+--- a/.codex/hooks/checks/local_registry.py
++++ b/.codex/hooks/checks/local_registry.py
+@@ -3,5 +3,4 @@
+-# Import project-specific Check subclasses explicitly and add the classes here.
+-# Example:
+-# from .require_ticket import RequireTicket
+-# LOCAL_CHECKS = (RequireTicket,)
+-LOCAL_CHECKS = ()
++from .local_command_probe import LocalCommandProbe
++
++
++LOCAL_CHECKS = (LocalCommandProbe,)
+diff --git a/.codex/hooks/policy.json b/.codex/hooks/policy.json
+index 21bf47b..4a8048e 100644
+--- a/.codex/hooks/policy.json
++++ b/.codex/hooks/policy.json
+@@ -47 +47,5 @@
+-  "check_config": {}
++  "check_config": {
++    "local_command_probe": {
++      "command": "printf extension-trigger"
++    }
++  }
+diff --git a/hook-proof/allowed.txt b/hook-proof/allowed.txt
+index a574d5c..1e74c9e 100644
+--- a/hook-proof/allowed.txt
++++ b/hook-proof/allowed.txt
+@@ -1 +1 @@
+-allowed=baseline
++allowed=attempted
