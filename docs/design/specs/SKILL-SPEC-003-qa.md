@@ -30,7 +30,7 @@ depends_on:
     hash: sha256:747b6340fc5c2348aad33ca5488012808670b3503b311d7b7d0f1204625afd4c
     excerpt: "| `qa`, promoted, `verdict: findings` or `fail` | `/dev <arg> --fix` |"
   - source: docs/design/10-sequencer-and-contracts.md#7-stack-yaml
-    hash: sha256:b08220564c5d2c4d1328cea9cbfd1cb793d5ee1fd9ec7c727505006e170e4241
+    hash: sha256:f51716b6cfb1f4a48f4efbcff03947b3adab879dac1b6de7720564c85c87c43c
     excerpt: "`commands.<key>.junit_path` | string | `test` only | where the runner writes JUnit XML; the oracle reads per-test outcomes from this file, not from stdout"
   - source: docs/design/11-artifact-registry.md#1-template-registry
     hash: sha256:09607ea79839ab215871d87e8221166e14eeb6ca26f8372e4ead4173f1d92907

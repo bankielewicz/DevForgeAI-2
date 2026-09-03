@@ -12,7 +12,7 @@ and refuted rather than only read.
 | `dispatch.py` | the hook dispatcher, one script for both providers: one event in, one decision out |
 | `policy.py` | the shared registry and path policy both of the above read; it writes nothing |
 | `run_conformance.py` | the allow/deny table: dispatcher rows, grammar rows, end-to-end backstops |
-| `demo_sequencer.sh` | STORY-001 walked through the dev skill twice, in copy mode and in worktree mode |
+| `demo_sequencer.sh` | STORY-001 walked through the dev skill four times: the Python and Node fixtures, each in copy mode and in worktree mode |
 | `settings.claude.json`, `hooks.codex.json`, `config.codex.toml` | the provider fragments an installed project carries |
 | `requirements.codex.toml` | post-MVP: the administrator-managed Codex shape, read by nothing here |
 | `agents/claude/*.md`, `agents/*.toml` | the five dev workers, in each provider's format |
@@ -21,11 +21,49 @@ and refuted rather than only read.
 ## Run it
 
 ```
-bash demo_sequencer.sh        # two full runs; ends "DEMO OK: copy mode green, worktree mode green"
+bash demo_sequencer.sh        # four full runs; ends
+                              # "DEMO OK: python copy/worktree green, node copy/worktree green"
 python3 run_conformance.py    # ends "<n>/<n> rows hold"; exit 0 means every row held
 ```
 
-Both write only to scratch directories under `/tmp`.
+Both write only to scratch directories under `$TMPDIR` (`/tmp` by default).
+
+## The demo, and the one claim it supports
+
+`demo_sequencer.sh` runs the same story through the dev skill four times: the
+Python fixture (`../fixtures/dev-tdd/`, the control, unchanged) and the Node
+fixture (`../fixtures/dev-tdd-node/`), each in copy mode and in worktree mode.
+Each run goes gate → red → green (rewind) → red → green → refactor → smoke →
+review → `ready_to_promote` → `devforgeai promote`, and each asserts, not just
+prints:
+
+- the story's three `test_plan` names appear in the JUnit file the section's
+  `junit_path` points at, all `failed` at red and all `passed` at green and
+  refactor — read straight out of the XML, keyed by `testcase@name`;
+- `run.yaml#red_hashes` is unchanged from the successful red through green and
+  through refactor, so the frozen-tests rule is observed rather than assumed;
+- lint passed — both as the refactor transition advancing with the `lint` key
+  authorised, and by re-running the section's resolved `lint` argv against the
+  promoted canonical tree;
+- the promoted refactored implementation is in the canonical tree, the handoff
+  outcome is `pass` and the run status is `promoted`;
+- **no undeclared output**: a file-by-file sha256 snapshot of the project taken
+  before the gate and again after promotion, whose only delta is the story's two
+  write-fence files plus the phase reports promotion publishes under
+  `docs/reports/`. For the Node runs that also means no `node_modules/`, no
+  `package-lock.json`, no `npm-shrinkwrap.json`, no `.npmrc` — checked
+  explicitly — and no argv anywhere in the resolved section naming a package
+  manager or a fetcher.
+
+The two fixtures differ in one line of story frontmatter: `commands.source` is
+`.devforgeai/stack.yaml#python` in one and `#node` in the other. The claim the
+demo supports is exactly that: **two interpreted ecosystems run through the same
+stack-selected workflow.** It does not prove compiled-stack support (the
+`csharp` section is declared and never executed here), arbitrary Node-version
+compatibility (the runs use whatever `node` is on `PATH`), or automatic stack
+detection (each story names its section by hand and the gate pins the file by
+hash). A missing runner is reported as `COULD_NOT_RUN`, naming it, with a
+non-zero exit — never a silent skip.
 
 ## The model in one paragraph
 

@@ -1,0 +1,10 @@
+{
+  "name": "tinyapp",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Fixture package for the dev-tdd skill specification. Dependency-free on purpose: the demo never invokes npm.",
+  "engines": {
+    "node": ">=18.19"
+  }
+}

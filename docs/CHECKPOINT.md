@@ -2,6 +2,20 @@
 
 Updated at the end of every wave. Newest entry first. Each entry says what exists, what is verified, what is open, and the decision the owner is asked to make at that check-in.
 
+## Check-in 11 — 2026-09-03, language-neutral fixture conversion (Node) and JUnit normalization
+
+**Made**
+- `docs/design/examples/fixtures/dev-tdd-node/`: dependency-free `package.json` (`"type": "module"`), `tinyapp/text.mjs`, empty `tests/`, and a story anchored to `.devforgeai/stack.yaml#node` with the same three criteria and test names as the Python control (`test_slugify_basic`, `test_slugify_unicode`, `test_slugify_empty`). Python fixture tree unchanged (README mention only).
+- `stack.yaml` gains a `node` section (direct `node --test --test-reporter=junit --test-reporter-destination=...` argv, `node --check` lint, no npm ever) and a new optional per-section key `junit_dialect: generic | pytest | node` (schema, template, doc 10 §3 and §7).
+- Sequencer: a deterministic runner-normalization boundary (`normalize_junit`) behind `junit_dialect`, monotone toward refusal: a failure without an assertion marker becomes `error`, a file-named testcase is a collection error, an empty file is `NO_TESTS`. Generic dialect is byte-for-byte the old behaviour. Live probing showed the old reader let a thrown ReferenceError (node) or NameError (pytest) satisfy the red gate; eight new conformance rows pin the six hostile cases plus honest node red and green.
+- Demo runs four complete stories (python and node, copy and worktree), each asserting exact test names and outcomes in the JUnit file, frozen red hashes through green and refactor, lint, promoted refactored code, a sha256 tree diff (fence files, `.devforgeai/**`, `docs/reports/**` only), and for node the absence of `node_modules`, lockfiles and any package-manager or fetcher token in the resolved argv. A missing `node` reports `COULD_NOT_RUN` and fails the demo; never a silent skip.
+
+**Verified**: `DEMO OK: python copy/worktree green, node copy/worktree green`; conformance 206/206 (124 dispatcher, 35 grammar, 47 backstops); verify.py V1–V4, V8, V9 ok, hashes recomputed; six schemas validate.
+
+**What this proves and does not**: two interpreted ecosystems run through the same stack-selected workflow with the same oracle. It does not prove compiled-stack support (Rust needs a non-JUnit result parser; C# needs a network restore), arbitrary Node-version compatibility, or automatic stack detection.
+
+**Known limits recorded**: `node --check` accepts one path, so lint covers `tinyapp/text.mjs` only; the node dialect treats a leaf test literally named like a file as file-level (fails closed either way); `runner_probe` is declared but not yet invoked by the sequencer; no `commands.format` for node; network isolation is structural, not enforced.
+
 ## Check-in 10 — 2026-09-03, defect pass and error-taxonomy draft
 
 **Made**

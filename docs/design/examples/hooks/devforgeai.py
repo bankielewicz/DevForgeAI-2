@@ -52,6 +52,7 @@ from policy import (
     CANDIDATE_OPS,
     GATE_POLICIES,
     HOOK_ONLY,
+    JUNIT_DIALECTS,
     MAX_CLAIMED_PATHS,
     MAX_EVIDENCE_REFS,
     REASON_CODES,
@@ -903,7 +904,7 @@ def run_key(e: dict, key: str) -> dict:
     if re.search(r"No module named \S+", out) and p.returncode != 0:
         return {"key": key, "classification": "INFRA_FAILURE", "exit": p.returncode,
                 "output": out, "junit": {}, "counts": {}}
-    results, counts = read_junit(root, entry)
+    results, counts = read_junit(root, entry, stack)
     return {
         "key": key,
         "classification": classify(key, p.returncode, results, counts, junit_path),
@@ -914,7 +915,8 @@ def run_key(e: dict, key: str) -> dict:
     }
 
 
-def read_junit(root: Path, entry: dict) -> tuple[dict[str, str], dict[str, int]]:
+def read_junit(root: Path, entry: dict,
+               stack: dict | None = None) -> tuple[dict[str, str], dict[str, int]]:
     junit_path = entry.get("junit_path")
     if not junit_path:
         return {}, {}
@@ -922,25 +924,130 @@ def read_junit(root: Path, entry: dict) -> tuple[dict[str, str], dict[str, int]]
     if not p.exists():
         return {}, {}
     try:
-        root = ET.parse(p).getroot()
+        xml_root = ET.parse(p).getroot()
     except ET.ParseError:
         return {}, {"parse_error": 1}
+    section = stack or {}
+    return normalize_junit(
+        str(section.get("junit_dialect") or "generic"),
+        xml_root,
+        str(section.get("test_glob") or ""),
+    )
+
+
+# ---------- runner normalisation ----------
+#
+# The oracle speaks one vocabulary: a `<failure>` is a test that ran and failed
+# an assertion, an `<error>` is a test that never ran. Real runners do not all
+# speak it, and read literally their XML lets a red gate be satisfied by
+# something that is not a failing assertion — which is the one thing the gate
+# exists to require. Three cases, each observed against the live reporter:
+#
+#   * node's built-in runner reports an assertion failure, a ReferenceError
+#     thrown inside a test body, and a module that would not parse, all as
+#     `<failure type="testCodeFailure">`; only the assertion spells out
+#     `cause: AssertionError [ERR_ASSERTION]` in the element body;
+#   * an empty test file makes node emit one passing testcase named after the
+#     file, so an empty red suite reads as a green one;
+#   * pytest reports a `NameError` raised in a test body as a `<failure>`,
+#     distinguishable from a real assertion only by its `message`.
+#
+# So a section names the runner that wrote its `junit_path`, and this boundary
+# maps that runner's XML onto the generic vocabulary before `classify` sees it.
+# It only ever moves an outcome towards `error` or drops a case that never ran;
+# it never turns an error into a failure or a failure into a pass. `generic`
+# reads the file exactly as the oracle always has.
+
+NODE_TEST_FILE = re.compile(r"\.(?:js|mjs|cjs)$")
+NODE_ASSERTION_MARKERS = ("ERR_ASSERTION", "AssertionError")
+PYTEST_ASSERTION_PREFIXES = ("AssertionError", "assert ", "Failed:")
+
+
+def normalize_junit(dialect: str, xml_root,
+                    test_glob: str = "") -> tuple[dict[str, str], dict[str, int]]:
+    """Read one runner's JUnit XML in the oracle's own vocabulary.
+
+    Returns `(results, counts)`: a name -> `passed|failed|error|skipped` mapping
+    and the suite totals `classify` reads. A dialect this does not know is read
+    as `generic`; the gate refuses a section naming anything outside
+    `JUNIT_DIALECTS`, so that fallback is a backstop, never a relaxation.
+    """
+    if dialect not in JUNIT_DIALECTS:
+        dialect = "generic"
     results: dict[str, str] = {}
-    for tc in root.iter("testcase"):
+    for tc in xml_root.iter("testcase"):
         name = tc.get("name", "")
-        if tc.find("failure") is not None:
-            results[name] = "failed"
-        elif tc.find("error") is not None:
-            results[name] = "error"
-        elif tc.find("skipped") is not None:
-            results[name] = "skipped"
-        else:
-            results[name] = "passed"
-    counts = {"tests": len(results)}
-    for suite in root.iter("testsuite"):
+        state = junit_state(tc)
+        if dialect == "node":
+            if node_file_case(name, test_glob):
+                # Node emits a testcase for the file itself only when the file
+                # produced no subtests. Clean means no test ran at all, so the
+                # case is dropped and `classify` reports NO_TESTS instead of
+                # reading an empty file as a pass. Not clean means the module
+                # threw before any test registered — a syntax error, a failed
+                # import — which is a collection error for the whole run, not
+                # one failing test.
+                if state != "passed":
+                    results[name] = "error"
+                continue
+            if state == "failed" and not element_carries(
+                    tc.find("failure"), NODE_ASSERTION_MARKERS):
+                state = "error"
+        elif dialect == "pytest" and state == "failed":
+            if not pytest_assertion(tc.find("failure")):
+                state = "error"
+        results[name] = state
+    counts: dict[str, int] = {"tests": len(results)}
+    for suite in xml_root.iter("testsuite"):
         for field in ("errors", "failures"):
             counts[field] = counts.get(field, 0) + int(suite.get(field) or 0)
     return results, counts
+
+
+def junit_state(tc) -> str:
+    """The literal reading of one testcase: the `generic` dialect, unchanged."""
+    if tc.find("failure") is not None:
+        return "failed"
+    if tc.find("error") is not None:
+        return "error"
+    if tc.find("skipped") is not None:
+        return "skipped"
+    return "passed"
+
+
+def node_file_case(name: str, test_glob: str) -> bool:
+    """Whether node named this testcase after a test file rather than a test."""
+    if NODE_TEST_FILE.search(name):
+        return True
+    return bool(test_glob) and matches(name, [test_glob])
+
+
+def element_carries(element, markers) -> bool:
+    """Whether an element's body text carries one of these markers.
+
+    The body, not the attributes: node's `message` for a failed `assert.equal`
+    is the value diff alone, and only the body spells out the assertion's own
+    `cause: AssertionError [ERR_ASSERTION]`.
+    """
+    if element is None:
+        return False
+    body = "".join(element.itertext())
+    return any(marker in body for marker in markers)
+
+
+def pytest_assertion(element) -> bool:
+    """Whether a pytest `<failure>` reports an assertion rather than a throw.
+
+    pytest writes the exception's own name into `message`: an assertion reads
+    `AssertionError: ...`, a bare assert with rewriting off reads `assert ...`,
+    and `pytest.fail()` reads `Failed: ...`. Anything else — a `NameError`,
+    `TypeError` or `ImportError` raised inside the test body — is a throw, and
+    a throw is not the failing assertion a red gate requires. A `<failure>`
+    carrying no message is read as a throw: the oracle fails closed.
+    """
+    if element is None:
+        return False
+    return (element.get("message") or "").lstrip().startswith(PYTEST_ASSERTION_PREFIXES)
 
 
 def classify(key: str, code: int, results: dict, counts: dict, junit_path) -> str:

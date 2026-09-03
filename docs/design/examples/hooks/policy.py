@@ -68,6 +68,14 @@ CLASSIFICATIONS = {
     "INFRA_FAILURE", "TIMEOUT", "TEST_FAILURE",
 }
 
+# Which runner wrote the JUnit file the oracle reads, closed. `generic` trusts
+# the file literally and is the default, so a section that names no dialect is
+# read exactly as it was before this key existed. `pytest` and `node` name
+# runners that report an import error and an assertion failure through the same
+# element; the oracle normalises those into the generic vocabulary before it
+# classifies, so a throw can never satisfy the red gate as an assertion.
+JUNIT_DIALECTS = ("generic", "pytest", "node")
+
 # Report verdict, closed. A report-producing phase records how its own report
 # reads; the run's status is unaffected — reporting a defect is a passing run.
 # The sequencer uses it to select the handoff row, nothing else.
@@ -825,6 +833,12 @@ def stack_problems(stack: dict, use_keys) -> list[str]:
         commands = {}
     if stack.get("compiled") is True and not commands.get("build"):
         problems.append("compiled: true requires a commands.build entry")
+    dialect = stack.get("junit_dialect", "generic")
+    if dialect not in JUNIT_DIALECTS:
+        problems.append(
+            f"stack section junit_dialect {dialect!r} is not one of "
+            f"{', '.join(JUNIT_DIALECTS)}"
+        )
     for key in sorted(set(use_keys or ())):
         entry = commands.get(key)
         if not isinstance(entry, dict):

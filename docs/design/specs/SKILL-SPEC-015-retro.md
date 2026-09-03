@@ -21,7 +21,7 @@ depends_on:
     hash: sha256:cee716ddb3ae9b6b4405037ede3bb7c6445e0e6c8ac28382344a655d31754dcd
     excerpt: "One schema, both providers, every skill. The worker's final message is exactly this object, with no Markdown fence and no surrounding prose."
   - source: docs/design/10-sequencer-and-contracts.md#3-status-vocabulary-and-gate-policy
-    hash: sha256:36ffb340bd5d843cd945f7d17a590e335e491b11a60b08d4bf70e12a3a223620
+    hash: sha256:620b4cfcd770a5c653047f88fb4a09afb53a59ece78948c18e970bc9beaec5e6
     excerpt: "A document run carries the fixed map `{unresolvable_source: BLOCK}`, because it has no story to declare a wider one."
   - source: docs/design/10-sequencer-and-contracts.md#10-evidence-files
     hash: sha256:4eebadd862a3dfd90bc0afff8342a1b18a76b2a4fe1ec5bafa23cea390f48984

@@ -43,6 +43,11 @@
     },
     "test_glob": {"$ref": "#/$defs/glob"},
     "test_layout": {"type": "string", "minLength": 1, "maxLength": 100},
+    "junit_dialect": {
+      "enum": ["generic", "pytest", "node"],
+      "default": "generic",
+      "description": "Optional; defaults to generic. Which runner wrote junit_path, so the oracle can read that runner's JUnit faithfully instead of guessing. generic trusts the file literally: a <failure> is a test failure and an <error> is an import or collection error. pytest and node name runners that encode both outcomes in the same element, and the oracle normalises them before classification: a non-assertion throw is COLLECTION_ERROR, not a satisfied red gate, and a file whose tests never ran is NO_TESTS, not a pass. Naming the wrong dialect weakens no gate; it only reads a runner's own vocabulary less precisely."
+    },
     "runner_probe": {
       "type": "object",
       "additionalProperties": false,

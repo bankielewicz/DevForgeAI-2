@@ -7,7 +7,7 @@
 # Contract (plan new contract 5):
 #   version, compiled, package_manager, manifests[],
 #   commands.{build?,test,lint,format} each {argv[], cwd?, junit_path?, timeout_s?},
-#   test_glob, test_layout, runner_probe {argv[], exit_ok},
+#   test_glob, test_layout, junit_dialect?, runner_probe {argv[], exit_ok},
 #   packages {allow[], deny[]}, extractors[], forbidden_imports[], ignore_dirs[]
 # `compiled: true` requires commands.build; the oracle runs build before test.
 #
@@ -47,6 +47,7 @@ python:
         - "import pathlib, sys; sys.exit(any(p.read_text() != p.read_text().replace('\t', '    ') for p in pathlib.Path('.').rglob('*.py')))"
       cwd: "."
       timeout_s: 300
+  junit_dialect: pytest
   test_glob: "tests/test_*.py"
   test_layout: sibling-tests-dir
   # Directories a copy-mode candidate root leaves behind and no manifest hashes.
@@ -66,6 +67,80 @@ python:
     - paths: ["tinyapp/**"]
       patterns: ['^\s*(from|import)\s+sqlalchemy', '^\s*(from|import)\s+django']
       reason: "techstack.md#data-access mandates raw sqlite3; no ORM"
+
+# A second interpreted section, for the sibling fixture
+# `examples/fixtures/dev-tdd-node/`. It exists to show that the phase machinery
+# is language-neutral: the same registry, the same fence, the same oracles, a
+# different `commands.source` anchor. Everything it names ships with Node
+# itself — `node:test` for the suite, `node --check` for the lint — so the
+# section installs nothing and `npm` is declared but never invoked. No argv
+# here reaches the network.
+node:
+  version: 1
+  compiled: false
+  # Declared so a reader knows which manifest syntax `extractors` speaks.
+  # Nothing in the sequencer runs it, and the fixture has no dependencies to
+  # install; a `npm` argv appears in no command key.
+  package_manager: npm
+  manifests:
+    - package.json
+  commands:
+    test:
+      # The standard-library test runner, writing JUnit XML straight to the
+      # path the oracle reads. The file argument is explicit rather than a
+      # glob so the runner never walks node_modules looking for suites.
+      argv:
+        - node
+        - --test
+        - --test-reporter=junit
+        - --test-reporter-destination=.devforgeai/work/junit.xml
+        - tests/text.test.mjs
+      cwd: "."
+      junit_path: .devforgeai/work/junit.xml
+      timeout_s: 600
+    lint:
+      # `node --check` parses one file and exits non-zero on a syntax error:
+      # the Node counterpart of the Python section's ast.parse sweep, and the
+      # cheapest linter Node ships with. Verified: it takes a
+      # single path and silently ignores any extra argument, so the test file
+      # is not listed here — a second path would be accepted and not checked,
+      # which is worse than not naming it.
+      argv: [node, --check, tinyapp/text.mjs]
+      cwd: "."
+      timeout_s: 300
+    # No `format` key. The contract makes it optional, and every stdlib-only
+    # formatter check would need `node --eval`, whose module type is resolved
+    # differently across the Node versions this fixture claims to run on
+    # (`"type": "module"` plus module detection). A key that behaves
+    # differently per runtime is worse than an absent optional key.
+  junit_dialect: node
+  test_glob: "tests/*.test.mjs"
+  test_layout: sibling-tests-dir
+  # Nothing here is created by a demo run: the fixture has no dependencies and
+  # the section never invokes a package manager. They are declared so that a
+  # project that does install would not have its own output read back as an
+  # undeclared write.
+  ignore_dirs: ["node_modules", "dist"]
+  runner_probe:
+    argv: [node, --version]
+    exit_ok: 0
+  # Empty on purpose, and empty is not a shrug: `allow: []` disables the
+  # allowlist check, and there is nothing to allow, because the fixture
+  # declares no dependency. A real project fills both lists.
+  packages:
+    allow: []
+    deny: []
+  extractors:
+    # package.json nests its dependency maps, so a nested key is a package
+    # name and a top-level key is metadata. The lookahead drops the keys of
+    # `engines`, the one other nested map a minimal manifest carries. Capture
+    # group 1 is the package name.
+    - paths: [package.json]
+      regex: '^[ \t]{4,}"(?!node"|npm"|pnpm"|yarn")(@?[A-Za-z0-9._/-]+)"\s*:\s*"'
+  forbidden_imports:
+    - paths: ["tinyapp/**"]
+      patterns: ['\brequire\s*\(']
+      reason: "techstack.md#modules mandates ES modules; no CommonJS require()"
 
 # A compiled section. `compiled: true` makes commands.build mandatory at the
 # gate, and the oracle runs it before test on every transition.
