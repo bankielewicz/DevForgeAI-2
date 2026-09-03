@@ -9,13 +9,13 @@ author: "DevForgeAI plan skill (wave 2 spec authoring)"
 date: 2026-09-02
 depends_on:
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:de7d775e46bd44c52089a3998b114a5ebb5ce6875be3ebf3dca126f5a9bbaa32
+    hash: sha256:a6bbaf9af2d69f7ede18d7c40f242c42edb26d79be964ffec3f386d6347014c2
     excerpt: "**The model dispatches, the sequencer decides.** For an anatomy-governed skill, the primary window (provider entry adapter + skill orchestration) does light, trivial work only."
   - source: docs/design/01-skill-anatomy.md#evidence-home
     hash: sha256:d4ad2626d2dc993f9879247429ce4a15a9dcee31c9b4b20da8178ffe8bac8dc9
     excerpt: "There is one home for a run's evidence. The sequencer writes every file below except the judge findings under `evidence/<agent>/`:"
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:37b51ea5748164510e7687527aeab55bc92af9524ee771b293989640cecf8cce
+    hash: sha256:511733ee35ca74fd5a5c0b59f225d7d975788e7d43d939f44c23b7aa8460cff0
     excerpt: "| retro | document | `docs/reports/retro-<arg>.md` | 4 |"
   - source: docs/design/10-sequencer-and-contracts.md#5-worker-result
     hash: sha256:cee716ddb3ae9b6b4405037ede3bb7c6445e0e6c8ac28382344a655d31754dcd
@@ -27,10 +27,10 @@ depends_on:
     hash: sha256:4eebadd862a3dfd90bc0afff8342a1b18a76b2a4fe1ec5bafa23cea390f48984
     excerpt: "| `docs/reports/<skill>-<run>-<phase>.md` | Markdown | sequencer at a passing transition | the human, `retro` `collect`, `review` |"
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:de637edceb588df104a40b57738eb263989f6603f90ece6f4d0e64fef07ffb6a
+    hash: sha256:747b6340fc5c2348aad33ca5488012808670b3503b311d7b7d0f1204625afd4c
     excerpt: "| document run, promoted, no verdict or `verdict: pass` | `/status` |"
   - source: docs/design/11-artifact-registry.md#1-template-registry
-    hash: sha256:25886acb1c2963b15938f0c577c3bfd28b9807dd2dd961c59ff2b43fa00b62e2
+    hash: sha256:09607ea79839ab215871d87e8221166e14eeb6ca26f8372e4ead4173f1d92907
     excerpt: "| `retro-report` | `.devforgeai/skills/retro/templates/retro-report.md` | 1 | `^LESS-[0-9]{3}$` | sprint, template, template_version, status, depends_on | Outcomes, Lessons, Proposed Amendments, Archive |"
   - source: docs/design/02-skill-roster.md#retro
     hash: sha256:f2a88c7bda36610205f8044bbc8314c9c65c0f72339ba2445ccb6eba3675e17e

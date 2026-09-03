@@ -454,11 +454,13 @@ def candidate_open(e: dict, ignore_dirs) -> dict:
         git(ROOT, "worktree", "add", "-b", branch, str(root), base)
         exclude_sequencer_paths(ROOT)
         mode, base_ref = "worktree", base
+        dirty_at_open = sorted(canonical_dirty_set())
     else:
+        dirty_at_open = []
         copy_tree(ROOT, root, ignore_dirs)
         mode, base_ref = "copy", manifest_digest(manifest(root, ignore_dirs))
     candidate = {"mode": mode, "root": str(root), "base_ref": base_ref,
-                 "checkpoint": "base"}
+                 "checkpoint": "base", "dirty_at_open": dirty_at_open}
     write_marker(root, e["run"])
     if mode == "copy":
         write_copy_checkpoint(e["run"], root, ignore_dirs, "base")
@@ -678,13 +680,36 @@ def promotion_rows(e: dict) -> list[dict]:
     return rows
 
 
+def canonical_dirty_set() -> set[str]:
+    """Every canonical working-tree path git reports as modified or untracked."""
+    if not git_repo(ROOT):
+        return set()
+    out = git(ROOT, "status", "--porcelain", "-z", check=False).stdout
+    return {row[3:] for row in out.split("\0") if len(row) > 3}
+
+
 def canonical_dirty(paths) -> list[str]:
     """Canonical working-tree files that promotion would overwrite."""
-    if not git_repo(ROOT):
+    return sorted(canonical_dirty_set() & set(paths))
+
+
+def stray_canonical_writes(e: dict, changed) -> list[str]:
+    """Canonical paths that became dirty during the run and are not the run's own.
+
+    A worker whose hook failed open, or a subprocess a hook cannot see, may have
+    written outside the candidate root. Promotion refuses rather than carrying
+    an unaudited canonical edit forward; the sequencer's own report files and
+    the run's declared change set are excluded.
+    """
+    if e["candidate"].get("mode") != "worktree":
         return []
-    out = git(ROOT, "status", "--porcelain", "-z", check=False).stdout
-    dirty = {row[3:] for row in out.split("\0") if len(row) > 3}
-    return sorted(dirty & set(paths))
+    before = set(e["candidate"].get("dirty_at_open") or [])
+    own = set(changed) | set(sequencer_writes(e["run"]))
+    now = canonical_dirty_set()
+    # Canonical `.devforgeai/` is the sequencer's own (state, lock, sessions,
+    # provenance log); hooks deny workers there, so it is not a stray signal.
+    return sorted(p for p in now - before - own
+                  if not p.startswith(".devforgeai/") and not p.endswith("/"))
 
 
 def candidate_promote(e: dict, state: dict) -> list[str]:
@@ -724,6 +749,10 @@ def candidate_promote(e: dict, state: dict) -> list[str]:
             dirty = canonical_dirty(changed)
             if dirty:
                 return [f"DIRTY_TARGET: canonical has uncommitted changes to {dirty}"]
+            stray = stray_canonical_writes(e, changed)
+            if stray:
+                return [f"DIRTY_TARGET: canonical paths changed outside the candidate root "
+                        f"during the run: {stray}"]
             merge = git(ROOT, "merge", "--ff-only", candidate_branch(e), check=False)
             if merge.returncode != 0:
                 return ["MERGE_CONFLICT: " + (merge.stderr or merge.stdout).strip()[-400:]]

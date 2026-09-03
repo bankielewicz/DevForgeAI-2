@@ -23,5 +23,8 @@ for event, entries in src.items():
 p.write_text(json.dumps(cur, indent=2) + "\n")
 print(f"merged hookd entries into {p}")
 PY
-grep -q "hookd.log.jsonl" .gitignore 2>/dev/null || printf '\n# hookd runtime files\n.claude/hooks/hookd.log.jsonl\n.claude/hooks/receipts/\n.claude/hooks/__pycache__/\n.claude/hooks/checks/__pycache__/\n' >> .gitignore
+# Ignore runtime files unless the project already ignores .claude/ as a whole.
+if ! git check-ignore -q .claude/hooks/hookd.log.jsonl 2>/dev/null; then
+  grep -q "hookd.log.jsonl" .gitignore 2>/dev/null || printf '\n# hookd runtime files\n.claude/hooks/hookd.log.jsonl\n.claude/hooks/receipts/\n.claude/hooks/__pycache__/\n.claude/hooks/checks/__pycache__/\n' >> .gitignore
+fi
 echo "installed. Open /hooks in Claude Code to confirm the entries; SessionStart context appears on the next session."

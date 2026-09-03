@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devforgeai.dev/schemas/v1/error-taxonomy.schema.json",
+  "title": "DevForgeAI error taxonomy",
+  "description": "Validates framework/contracts/error-taxonomy.yaml (installed as .devforgeai/contracts/error-taxonomy.yaml). Every code carries a meaning; emitter, protocol, outcome and next are required where the code is something a caller must act on.",
+  "type": "object",
+  "required": ["taxonomy_version", "phase_outcomes", "exit_codes", "hook_decisions", "hook_failures", "sequencer_refusals", "worker_statuses", "worker_reason_codes", "oracle_classifications", "gate_policies", "run_states", "rollup"],
+  "additionalProperties": false,
+  "$defs": {
+    "outcome": {"type": "string", "enum": ["COMPLETE", "NEEDS_DECISION", "BLOCKED", "FAILED", "COULD_NOT_RUN", "INFRA_FAILURE", "by reason_code"]},
+    "code": {
+      "type": "object",
+      "required": ["meaning"],
+      "properties": {
+        "meaning": {"type": "string", "minLength": 8},
+        "emitter": {"type": "string"},
+        "protocol": {"type": "string"},
+        "outcome": {"$ref": "#/$defs/outcome"},
+        "next": {"type": "string"},
+        "becomes": {"type": "string", "enum": ["none", "deny", "ask", "context"]},
+        "gate_policy_key": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "codes": {"type": "object", "minProperties": 1, "additionalProperties": {"$ref": "#/$defs/code"}}
+  },
+  "properties": {
+    "taxonomy_version": {"type": "integer", "minimum": 1},
+    "phase_outcomes": {
+      "type": "object",
+      "required": ["COMPLETE", "NEEDS_DECISION", "BLOCKED", "FAILED", "COULD_NOT_RUN", "INFRA_FAILURE"],
+      "additionalProperties": {"$ref": "#/$defs/code"}
+    },
+    "exit_codes": {
+      "type": "object",
+      "required": ["0", "1", "2", "3"],
+      "propertyNames": {"pattern": "^[0-9]+$"},
+      "additionalProperties": {"$ref": "#/$defs/code"}
+    },
+    "hook_decisions": {
+      "type": "object",
+      "required": ["none", "deny", "ask", "context"],
+      "not": {"required": ["allow"]},
+      "additionalProperties": {"$ref": "#/$defs/code"}
+    },
+    "hook_failures": {"$ref": "#/$defs/codes"},
+    "sequencer_refusals": {
+      "type": "object",
+      "required": ["STORY_IN_FLIGHT", "FENCE_OVERLAP", "LEASE_HELD", "UNCLAIMED_CHANGE", "STALE_BASE", "MERGE_CONFLICT", "DIRTY_TARGET", "NO_CANDIDATE"],
+      "propertyNames": {"pattern": "^[A-Z][A-Z_]+$"},
+      "additionalProperties": {"$ref": "#/$defs/code"}
+    },
+    "worker_statuses": {
+      "type": "object",
+      "required": ["pass", "fail", "needs_user", "could_not_run"],
+      "additionalProperties": {"$ref": "#/$defs/code"}
+    },
+    "worker_reason_codes": {
+      "type": "object",
+      "required": ["runner_missing", "timeout", "network", "hook_fault"],
+      "additionalProperties": {"$ref": "#/$defs/code"}
+    },
+    "oracle_classifications": {
+      "type": "object",
+      "required": ["PASS", "EXPECTED_TEST_FAILURE", "TEST_FAILURE", "NO_TESTS", "COLLECTION_ERROR", "INFRA_FAILURE", "TIMEOUT"],
+      "additionalProperties": {"$ref": "#/$defs/code"}
+    },
+    "gate_policies": {
+      "type": "object",
+      "required": ["BLOCK", "REQUIRE_HUMAN", "WARN", "OFF"],
+      "additionalProperties": {"$ref": "#/$defs/code"}
+    },
+    "run_states": {
+      "type": "object",
+      "required": ["active", "ready_to_promote", "promoted", "abandoned"],
+      "additionalProperties": {"$ref": "#/$defs/code"}
+    },
+    "rollup": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["when", "outcome"],
+        "properties": {"when": {"type": "string"}, "outcome": {"$ref": "#/$defs/outcome"}},
+        "additionalProperties": false
+      }
+    },
+    "open_items": {"type": "array", "items": {"type": "string"}}
+  }
+}

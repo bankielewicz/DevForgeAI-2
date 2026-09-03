@@ -9,13 +9,13 @@ author: "DevForgeAI plan skill, wave 2 spec author"
 date: 2026-09-02
 depends_on:
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:de7d775e46bd44c52089a3998b114a5ebb5ce6875be3ebf3dca126f5a9bbaa32
+    hash: sha256:a6bbaf9af2d69f7ede18d7c40f242c42edb26d79be964ffec3f386d6347014c2
     excerpt: "**The model dispatches, the sequencer decides.** For an anatomy-governed skill, the primary window (provider entry adapter + skill orchestration) does light, trivial work only."
   - source: docs/design/01-skill-anatomy.md#handoff-contract
-    hash: sha256:4feb33747f3dc13225e4b6fe0b111c66ccec97d25902bb6850780bdd894e6a1d
+    hash: sha256:dc50836dc15a928b0c4758ef3a671c6f78d5c7db7ea207c923b917d89faa9e96
     excerpt: "Every anatomy-governed skill run ends with a handoff. The sequencer writes `.devforgeai/work/<run>/handoff.json` at `phase next` and at `phase fail`; the block below is that file's rendering, and it is the only handoff the primary window prints."
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:37b51ea5748164510e7687527aeab55bc92af9524ee771b293989640cecf8cce
+    hash: sha256:511733ee35ca74fd5a5c0b59f225d7d975788e7d43d939f44c23b7aa8460cff0
     excerpt: "| brainstorm | 2 | `research_request` | `research_requester` | none | 2 | — | report_only | — |"
   - source: docs/design/10-sequencer-and-contracts.md#5-2-validation-order
     hash: sha256:9f1bf77b7e84302ff6f3f20260228d57390cc97ab8e8d3f68f52c3ff2658aab8
@@ -24,7 +24,7 @@ depends_on:
     hash: sha256:ffa41b5d270dc260e28fa9f6bdbc855069a6e922d1148c74b25860dba63484dc
     excerpt: "the phase declared `writes: docs` and `changed[]` is non-empty, unless it is marked conditional, in which case an empty change set needs a non-empty `note`; every changed path exists in the root with the bytes the checkpoint will hold"
   - source: docs/design/11-artifact-registry.md#1-template-registry
-    hash: sha256:25886acb1c2963b15938f0c577c3bfd28b9807dd2dd961c59ff2b43fa00b62e2
+    hash: sha256:09607ea79839ab215871d87e8221166e14eeb6ca26f8372e4ead4173f1d92907
     excerpt: "| `brainstorm` | `.devforgeai/skills/brainstorm/templates/brainstorm.md` | 1 | `^IDEA-[0-9]{3}$` | slug, template, template_version, status, provenance | Problem, Ideas, Clusters, Open Questions |"
   - source: docs/design/11-artifact-registry.md#4-upstream-and-downstream-per-skill
     hash: sha256:cfcaef76005176490e96b9e67c8fa4f0b7a6a2e13b6badf856468881fbe25200
@@ -33,7 +33,7 @@ depends_on:
     hash: sha256:528e8caae179b945781ade05601caaa2083cca8e66166058494207536ce0ff64
     excerpt: "Every idea gets an ID (`IDEA-NNN`) so PM can archive or promote by reference."
   - source: docs/design/02-skill-roster.md#handoff-decision-tables
-    hash: sha256:6edc7499ee163453f3be6390b0dda08b3fab885f1399ff944056040596ec3801
+    hash: sha256:1dac784b4670cc7559f323011dfe304dfe8c0baf349063162f90d76d902c5d3c
     excerpt: "| brainstorm | pass | `/pm {slug}` |"
   - source: docs/design/05-subagent-sets.md#sets-per-skill
     hash: sha256:9e12f3beb236a025c18d40e741c09ba675bd71d2d87f56e2b205c7556b944bf9

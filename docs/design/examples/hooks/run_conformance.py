@@ -1623,6 +1623,27 @@ def merge_conflict_backstop() -> tuple[bool, str]:
     return passed, f"exit={code}\n" + output[-300:]
 
 
+def stray_write_backstop() -> tuple[bool, str]:
+    """A canonical path written outside the root during the run refuses promotion.
+
+    This is the hole a fail-open hook leaves: the worker wrote to the canonical
+    tree instead of the candidate root. The path is not in the fence and not in
+    the run's change set, so only the dirty-set comparison can see it.
+    """
+    root = finished_run("stray", git=True)
+    (root / "NOTES-stray.md").write_text("written outside the candidate root\n")
+    code, output = sequence(root, "promote", "STORY-001")
+    passed = all((
+        code == 1,
+        "DIRTY_TARGET" in output,
+        "outside the candidate root" in output,
+        "NOTES-stray.md" in output,
+        (root / "NOTES-stray.md").read_text() == "written outside the candidate root\n",
+        state_of(root)["runs"]["STORY-001"]["status"] == "ready_to_promote",
+    ))
+    return passed, f"exit={code}\n" + output[-260:]
+
+
 def dirty_target_backstop() -> tuple[bool, str]:
     """An uncommitted canonical edit to a changed path refuses the promotion."""
     root = finished_run("dirty", git=True)
@@ -2177,6 +2198,8 @@ BACKSTOPS = [
     ("MERGE_CONFLICT aborts the rebase and moves no canonical byte", merge_conflict_backstop),
     ("DIRTY_TARGET refuses to merge over an uncommitted canonical edit",
      dirty_target_backstop),
+    ("DIRTY_TARGET refuses a canonical path written outside the root during the run",
+     stray_write_backstop),
     ("FENCE_OVERLAP refuses a second run over the same paths", fence_overlap_backstop),
     ("STORY_IN_FLIGHT refuses review and qa until the story's run is promoted",
      story_in_flight_backstop),

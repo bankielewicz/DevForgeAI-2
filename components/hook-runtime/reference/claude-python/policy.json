@@ -1,4 +1,5 @@
 {
+  "_patterns_note": "denied_commands and ask_commands are regexes anchored at the start of each command segment (after env assignments and sudo/time/nice/env prefixes); heredoc bodies are removed before matching.",
   "protected_paths": [
     ".claude/settings.json",
     ".claude/hooks/*",
@@ -11,14 +12,16 @@
   ],
   "deny_outside_project": true,
   "denied_commands": [
-    "\\brm\\s+-[a-zA-Z]*r[a-zA-Z]*f\\s+/(\\s|$)",
-    "\\bgit\\s+push\\b.*(--force|-f)\\b",
-    "\\bgit\\s+reset\\s+--hard\\b",
-    "\\bgit\\s+clean\\b",
-    "\\bcurl\\b.*\\|\\s*(ba)?sh\\b"
+    "rm\\s+-[a-zA-Z]*r[a-zA-Z]*f\\s+/(\\s|$)",
+    "git\\s+push\\b.*(--force|-f)\\b",
+    "git\\s+reset\\s+--hard\\b",
+    "git\\s+clean\\b",
+    "curl\\b.*\\|\\s*(ba)?sh\\b"
   ],
   "ask_commands": [
-    "\\bgit\\s+push\\b"
+    "git\\s+push\\b",
+    "(ba|z)?sh\\s+-c\\b",
+    "eval\\b"
   ],
   "receipt_agents": [
     "red_dev",

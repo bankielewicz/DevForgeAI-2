@@ -5,7 +5,8 @@ stdout JSON and stderr, so what is tested is what Claude Code sees.
     python3 components/hook-runtime/reference/claude-python/tests/run_tests.py
 
 Covers: pass-through, path deny, redirect deny, outside-project deny, command
-deny, command ask, SessionStart context, SubagentStop receipt accept and
+deny (including after `&&`), heredoc mention passing, interpreter-escape ask,
+command ask, SessionStart context, SubagentStop receipt accept and
 reject, a critical check that raises (fail closed), the alarm firing before the
 settings timeout, and malformed stdin.
 """
@@ -92,6 +93,19 @@ def main() -> int:
     # 8 harmless command passes
     code, out, err = run(event("PreToolUse", tool_name="Bash", tool_input={"command": "ls -la"}), root)
     check("ls passes through", code == 0 and out.strip() == "", f"{code} {out!r}")
+
+    # 8a heredoc body mentioning a denied command passes (segment-anchored matching)
+    heredoc = "cat > notes.md <<'EOF'\nnever run git push --force here\nEOF\n"
+    code, out, err = run(event("PreToolUse", tool_name="Bash", tool_input={"command": heredoc}), root)
+    check("heredoc mentioning a denied command passes", code == 0, f"{code} {err!r}")
+
+    # 8b denied command in a later segment is still caught
+    code, out, err = run(event("PreToolUse", tool_name="Bash", tool_input={"command": "cd src && git push --force origin main"}), root)
+    check("denied command after && is caught", code == 2, f"{code} {err!r}")
+
+    # 8c interpreter escape asks
+    code, out, err = run(event("PreToolUse", tool_name="Bash", tool_input={"command": "bash -c 'git push --force'"}), root)
+    check("bash -c asks", code == 0 and '"ask"' in out, f"{code} {out!r}")
 
     # 9 SessionStart context
     code, out, err = run(event("SessionStart", source="startup"), root)

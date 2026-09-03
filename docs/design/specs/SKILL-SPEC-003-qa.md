@@ -9,13 +9,13 @@ author: "DevForgeAI plan skill"
 date: 2026-09-02
 depends_on:
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:de7d775e46bd44c52089a3998b114a5ebb5ce6875be3ebf3dca126f5a9bbaa32
+    hash: sha256:a6bbaf9af2d69f7ede18d7c40f242c42edb26d79be964ffec3f386d6347014c2
     excerpt: "For an anatomy-governed skill, the primary window (provider entry adapter + skill orchestration) does light, trivial work only. It dispatches workers and calls the sequencer. It never writes state, never advances a phase, and never decides that a phase passed."
   - source: docs/design/01-skill-anatomy.md#evidence-home
     hash: sha256:d4ad2626d2dc993f9879247429ce4a15a9dcee31c9b4b20da8178ffe8bac8dc9
     excerpt: "There is one home for a run's evidence. The sequencer writes every file below except the judge findings under `evidence/<agent>/`:"
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:37b51ea5748164510e7687527aeab55bc92af9524ee771b293989640cecf8cce
+    hash: sha256:511733ee35ca74fd5a5c0b59f225d7d975788e7d43d939f44c23b7aa8460cff0
     excerpt: "| qa | 1 | `run_tests` | `test_runner` | none | 2 | `test` | green | — |"
   - source: docs/design/10-sequencer-and-contracts.md#3-2-defect-to-action-map-as-implemented
     hash: sha256:700e29f7b7eb3b6883d0895d79e3822bf06c32e633eb10b44155761fe4c5ef28
@@ -27,19 +27,19 @@ depends_on:
     hash: sha256:ffa41b5d270dc260e28fa9f6bdbc855069a6e922d1148c74b25860dba63484dc
     excerpt: "`green` | every `test_paths` hash equals `red_hashes`; build when compiled; broker `test`; every `test_plan` name is `passed` | the tests that were red are green and were not edited to get there"
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:de637edceb588df104a40b57738eb263989f6603f90ece6f4d0e64fef07ffb6a
+    hash: sha256:747b6340fc5c2348aad33ca5488012808670b3503b311d7b7d0f1204625afd4c
     excerpt: "| `qa`, promoted, `verdict: findings` or `fail` | `/dev <arg> --fix` |"
   - source: docs/design/10-sequencer-and-contracts.md#7-stack-yaml
     hash: sha256:b08220564c5d2c4d1328cea9cbfd1cb793d5ee1fd9ec7c727505006e170e4241
     excerpt: "`commands.<key>.junit_path` | string | `test` only | where the runner writes JUnit XML; the oracle reads per-test outcomes from this file, not from stdout"
   - source: docs/design/11-artifact-registry.md#1-template-registry
-    hash: sha256:25886acb1c2963b15938f0c577c3bfd28b9807dd2dd961c59ff2b43fa00b62e2
+    hash: sha256:09607ea79839ab215871d87e8221166e14eeb6ca26f8372e4ead4173f1d92907
     excerpt: "`qa-report` | `.devforgeai/skills/qa/templates/qa-report.md` | 1 | `^CRIT-[0-9]{3}$` | story, template, template_version, status, verdict, depends_on | Criteria, Evidence, Regressions, Fix Guidance"
   - source: docs/design/11-artifact-registry.md#3-depends-on-edges
     hash: sha256:f3c304ff840d2027432f743288bccec0ea5bc5d7b99b7f41c8d524b1c3591da2
     excerpt: "`qa-report` | the story's acceptance criteria and `test_plan`; the `review-report`"
   - source: docs/design/02-skill-roster.md#handoff-decision-tables
-    hash: sha256:6edc7499ee163453f3be6390b0dda08b3fab885f1399ff944056040596ec3801
+    hash: sha256:1dac784b4670cc7559f323011dfe304dfe8c0baf349063162f90d76d902c5d3c
     excerpt: "| qa | pass (`verdict: pass`), more stories in sprint | `/dev {next_story}` |"
   - source: docs/design/05-subagent-sets.md#sets-per-skill
     hash: sha256:9e12f3beb236a025c18d40e741c09ba675bd71d2d87f56e2b205c7556b944bf9
