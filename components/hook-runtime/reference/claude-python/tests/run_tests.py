@@ -2,7 +2,7 @@
 """Runs hookd as a subprocess against fixture events and checks exit code,
 stdout JSON and stderr, so what is tested is what Claude Code sees.
 
-    python3 poc/hooks/tests/run_tests.py
+    python3 components/hook-runtime/reference/claude-python/tests/run_tests.py
 
 Covers: pass-through, path deny, redirect deny, outside-project deny, command
 deny, command ask, SessionStart context, SubagentStop receipt accept and
