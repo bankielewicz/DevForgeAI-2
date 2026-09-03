@@ -18,6 +18,14 @@ Updated at the end of every wave. Newest entry first. Each entry says what exist
 
 **NOT_EVALUATED**: D13 item 8 still requires a fresh Claude Code session with non-empty judge findings, byte-identical sequencer persistence, unchanged candidate/canonical trees, and next-phase consumption by path. The dev skill must then be regenerated from the current spec and its three current evals must pass 7/7, 4/4 and 5/5. The untracked `out/` package predates D13 and remains the failed 2/7, 4/4, 4/5 evidence; it is not admitted as current acceptance. Until those two provider-facing steps pass, the follow-up PR is a draft and the framework state is IMPLEMENTED, not PROVEN.
 
+## Check-in 14 — 2026-09-03 evening, judge persistence proven live (D13 item 8, first half)
+
+**Live run 3** (`~/Projects/dfai-proof`, branch `run3`, session b7237382, 20:46–21:06Z): all five phases passed with the D13 sequencer and judge agents. Both judges returned non-empty `findings` in the receipt; the sequencer persisted `evidence/smoke_qa/findings.md` and `evidence/dev_critic/findings.md` at the fixed paths; both judge results record `changed: []` and `claimed_paths: []`; dev_critic listed smoke's persisted file among its inputs and closed a boundary smoke had left open (recomputed the frozen test hash); the handoff carried both paths in `findings_paths`; the owner confirmed and promotion fast-forwarded and removed the root. PRs 8 and 9 merged in the meantime; this session now works in `.claude/worktrees/judge-persistence-proof`.
+
+**Two provider facts from the run, recorded as spec defects (D14 items 8 and 9)**: (a) a custom subagent's `tools:` frontmatter accepts tool names and MCP server patterns only; `Bash(devforgeai status)` there is not a command restriction (the judges ran `ls`, `sha256sum`, `grep -c` through Bash, admitted by the dispatcher's read-only set, while `git`, `find` and pipelines were refused by the hook). Command-level restriction is the hook's job; agent files must list `Bash` and the dispatcher bounds it per role. (b) The dispatcher's read-only command set is therefore part of the judge contract and must be named in the specs.
+
+**Remaining for D13 item 8**: regenerate the dev skill with the cold-session prompt and pass evals 7/7, 4/4, 5/5.
+
 ## Check-in 13 — 2026-09-03, gap-closure plan accepted with amendments; D13/D14 wave in progress
 
 **Plan**: Codex's `SDD-GAP-CLOSURE-2026-09-03` (branch `docs/sdd-research-gap-closure`, worktree `worktrees/sdd-research-gap-closure`, base 908b23b) is accepted by the owner with these amendments, which govern the plan until it is re-frozen:
