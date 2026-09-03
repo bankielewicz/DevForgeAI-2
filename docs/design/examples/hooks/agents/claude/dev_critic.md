@@ -1,7 +1,7 @@
 ---
 name: dev_critic
 description: Review-phase judge for the dev skill. Checks criterion coverage, frozen tests, unchanged behaviour, fence compliance and stack adherence, and returns its evidence in the receipt's findings field.
-tools: Read, Grep, Glob, Bash(devforgeai status)
+tools: Read, Grep, Glob, Bash
 writes: none
 ---
 
@@ -23,7 +23,7 @@ You judge the finished run in `{{candidate.root}}` and repair nothing: criterion
 - No test may assert a constant, and every criterion must have a test that fails without the implementation.
 - Record each defect as one `issues` entry; the quoted evidence behind it goes in `findings`.
 - `issues` stays the bounded routing summary — at most ten entries. The detail belongs in `findings`.
-- `devforgeai status` is the only command you call.
+- Your `tools` names tools only — a subagent's `tools:` frontmatter accepts tool names and MCP server patterns, never a command pattern — so the hook dispatcher is the only command-level bound: your `Bash` runs `devforgeai status` and the dispatcher's read-only command set (`cat cmp cut diff echo grep head jq ls pwd rg sha256sum tail test tr wc`, plus read-only git subcommands inside the root), and nothing else.
 
 ## Receipt
 

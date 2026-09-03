@@ -9,7 +9,7 @@ author: "DevForgeAI wave-2 specification author"
 date: 2026-09-02
 depends_on:
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:5afb88c46aa635c961564af8e58c799a44f387c6bd877eeac2ec7568f73aba7e
+    hash: sha256:6556607035516c49ee43fe2bbeffe1a74e898889d84be00c9a05fdf751d209b6
     excerpt: "**The model dispatches, the sequencer decides.** For an anatomy-governed skill, the primary window (provider entry adapter + skill orchestration) does light, trivial work only."
   - source: docs/design/01-skill-anatomy.md#dedicated-templates
     hash: sha256:55bd4a18d63e645adffa187d34256dc7db7370095dcbf9e96a190028f7e65a5e
@@ -51,7 +51,7 @@ depends_on:
     hash: sha256:f2957217c9af147e4a7ea03749cbe6efda266bd56d403f39aa25c9a655872609
     excerpt: "| plan | epic-writer, story-writer, skill-spec-writer, dependency-mapper, estimator, sprint-writer, critic |"
   - source: docs/design/05-subagent-sets.md#contract-format
-    hash: sha256:2b49e9bf10b0b95694f88e3682ff326a735eebe105e88488d1c5c12b8e0c83de
+    hash: sha256:3a2409480378cf04230fb065ccf81153e83704df9a85236cc8cd8fffbc83de7c
     excerpt: "`must_not` is compiled into the agent prompt verbatim."
   - source: docs/design/06-skill-specification.md#where-the-spec-sits-in-the-pipeline
     hash: sha256:3a3b21544bff9cfa31bc8529dbd0b0cf46952ea27169823452023b5433f5f62f
@@ -429,7 +429,7 @@ The four `scripts/check_*.py` invocations are designed as sequencer-side checks 
 
 ### 7d. Worker contracts
 
-Each block becomes `agents/<role>.md` verbatim, wrapped in skill-creator's Role / Inputs / Process / Output framing, and compiles to one provider profile per target. `name` is the canonical registry worker name, which is what a hook receives as `agent_type`; the compiled filename carries the skill prefix so two skills' profiles cannot collide. `tools` are the Claude names and `tools_codex` the Codex ones, where `apply_patch` stands in for `Edit` and `Write`. `model: inherit` keeps the worker on the session's model, which is what the terminal-only constraint leaves available. No plan phase grants a stack command key, so no worker here carries `Bash(devforgeai run *)`. Claude-only frontmatter — `hooks`, `memory`, `background`, `permissionMode`, and Claude's own `isolation` — is omitted from every profile.
+Each block becomes `agents/<role>.md` verbatim, wrapped in skill-creator's Role / Inputs / Process / Output framing, and compiles to one provider profile per target. `name` is the canonical registry worker name, which is what a hook receives as `agent_type`; the compiled filename carries the skill prefix so two skills' profiles cannot collide. `tools` are the Claude names and `tools_codex` the Codex ones, where `apply_patch` stands in for `Edit` and `Write`. `model: inherit` keeps the worker on the session's model, which is what the terminal-only constraint leaves available. No plan phase grants a stack command key, so no worker here is granted a `devforgeai run` key. Claude-only frontmatter — `hooks`, `memory`, `background`, `permissionMode`, and Claude's own `isolation` — is omitted from every profile.
 
 ```yaml
 name: epic_writer
@@ -437,8 +437,8 @@ description: Dispatch this worker at the epics phase to write one epic per requi
 skill: plan
 writes: candidate
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Edit, Write]
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+tools: [Read, Grep, Glob, Bash, Edit, Write]
+tools_codex: [Read, Grep, Glob, Bash, apply_patch]
 skills: []
 compiled_to: [.claude/agents/plan-epic_writer.md, .codex/agents/plan-epic_writer.toml]
 responsibility: Write one epic per requirement cluster inside the candidate root, each naming the constitution sections its stories will slice and the PRD requirement anchors it covers.
@@ -471,8 +471,8 @@ description: Dispatch this worker at the stories phase to write one self-contain
 skill: plan
 writes: candidate
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Edit, Write]
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+tools: [Read, Grep, Glob, Bash, Edit, Write]
+tools_codex: [Read, Grep, Glob, Bash, apply_patch]
 skills: []
 compiled_to: [.claude/agents/plan-story_writer.md, .codex/agents/plan-story_writer.toml]
 responsibility: Write one story per epic slice inside the candidate root, each self-contained: its own context bundle of excerpt, anchor and digest entries, its write fence, its stack reference and one test_plan row per acceptance criterion.
@@ -511,8 +511,8 @@ description: Dispatch this worker at the skill_specs phase to write one specific
 skill: plan
 writes: candidate
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Edit, Write]
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+tools: [Read, Grep, Glob, Bash, Edit, Write]
+tools_codex: [Read, Grep, Glob, Bash, apply_patch]
 skills: []
 compiled_to: [.claude/agents/plan-skill_spec_writer.md, .codex/agents/plan-skill_spec_writer.toml]
 responsibility: Write one skill specification per capability the project lacks, inside the candidate root, filling all sixteen sections of the skill-spec template from the mandate or the requires_skill value that demands it.
@@ -544,8 +544,8 @@ description: Dispatch this worker at the dependencies phase to set each story's 
 skill: plan
 writes: candidate
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Edit, Write]
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+tools: [Read, Grep, Glob, Bash, Edit, Write]
+tools_codex: [Read, Grep, Glob, Bash, apply_patch]
 skills: []
 compiled_to: [.claude/agents/plan-dependency_mapper.md, .codex/agents/plan-dependency_mapper.toml]
 responsibility: Order the stories by dependency and set each story's `blocked_by` frontmatter key in place, leaving every body byte and every other key identical.
@@ -579,8 +579,8 @@ description: Dispatch this worker at the estimates phase to set each story's siz
 skill: plan
 writes: candidate
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Edit, Write]
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+tools: [Read, Grep, Glob, Bash, Edit, Write]
+tools_codex: [Read, Grep, Glob, Bash, apply_patch]
 skills: []
 compiled_to: [.claude/agents/plan-estimator.md, .codex/agents/plan-estimator.toml]
 responsibility: Assign each story a size of XS, S, M or L from its fence breadth, criterion count and interface surface, set the `size` key in place, and flag every L for splitting.
@@ -612,8 +612,8 @@ description: Dispatch this worker at the sprints phase to write the sprint files
 skill: plan
 writes: candidate
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Edit, Write]
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+tools: [Read, Grep, Glob, Bash, Edit, Write]
+tools_codex: [Read, Grep, Glob, Bash, apply_patch]
 skills: []
 compiled_to: [.claude/agents/plan-sprint_writer.md, .codex/agents/plan-sprint_writer.toml]
 responsibility: Write the sprint files that order the stories inside the candidate root, and set the `sprint` key on each story they schedule.
@@ -646,8 +646,8 @@ description: Dispatch this worker at the critic phase to judge every artifact th
 skill: plan
 writes: none
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status)]
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status)]
+tools: [Read, Grep, Glob, Bash]
+tools_codex: [Read, Grep, Glob, Bash]
 skills: []
 compiled_to: [.claude/agents/plan-plan_critic.md, .codex/agents/plan-plan_critic.toml]
 responsibility: Check every artifact this run wrote against its template header and against the upstream anchor it cites, and report defects without repairing them.
@@ -674,7 +674,7 @@ body:
   receipt: One devforgeai.worker-result/v1 object; findings contains the complete defect report, claimed_paths is empty on every status, evidence_refs does not name the sequencer-created findings path, and each defect is also one issues row.
 ```
 
-A producer's tools are the read set plus `Edit` and `Write`, which Codex serves as `apply_patch`; a judge's are the read set alone, with no `Write`, no `Edit` and no `apply_patch` on either target. Its report reaches disk as the `findings` string the sequencer persists to `.devforgeai/work/<run>/evidence/<agent>/findings.md`, a gitignored, run-scoped path outside the candidate root that is never promoted. Both include `Bash(devforgeai status)` and nothing else on the Bash surface, because no `plan` phase grants a stack command key (open item OI-3).
+A producer's tools are the read set plus `Edit` and `Write`, which Codex serves as `apply_patch`; a judge's are the read set alone, with no `Write`, no `Edit` and no `apply_patch` on either target. Its report reaches disk as the `findings` string the sequencer persists to `.devforgeai/work/<run>/evidence/<agent>/findings.md`, a gitignored, run-scoped path outside the candidate root that is never promoted. Both include `Bash` and nothing else on the Bash surface, because no `plan` phase grants a stack command key (open item OI-3). `tools` names tools only: a Claude Code subagent's `tools:` frontmatter accepts tool names and MCP server patterns, never a command pattern, so the hook dispatcher is the only command-level bound. A judge's `Bash` runs `devforgeai status` and the dispatcher's read-only command set (`cat cmp cut diff echo grep head jq ls pwd rg sha256sum tail test tr wc`, plus read-only git subcommands inside the root) and nothing else; a producer's additionally runs `devforgeai run KEY` for its granted keys.
 
 ### 7e. Handoff outcomes
 
@@ -784,7 +784,7 @@ Every script is deterministic, non-interactive, prints data to stdout and diagno
 |-----------|-----------------|--------------------|
 | OI-1: Slice belongs to a framework worker, but no `plan` phase dispatches one | The generated skill grows an eighth agent file with no registry phase to run it | Slice is a sequencer step inside `devforgeai phase start`: it resolves the incoming artifact's already-hashed bundle and writes `.devforgeai/work/<run>/context.json`, which every worker of the run is handed by path. That is the run-level bundle. Each story's own bundle is a different artifact, built by `story_writer`, which is why `references/story-bundle.md` carries those rules — verbatim excerpts, anchors, no summarising — as that worker's own contract. |
 | OI-2: provenance conformance at the gate | A `plan` spec that promised story-style re-resolution at its own gate would over-promise | `10-sequencer-and-contracts.md` section 3.4 carries full re-resolution, and section 4 makes `qa` and `review` the only story-anchored document skills. `plan`'s own gate is the fence gate alone, so nothing re-resolves the PRD or the constitution digests when this run opens. `02-skill-roster.md#plan` describes that check as `plan`'s gate; it is a requirement on the gate, not behaviour today, and `scripts/check_epic.py` is the designed replacement. |
-| OI-3: worker tools | A generator either gives every worker the same tools or widens a judge's to include an unfenced write | Tools follow the role. A producer carries `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` plus `Edit` and `Write`, which Codex serves as `apply_patch`; every write is denied outside `candidate.root` and outside the phase's fence, and a `writes: fields` phase is narrowed again to its field fence and its three keys. A judge carries the read set and no write tool at all; its report travels in the receipt's `findings` string, which the sequencer persists to `.devforgeai/work/<run>/evidence/<agent>/findings.md` (D13). `Bash(devforgeai run *)` is granted only where a phase declares run keys, and no `plan` phase does. |
+| OI-3: worker tools | A generator either gives every worker the same tools or widens a judge's to include an unfenced write | Tools follow the role. A producer carries `Read`, `Grep`, `Glob`, `Bash` plus `Edit` and `Write`, which Codex serves as `apply_patch`; every write is denied outside `candidate.root` and outside the phase's fence, and a `writes: fields` phase is narrowed again to its field fence and its three keys. A judge carries the read set and no write tool at all; its report travels in the receipt's `findings` string, which the sequencer persists to `.devforgeai/work/<run>/evidence/<agent>/findings.md` (D13). `devforgeai run KEY` is inside a producer's `Bash` bound only where a phase declares run keys, and no `plan` phase does. |
 | OI-4: no outcome row for `status: fail` with no `next` | A reader assumes a failing critic passes silently | `examples/hooks/devforgeai.py` inserts `"<agent> reported fail"` as a transition problem row, so the phase retries to `max_attempts: 2` and then blocks `REQUIRE_HUMAN`. The `fail at any other phase` row in section 7e is that path. |
 | OI-5: `--retry`, `--reslice` and `--next-sprint` look like resume flags | A user expects `/plan {slug} --reslice {story}` to reopen a run and patch one story | No flag resumes anything. A blocked run resumes on its own account: it stays `active` with `run.yaml#blocked_at` naming the phase, and plain `devforgeai phase start plan {slug}` resumes it there with `attempts` reset, which is why `--retry` is unnecessary and is not implemented as a resume. Every other invocation — after `devforgeai phase fail --reason <text>` closed a run, or with no run open — starts fresh at `epics`, and the flags change only what the workers read: `--reslice` directs `story_writer` to rebuild the bundles of the named stories, `--next-sprint` directs `sprint_writer` to start after the last sprint marked done, and `--retry` is a plain re-run. `--scope` is the only flag whose value reaches the artifacts. The exact invocation is `/plan {slug} --reslice {story}`, with the slug positional and one or more story ids after the flag: the fence is `docs/plan/{arg}/**`, so a story id in the argument position would fence the run to a directory that does not exist. Every skill that routes here writes it that long form. |
 | OI-6: the ADR path is a producer exception | Not reachable from `plan` | `.devforgeai/provenance/adr/**` is declared for `architect`/`adr` and `amend`/`adr` and is not in `plan`'s fence. `plan` has no `adr` phase and writes nothing under `.devforgeai/provenance/`. It reads ADRs only through `analyze` and `retro` reports it consumes. |
@@ -906,7 +906,7 @@ Quick-mode results are generation feedback only: one enabled run per eval and no
 
 | Kind | Value |
 |------|-------|
-| Tools | SKILL.md: `Read`, `Agent`, and a Bash grammar no wider than the five model-callable operations `devforgeai status \| phase start <skill> <arg> \| phase fail --reason \| validate \| promote <run>`. Document writers (`epic_writer`, `story_writer`, `skill_spec_writer`, `dependency_mapper`, `estimator`, `sprint_writer`): `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` plus `Edit` and `Write`, which Codex serves as `apply_patch`, denied outside `candidate.root` and outside the phase's fence, and narrowed again to the field fence and the three keys for the two `writes: fields` phases. The judge `plan_critic` carries the same read set with no `Write`, `Edit` or `apply_patch`; its report travels in `findings`. No `plan` phase grants a stack command key, so no worker carries `Bash(devforgeai run *)`. |
+| Tools | SKILL.md: `Read`, `Agent`, and a Bash grammar no wider than the five model-callable operations `devforgeai status \| phase start <skill> <arg> \| phase fail --reason \| validate \| promote <run>`. Document writers (`epic_writer`, `story_writer`, `skill_spec_writer`, `dependency_mapper`, `estimator`, `sprint_writer`): `Read`, `Grep`, `Glob`, `Bash` plus `Edit` and `Write`, which Codex serves as `apply_patch`, denied outside `candidate.root` and outside the phase's fence, and narrowed again to the field fence and the three keys for the two `writes: fields` phases. The judge `plan_critic` carries the same read set with no `Write`, `Edit` or `apply_patch`; its report travels in `findings`. No `plan` phase grants a stack command key, so no worker is granted a `devforgeai run` key. |
 | MCP servers | none |
 | Runtime | Python 3.11+ for the four bundled scripts; PyYAML 6+ for frontmatter and `stack.yaml` parsing. Worktree mode additionally requires `git` with at least one commit on the project; without it the run falls back to copy mode |
 | Project commands | none brokered. No `plan` phase declares a `run_keys` entry, so this run brokers no command and its run file carries `granted_keys: []`. Every story this skill writes names the `test` key, and `lint` where the pinned section defines it, through `commands.use`; `build` is required in that list when the pinned section has `compiled: true`. Keys are named, never a literal command; the sequencer resolves them from the hash-pinned section. Contract: `10-sequencer-and-contracts.md` section 7. |

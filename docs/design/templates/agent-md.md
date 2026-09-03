@@ -15,15 +15,21 @@ forbidden_text: ["TODO", "TBD", "{{", "}}", "<fill in>"]
 #   role `writes` declares (06-skill-specification.md section 14), so they are carried here rather than
 #   left to the prose body.
 # writes: `candidate` for a producer, `none` for a judge (05-subagent-sets.md). There is no third
-#   value. It fixes `tools`: a producer declares [Read, Grep, Glob, Edit, Write,
-#   Bash(devforgeai run *)]; a judge declares [Read, Grep, Glob, Bash(devforgeai status)] and no
-#   write tool of any kind. A judge returns its evidence as the receipt's `findings`, and the
-#   sequencer persists it to .devforgeai/work/<run>/evidence/<agent>/findings.md.
+#   value. It fixes `tools`: a producer declares [Read, Grep, Glob, Edit, Write, Bash]; a judge
+#   declares [Read, Grep, Glob, Bash] and no write tool of any kind. A judge returns its evidence
+#   as the receipt's `findings`, and the sequencer persists it to
+#   .devforgeai/work/<run>/evidence/<agent>/findings.md.
+# tools names tools only: a Claude Code subagent's `tools:` frontmatter accepts tool names and MCP
+#   server patterns, never a command pattern, so the hook dispatcher is the only command-level
+#   bound. A judge's Bash runs `devforgeai status` and the dispatcher's read-only command set
+#   (cat cmp cut diff echo grep head jq ls pwd rg sha256sum tail test tr wc, plus read-only git
+#   subcommands inside the root) and nothing else; a producer's additionally runs
+#   `devforgeai run KEY` for its granted keys. The Bash bound is restated in the body's ## Rules.
 # provenance: the skill-spec section 7 worker contract this was generated from (11 section 3).
 # == instance frontmatter: fill every field ==
 name: "{{canonical_worker_name}}"
 description: "{{one sentence: what this worker is dispatched to do}}"
-tools: [Read, Grep, Glob, Edit, Write, Bash(devforgeai run *)]   # producer set; judges drop the write tools
+tools: [Read, Grep, Glob, Edit, Write, Bash]   # producer set; judges drop the write tools
 writes: candidate           # candidate (producer) | none (judge)
 skill: "{{skill-name}}"
 responsibility: "{{one sentence, one job}}"

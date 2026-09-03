@@ -219,9 +219,13 @@ must_not:
   - {{forbidden action}}
   - write outside the candidate root or outside this phase's write fence   # producer
   - run a raw stack command, a git write, a package manager, or a network tool
-tools: [Read, Grep, Glob, Edit, Write, Bash(devforgeai run *)]   # producer set
-                               # judge set: [Read, Grep, Glob, Bash(devforgeai status)] and no write
+tools: [Read, Grep, Glob, Edit, Write, Bash]   # producer set
+                               # judge set: [Read, Grep, Glob, Bash] and no write
                                #   tool of any kind: no Write, no Edit, no apply_patch
+                               # tools names tools only; the hook dispatcher is the only
+                               #   command-level bound: a judge's Bash runs `devforgeai status`
+                               #   and the dispatcher's read-only command set, a producer's
+                               #   additionally `devforgeai run KEY` for its granted keys
 isolation: required | preferred
 returns: devforgeai.worker-result/v1
 ```
@@ -329,7 +333,7 @@ Quick-mode results are generation feedback only: one enabled run per eval and no
 
 | Kind | Value |
 |------|-------|
-| Tools | SKILL.md: `Read`, `Agent`, and a Bash grammar no wider than `devforgeai status \| phase start <skill> <arg> \| phase fail --reason \| validate \| promote <run>`. Workers: producers `Read`, `Grep`, `Glob`, `Edit`, `Write`, `Bash(devforgeai run *)`; judges `Read`, `Grep`, `Glob`, `Bash(devforgeai status)`. |
+| Tools | SKILL.md: `Read`, `Agent`, and a Bash grammar no wider than `devforgeai status \| phase start <skill> <arg> \| phase fail --reason \| validate \| promote <run>`. Workers: producers `Read`, `Grep`, `Glob`, `Edit`, `Write`, `Bash`; judges `Read`, `Grep`, `Glob`, `Bash`. |
 | MCP servers | {{none or names}} |
 | Runtime | {{python 3.11+, node 20, ...}} plus every third-party library any bundled script imports |
 | Project commands | `.devforgeai/stack.yaml#{{anchor}}` plus the `commands` keys this skill uses ({{build, test, lint, format}}). Name keys only, never a literal command; the sequencer resolves them from the hash-pinned section. `build` is required when that section has `compiled: true`. Contract: `10-sequencer-and-contracts.md`. |

@@ -8,8 +8,10 @@ Write permission is per role, there are exactly two roles, and every worker head
 
 | Role class | Who | `writes` | Tools |
 |---|---|---|---|
-| Producer | red, green, refactor and fix workers; every document writer (story, prd, adr, design, brainstorm, sourcetree, techstack, code_map, skill files, retro, drift, clarification, impact, validate reports) | `candidate` | `Read`, `Grep`, `Glob`, `Edit`, `Write` (Codex: `apply_patch`), and `Bash(devforgeai run *)` for the stack keys the phase granted |
-| Judge | gate resolver, critic, reviewer, smoke and QA verifier, analyze, status | `none` | `Read`, `Grep`, `Glob`, `Bash(devforgeai status)`. No `Write`, no `Edit`, no `apply_patch` |
+| Producer | red, green, refactor and fix workers; every document writer (story, prd, adr, design, brainstorm, sourcetree, techstack, code_map, skill files, retro, drift, clarification, impact, validate reports) | `candidate` | `Read`, `Grep`, `Glob`, `Edit`, `Write` (Codex: `apply_patch`), `Bash` — bounded by the dispatcher to `devforgeai run KEY` for the stack keys the phase granted, `devforgeai status`, and the read-only command set below |
+| Judge | gate resolver, critic, reviewer, smoke and QA verifier, analyze, status | `none` | `Read`, `Grep`, `Glob`, `Bash` — bounded by the dispatcher to `devforgeai status` and the read-only command set below. No `Write`, no `Edit`, no `apply_patch` |
+
+`tools` names tools only: a Claude Code subagent's `tools:` frontmatter accepts tool names and MCP server patterns, never a command pattern (`04-dual-target.md`, read 2026-09-03), so the hook dispatcher is the only command-level bound. The dispatcher's read-only command set is `cat cmp cut diff echo grep head jq ls pwd rg sha256sum tail test tr wc`, plus read-only git subcommands inside the root. That set is part of the judge contract and is named in each spec's section 7e and 7g, not left implicit in `09-hook-dispatcher.md`. A judge's `Bash` reaches that set and `devforgeai status` and nothing else; a producer's additionally reaches `devforgeai run KEY` for its granted keys.
 
 A producer writes inside the run's candidate root and nowhere else; `devforgeai run <key>` executes with cwd = `candidate.root`. A judge creates no file anywhere: it holds no write tool, and it returns its detailed evidence as the receipt's `findings`, at most 16384 UTF-8 bytes. The sequencer persists that string verbatim to `.devforgeai/work/<run>/evidence/<agent>/findings.md` at ingest — a run-scoped, gitignored path that is never promoted and that the worker neither chooses nor reaches — and the next phase's worker reads it by that path. `issues[]` stays the bounded routing summary. No worker of any class holds a git write, a package manager, a network tool, or a raw stack command.
 
@@ -35,12 +37,12 @@ must_not:
   - read files outside the context bundle
   - write outside the candidate root, or outside the phase's test paths
   - run a raw stack command, a git write, a package manager, or a network tool
-tools: [Read, Grep, Glob, Edit, Write, Bash(devforgeai run *)]   # producer set; a judge declares [Read, Grep, Glob, Bash(devforgeai status)]
+tools: [Read, Grep, Glob, Edit, Write, Bash]   # producer set; a judge declares [Read, Grep, Glob, Bash]
 isolation: required
 returns: devforgeai.worker-result/v1
 ```
 
-`must_not` is compiled into the agent prompt verbatim. `tools` is compiled into the target's tool allowlist where the target supports it, and matches the role `writes` declares: a `writes: candidate` worker carries Edit, Write and `devforgeai run` for its granted keys; a `writes: none` worker carries no write tool at all and returns `findings` instead.
+`must_not` is compiled into the agent prompt verbatim. `tools` is compiled into the target's tool allowlist where the target supports it, and matches the role `writes` declares: a `writes: candidate` worker carries Edit, Write and a `Bash` the dispatcher lets reach `devforgeai run` for its granted keys; a `writes: none` worker carries no write tool at all, a `Bash` that reaches only `devforgeai status` and the read-only command set, and returns `findings` instead. Every entry in `tools` is a tool name; the command bound is never written there.
 
 The worked example below uses a Python fixture as illustration only. Command, language, package-manager, and test-layout resolution is the `stack.yaml` contract in `10-sequencer-and-contracts.md`; no worker receives a literal command. A producer that needs the tests calls `devforgeai run <key>` for a key its phase granted, and the sequencer re-runs the transition oracle itself at `ingest-result` — the worker's run is for its own feedback, never the reason a phase advances.
 

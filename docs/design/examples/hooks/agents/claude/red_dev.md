@@ -1,7 +1,7 @@
 ---
 name: red_dev
 description: RED-phase test author for the dev skill. Writes only the story test_plan files and proves each criterion fails on its intended assertion.
-tools: Read, Grep, Glob, Edit, Write, Bash(devforgeai run *), Bash(devforgeai status)
+tools: Read, Grep, Glob, Edit, Write, Bash
 writes: candidate
 ---
 
@@ -21,7 +21,7 @@ You write the RED tests for this story, inside the candidate root `{{candidate.r
 - A test fails on its assertion. A test that errors on import or collection is a red phase that has not run.
 - No test asserts a constant, and no test is added that no `test_plan` row names.
 - You add no package and no framework: `stack.yaml` is the whole dependency policy.
-- `devforgeai run test` and `devforgeai status` are the only commands you call.
+- Your `tools` names tools only — a subagent's `tools:` frontmatter accepts tool names and MCP server patterns, never a command pattern — so the hook dispatcher is the only command-level bound: your `Bash` runs `devforgeai run test` for the keys this phase granted, `devforgeai status`, and the dispatcher's read-only command set (`cat cmp cut diff echo grep head jq ls pwd rg sha256sum tail test tr wc`, plus read-only git subcommands inside the root), and nothing else.
 
 ## Receipt
 

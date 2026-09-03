@@ -9,7 +9,7 @@ author: "DevForgeAI plan skill, wave 2 spec author"
 date: 2026-09-02
 depends_on:
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:5afb88c46aa635c961564af8e58c799a44f387c6bd877eeac2ec7568f73aba7e
+    hash: sha256:6556607035516c49ee43fe2bbeffe1a74e898889d84be00c9a05fdf751d209b6
     excerpt: "**The model dispatches, the sequencer decides.** For an anatomy-governed skill, the primary window (provider entry adapter + skill orchestration) does light, trivial work only."
   - source: docs/design/01-skill-anatomy.md#the-seven-sub-phases
     hash: sha256:6e32d5286a08040572df7c34dffed5c39e894c093c1a0490a4cfb858a87a1e6d
@@ -291,7 +291,7 @@ The primary window stays in the canonical checkout and never opens a manifest, a
 | 7 | Record | sequencer: `devforgeai phase next` | sequencer | n/a |
 | 8 | Handoff | sequencer: `devforgeai phase next`, which on the last passing transition marks the run `ready_to_promote` and renders the first block, a `REQUIRE_HUMAN` handoff naming `devforgeai promote <run>`; that command, run only after the user confirms in the session, renders the second | sequencer | n/a |
 
-Each worker becomes `agents/<role>.md`, named for the canonical registry worker name. The four document writers are producers: they write their file inside the candidate root and the receipt claims it. `onboard_critic` is a judge: it reads what the run wrote, repairs nothing, has no write tool and returns its complete bounded report in `findings`. The sequencer persists that string to the fixed run-scoped evidence path after receipt validation; the judge never names its own not-yet-created findings path in `evidence_refs`. `issues[]` stays the bounded summary the handoff carries, and `claimed_paths` is empty on every judge status. Persona and critic are different files with different prompts.
+Each worker becomes `agents/<role>.md`, named for the canonical registry worker name. The four document writers are producers: they write their file inside the candidate root and the receipt claims it. `onboard_critic` is a judge: it reads what the run wrote, repairs nothing, has no write tool and returns its complete bounded report in `findings`. The sequencer persists that string to the fixed run-scoped evidence path after receipt validation; the judge never names its own not-yet-created findings path in `evidence_refs`. `issues[]` stays the bounded summary the handoff carries, and `claimed_paths` is empty on every judge status. Persona and critic are different files with different prompts. `tools` names tools only: a Claude Code subagent's `tools:` frontmatter accepts tool names and MCP server patterns, never a command pattern, so the hook dispatcher is the only command-level bound. A judge's `Bash` runs `devforgeai status` and the dispatcher's read-only command set (`cat cmp cut diff echo grep head jq ls pwd rg sha256sum tail test tr wc`, plus read-only git subcommands inside the root) and nothing else; a producer's additionally runs `devforgeai run KEY` for its granted keys.
 
 The `Isolation` column is the DevForgeAI worker-contract value compiled into the generated target profile, not Claude's `isolation` frontmatter field. The framework does not use Claude's worktree isolation or `EnterWorktree`: both fork from HEAD, and the run's phases build linearly on one candidate root instead.
 
@@ -313,7 +313,7 @@ Two limits this table does not overstate. Every `devforgeai phase start` defect 
 
 ### 7d. Worker contracts
 
-Each block is the body of `agents/<role>.md` and compiles to one provider profile per target. `name` is the canonical registry worker name, which is what a hook receives as `agent_type`; the compiled filename carries the skill prefix so two skills' profiles cannot collide. `tools` are the Claude names; on Codex `apply_patch` stands in for `Edit` and `Write`, and the rest are the Codex equivalents of the same read surface. `model: inherit` keeps the worker on the session's model, which is what the terminal-only constraint leaves available. No onboard phase grants a stack command key, so no worker here carries `Bash(devforgeai run *)`. Claude-only frontmatter — `hooks`, `memory`, `background`, `permissionMode`, and Claude's own `isolation` — is omitted from every profile: the enforcement chain is the one dispatcher `init` installs, and the run's own candidate root is the isolation.
+Each block is the body of `agents/<role>.md` and compiles to one provider profile per target. `name` is the canonical registry worker name, which is what a hook receives as `agent_type`; the compiled filename carries the skill prefix so two skills' profiles cannot collide. `tools` are the Claude names; on Codex `apply_patch` stands in for `Edit` and `Write`, and the rest are the Codex equivalents of the same read surface. `model: inherit` keeps the worker on the session's model, which is what the terminal-only constraint leaves available. No onboard phase grants a stack command key, so no worker here is granted a `devforgeai run` key. Claude-only frontmatter — `hooks`, `memory`, `background`, `permissionMode`, and Claude's own `isolation` — is omitted from every profile: the enforcement chain is the one dispatcher `init` installs, and the run's own candidate root is the isolation.
 
 ```yaml
 name: code_mapper
@@ -321,7 +321,7 @@ description: Dispatch this worker at the code_map phase to write the OBSERVED .d
 skill: onboard
 writes: candidate
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Edit, Write]
+tools: [Read, Grep, Glob, Bash, Edit, Write]
 skills: []
 compiled_to: [.claude/agents/onboard-code_mapper.md, .codex/agents/onboard-code_mapper.toml]
 responsibility: Write the OBSERVED sections of `.devforgeai/stack.yaml` inside the candidate root from values stated in the repository's manifests and configuration, and report every required key no file states.
@@ -340,7 +340,7 @@ must_not:
   - drop or rewrite an anchor this phase did not derive
   - copy a manifest value into a Markdown file
   - write outside the candidate root, or outside the run's fence inside it
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+tools_codex: [Read, Grep, Glob, Bash, apply_patch]
 isolation: required
 returns: devforgeai.worker-result/v1
 body:
@@ -356,7 +356,7 @@ description: Dispatch this worker at the doc_ingest phase to write the OBSERVED 
 skill: onboard
 writes: candidate
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Edit, Write]
+tools: [Read, Grep, Glob, Bash, Edit, Write]
 skills: []
 compiled_to: [.claude/agents/onboard-doc_ingester.md, .codex/agents/onboard-doc_ingester.toml]
 responsibility: Write the OBSERVED section of `docs/architecture/architecture.md` inside the candidate root from constraints carried by a sealed Research dossier, citing each one by RUN, Source, Evidence and Claim id and the sealed manifest digest.
@@ -377,7 +377,7 @@ must_not:
   - reconcile a conflict between an admitted claim and the code it describes
   - change any path other than docs/architecture/architecture.md
   - write outside the candidate root, or outside the run's fence inside it
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+tools_codex: [Read, Grep, Glob, Bash, apply_patch]
 isolation: required
 returns: devforgeai.worker-result/v1
 body:
@@ -393,7 +393,7 @@ description: Dispatch this worker at the convention_infer phase to write the OBS
 skill: onboard
 writes: candidate
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Edit, Write]
+tools: [Read, Grep, Glob, Bash, Edit, Write]
 skills: []
 compiled_to: [.claude/agents/onboard-convention_inferrer.md, .codex/agents/onboard-convention_inferrer.toml]
 responsibility: Partition the observed layout, ownership and naming facts into source-derivable citations and non-derivable constraints, and write the OBSERVED section of `docs/architecture/sourcetree.md` inside the candidate root from that partition.
@@ -413,7 +413,7 @@ must_not:
   - state an ownership or naming rule no admitted source states
   - change any path other than docs/architecture/sourcetree.md
   - write outside the candidate root, or outside the run's fence inside it
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+tools_codex: [Read, Grep, Glob, Bash, apply_patch]
 isolation: required
 returns: devforgeai.worker-result/v1
 body:
@@ -429,7 +429,7 @@ description: Dispatch this worker at the observed_write phase to write the OBSER
 skill: onboard
 writes: candidate
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Edit, Write]
+tools: [Read, Grep, Glob, Bash, Edit, Write]
 skills: []
 compiled_to: [.claude/agents/onboard-observed_writer.md, .codex/agents/onboard-observed_writer.toml]
 responsibility: Write the OBSERVED section of `docs/architecture/techstack.md` inside the candidate root for the admitted stack constraints that no manifest or configuration file encodes.
@@ -447,7 +447,7 @@ must_not:
   - mark an OBSERVED entry as binding on a later phase
   - change any path other than docs/architecture/techstack.md
   - write outside the candidate root, or outside the run's fence inside it
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+tools_codex: [Read, Grep, Glob, Bash, apply_patch]
 isolation: required
 returns: devforgeai.worker-result/v1
 body:
@@ -463,7 +463,7 @@ description: Dispatch this worker at the critic phase to judge the OBSERVED sect
 skill: onboard
 writes: none
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status)]
+tools: [Read, Grep, Glob, Bash]
 skills: []
 compiled_to: [.claude/agents/onboard-onboard_critic.md, .codex/agents/onboard-onboard_critic.toml]
 responsibility: Report every OBSERVED entry whose Evidence names no resolvable path and no sealed Research reference, and every entry whose statement is readable at a path it cites.
@@ -480,7 +480,7 @@ must_not:
   - repair, rewrite or delete an entry it reports
   - accept an entry whose Evidence is a bare digest with no RUN, Source, Evidence and Claim ids
   - use Write, Edit or apply_patch, name its own findings path in evidence_refs, or run any stack command key
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status)]
+tools_codex: [Read, Grep, Glob, Bash]
 isolation: required
 returns: devforgeai.worker-result/v1
 body:
@@ -773,7 +773,7 @@ The dossier overlay carries the identifiers an OBS Evidence line cites. Its reco
 
 | Kind | Value |
 |------|-------|
-| Tools | `SKILL.md`: `Read`, `Agent`, and a Bash grammar no wider than the five model-callable operations `devforgeai status \| phase start <skill> <arg> \| phase fail --reason \| validate \| promote <run>`. Document writers (`code_mapper`, `doc_ingester`, `convention_inferrer`, `observed_writer`): `Read`, `Grep`, `Glob`, `Bash(devforgeai status)`, plus `Edit` and `Write`, which Codex serves as `apply_patch`; every write is denied outside `candidate.root` and outside the phase's fence. The judge `onboard_critic` carries `Read`, `Grep`, `Glob` and `Bash(devforgeai status)` with no `Write`, `Edit` or `apply_patch`; its report travels in `findings`. No onboard phase grants a stack command key, so no worker carries `Bash(devforgeai run *)` |
+| Tools | `SKILL.md`: `Read`, `Agent`, and a Bash grammar no wider than the five model-callable operations `devforgeai status \| phase start <skill> <arg> \| phase fail --reason \| validate \| promote <run>`. Document writers (`code_mapper`, `doc_ingester`, `convention_inferrer`, `observed_writer`): `Read`, `Grep`, `Glob`, `Bash`, plus `Edit` and `Write`, which Codex serves as `apply_patch`; every write is denied outside `candidate.root` and outside the phase's fence. The judge `onboard_critic` carries `Read`, `Grep`, `Glob` and `Bash` with no `Write`, `Edit` or `apply_patch`; its report travels in `findings`. No onboard phase grants a stack command key, so no worker is granted a `devforgeai run` key |
 | MCP servers | none |
 | Runtime | Python 3.11+ for `scripts/check_observed.py`, which imports `PyYAML` and the standard library only. Worktree mode additionally requires `git` with at least one commit on the project. The sequencer requires `jsonschema` to validate the written stack section at ingest; without it the phase is refused rather than checkpointed unvalidated |
 | Project commands | none. Every onboard phase declares an empty run-key set, so no `stack.yaml` key is brokered during this skill's run. The section this skill proposes is what later skills resolve their `build`, `test`, `lint` and `format` keys from; the contract is `10-sequencer-and-contracts.md` section 7 |

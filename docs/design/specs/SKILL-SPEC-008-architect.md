@@ -9,7 +9,7 @@ author: "DevForgeAI wave-2 specification author"
 date: 2026-09-02
 depends_on:
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:5afb88c46aa635c961564af8e58c799a44f387c6bd877eeac2ec7568f73aba7e
+    hash: sha256:6556607035516c49ee43fe2bbeffe1a74e898889d84be00c9a05fdf751d209b6
     excerpt: "**The model dispatches, the sequencer decides.** For an anatomy-governed skill, the primary window (provider entry adapter + skill orchestration) does light, trivial work only."
   - source: docs/design/01-skill-anatomy.md#dedicated-templates
     hash: sha256:55bd4a18d63e645adffa187d34256dc7db7370095dcbf9e96a190028f7e65a5e
@@ -397,7 +397,7 @@ Promotion is not part of the run's phases. The last passing `devforgeai phase ne
 
 ### 7d. Worker contracts
 
-Each block becomes `agents/<role>.md` verbatim, wrapped in skill-creator's Role / Inputs / Process / Output framing, and compiles to one provider profile per target. `name` is the canonical registry worker name, which is what a hook receives as `agent_type`; the compiled filename carries the skill prefix so two skills' profiles cannot collide. `tools` are the Claude names and `tools_codex` the Codex ones, where `apply_patch` stands in for `Edit` and `Write`. `model: inherit` keeps the worker on the session's model, which is what the terminal-only constraint leaves available. No architect phase grants a stack command key, so no worker here carries `Bash(devforgeai run *)`. Claude-only frontmatter — `hooks`, `memory`, `background`, `permissionMode`, and Claude's own `isolation` — is omitted from every profile.
+Each block becomes `agents/<role>.md` verbatim, wrapped in skill-creator's Role / Inputs / Process / Output framing, and compiles to one provider profile per target. `name` is the canonical registry worker name, which is what a hook receives as `agent_type`; the compiled filename carries the skill prefix so two skills' profiles cannot collide. `tools` are the Claude names and `tools_codex` the Codex ones, where `apply_patch` stands in for `Edit` and `Write`. `model: inherit` keeps the worker on the session's model, which is what the terminal-only constraint leaves available. No architect phase grants a stack command key, so no worker here is granted a `devforgeai run` key. Claude-only frontmatter — `hooks`, `memory`, `background`, `permissionMode`, and Claude's own `isolation` — is omitted from every profile.
 
 ```yaml
 name: option_comparer
@@ -405,8 +405,8 @@ description: Dispatch this worker at the option_compare phase to judge each arch
 skill: architect
 writes: none
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status)]
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status)]
+tools: [Read, Grep, Glob, Bash]
+tools_codex: [Read, Grep, Glob, Bash]
 skills: []
 compiled_to: [.claude/agents/architect-option_comparer.md, .codex/agents/architect-option_comparer.toml]
 responsibility: Produce one decision row per architecture decision area the PRD raises, each with at least two admissible options, the selected option, and the PRD anchor that justifies the selection.
@@ -438,8 +438,8 @@ description: Dispatch this worker at the constitution phase to write the constit
 skill: architect
 writes: candidate
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Edit, Write]
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+tools: [Read, Grep, Glob, Bash, Edit, Write]
+tools_codex: [Read, Grep, Glob, Bash, apply_patch]
 skills: []
 compiled_to: [.claude/agents/architect-constitution_writer.md, .codex/agents/architect-constitution_writer.toml]
 responsibility: Write docs/architecture/constitution.md inside the candidate root with its Principles, Mandates, Constraints and Style sections, one SEC-NNN row per rule, and the mandates that later phases bind to.
@@ -471,8 +471,8 @@ description: Dispatch this worker at the sourcetree phase to write the INTENDED 
 skill: architect
 writes: candidate
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Edit, Write]
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+tools: [Read, Grep, Glob, Bash, Edit, Write]
+tools_codex: [Read, Grep, Glob, Bash, apply_patch]
 skills: []
 compiled_to: [.claude/agents/architect-sourcetree_writer.md, .codex/agents/architect-sourcetree_writer.toml]
 responsibility: Write docs/architecture/sourcetree.md inside the candidate root with the INTENDED Layout, Ownership and Naming sections, one PATH-NNN row per path rule.
@@ -504,8 +504,8 @@ description: Dispatch this worker at the techstack phase to write techstack.md a
 skill: architect
 writes: candidate
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Edit, Write]
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+tools: [Read, Grep, Glob, Bash, Edit, Write]
+tools_codex: [Read, Grep, Glob, Bash, apply_patch]
 skills: []
 compiled_to: [.claude/agents/architect-techstack_writer.md, .codex/agents/architect-techstack_writer.toml]
 responsibility: Write docs/architecture/techstack.md and the INTENDED .devforgeai/stack.yaml section it names in its stack_section key, inside the candidate root and against the section contract.
@@ -540,8 +540,8 @@ description: Dispatch this worker at the architecture phase to write the INTENDE
 skill: architect
 writes: candidate
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Edit, Write]
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+tools: [Read, Grep, Glob, Bash, Edit, Write]
+tools_codex: [Read, Grep, Glob, Bash, apply_patch]
 skills: []
 compiled_to: [.claude/agents/architect-architecture_writer.md, .codex/agents/architect-architecture_writer.toml]
 responsibility: Write docs/architecture/architecture.md inside the candidate root with the INTENDED Components, Interfaces, Data Flow and Failure Modes sections, one COMP-NNN row per component.
@@ -573,8 +573,8 @@ description: Dispatch this worker at the design phase to write one design docume
 skill: architect
 writes: candidate
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Edit, Write]
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+tools: [Read, Grep, Glob, Bash, Edit, Write]
+tools_codex: [Read, Grep, Glob, Bash, apply_patch]
 skills: []
 compiled_to: [.claude/agents/architect-design_writer.md, .codex/agents/architect-design_writer.toml]
 responsibility: Write one docs/architecture/design-<topic>.md per decision row inside the candidate root, each recording the Decision, the Options compared, the Consequences and the Interfaces it fixes.
@@ -606,8 +606,8 @@ description: Dispatch this worker at the adr phase to write one ADR per decision
 skill: architect
 writes: candidate
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Edit, Write]
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+tools: [Read, Grep, Glob, Bash, Edit, Write]
+tools_codex: [Read, Grep, Glob, Bash, apply_patch]
 skills: []
 compiled_to: [.claude/agents/architect-adr_writer.md, .codex/agents/architect-adr_writer.toml]
 responsibility: Write one ADR per decision row at .devforgeai/provenance/adr/NNNN-<slug>.md inside the candidate root, each with its Context, Decision, Consequences and Alternatives, numbered ADR-NNNN in the order the decisions were taken.
@@ -641,8 +641,8 @@ description: Dispatch this worker at the gap_analysis phase to judge each INTEND
 skill: architect
 writes: none
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status)]
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status)]
+tools: [Read, Grep, Glob, Bash]
+tools_codex: [Read, Grep, Glob, Bash]
 skills: []
 compiled_to: [.claude/agents/architect-gap_analyzer.md, .codex/agents/architect-gap_analyzer.toml]
 responsibility: Compare each INTENDED section against the OBSERVED constraint sections that actually exist and return one evidenced gap row per difference, citing both anchors.
@@ -673,8 +673,8 @@ description: Dispatch this worker at the critic phase to judge every section thi
 skill: architect
 writes: none
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status)]
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status)]
+tools: [Read, Grep, Glob, Bash]
+tools_codex: [Read, Grep, Glob, Bash]
 skills: []
 compiled_to: [.claude/agents/architect-architect_critic.md, .codex/agents/architect-architect_critic.toml]
 responsibility: Check every written section against the template header it claims and against the PRD anchor or decision row it cites, and report defects without repairing them.
@@ -701,7 +701,7 @@ body:
   receipt: One devforgeai.worker-result/v1 object; findings contains the complete defect report, claimed_paths is empty on every status, evidence_refs does not name the sequencer-created findings path, and each defect is also one issues row.
 ```
 
-A producer's tools are the read set plus `Edit` and `Write`, which Codex serves as `apply_patch`; a judge has the read set and no write tool. Both include `Bash(devforgeai status)` and nothing else on the Bash surface, because no `architect` phase grants a stack command key (open item OI-3). A judge returns its bounded report in `findings`, which the sequencer persists only after validating the receipt.
+A producer's tools are the read set plus `Edit` and `Write`, which Codex serves as `apply_patch`; a judge has the read set and no write tool. Both include `Bash` and nothing else on the Bash surface, because no `architect` phase grants a stack command key (open item OI-3). A judge returns its bounded report in `findings`, which the sequencer persists only after validating the receipt. `tools` names tools only: a Claude Code subagent's `tools:` frontmatter accepts tool names and MCP server patterns, never a command pattern, so the hook dispatcher is the only command-level bound. A judge's `Bash` runs `devforgeai status` and the dispatcher's read-only command set (`cat cmp cut diff echo grep head jq ls pwd rg sha256sum tail test tr wc`, plus read-only git subcommands inside the root) and nothing else; a producer's additionally runs `devforgeai run KEY` for its granted keys.
 
 ### 7e. Handoff outcomes
 
@@ -822,7 +822,7 @@ Every script is deterministic, non-interactive, prints data to stdout and diagno
 |-----------|-----------------|--------------------|
 | OI-1: `01-skill-anatomy.md` and `05-subagent-sets.md` give Slice to a framework worker, but no `architect` phase dispatches one | The generated skill grows a tenth agent file with no registry phase to run it, and `agent_type` never matches at ingest | Slice is a sequencer step inside `devforgeai phase start`: it resolves the incoming artifact's already-hashed bundle and writes `.devforgeai/work/<run>/context.json`, which every worker of the run is handed by path. This spec promises no slice phase and ships no slice agent file. |
 | OI-2: provenance conformance at the gate | An `architect` spec that promised story-style re-resolution would over-promise | `10-sequencer-and-contracts.md` section 3.4 now carries full re-resolution, and section 4 makes `qa` and `review` the only story-anchored document skills. `architect`'s gate is the fence gate alone, so nothing re-resolves the PRD's `depends_on` entries when the run opens. `check_prd.py` is the designed replacement and is not wired in; the run relies on `architect_critic` reporting an uncited section instead, which is a model judgement and not a gate. |
-| OI-3: worker tools | A generator either gives every worker the same tools or widens a judge's to include a write | Tools follow the role. A producer carries `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` plus `Edit` and `Write`, which Codex serves as `apply_patch`; every write is denied outside `candidate.root` and outside the phase's fence, and the lease bound at `SubagentStart` is what the dispatcher checks. A judge carries only the read set, returns its complete bounded report in `findings`, and cannot use `Write`, `Edit` or `apply_patch`; the sequencer persists the validated string to the fixed judge-evidence path. `Bash(devforgeai run *)` is granted only where a phase declares run keys, and no `architect` phase does. |
+| OI-3: worker tools | A generator either gives every worker the same tools or widens a judge's to include a write | Tools follow the role. A producer carries `Read`, `Grep`, `Glob`, `Bash` plus `Edit` and `Write`, which Codex serves as `apply_patch`; every write is denied outside `candidate.root` and outside the phase's fence, and the lease bound at `SubagentStart` is what the dispatcher checks. A judge carries only the read set, returns its complete bounded report in `findings`, and cannot use `Write`, `Edit` or `apply_patch`; the sequencer persists the validated string to the fixed judge-evidence path. `devforgeai run KEY` is inside a producer's `Bash` bound only where a phase declares run keys, and no `architect` phase does. |
 | OI-4: no outcome row for `status: fail` with no `next` | A reader assumes a failing critic passes silently | `examples/hooks/devforgeai.py` inserts `"<agent> reported fail"` as a transition problem row, so the phase retries to `max_attempts: 2` and then blocks `REQUIRE_HUMAN`. The `fail at any other phase` row in section 7e is that path. |
 | OI-5: `--yolo` and `--retry` look like resume flags | A user expects the flag to be what picks up where the run stopped, and an author writes a repair route that depends on it | The run does pick up where it stopped, and no flag is what does it. A `needs_user` result blocks the run rather than closing it: it stays `active` with `run.yaml#blocked_at` naming `option_compare`, and plain `devforgeai phase start architect {slug}` resumes it there with `attempts` reset. `--yolo` changes only what the worker reads, and it is the only flag this skill defines; `02-skill-roster.md`'s `--retry` and `--update` are unnecessary under the resume rule, are not implemented, and this spec does not name them as commands. Where a run really is closed by `devforgeai phase fail --reason <text>`, the next invocation opens a fresh run from `option_compare`. |
 | OI-6: the ADR path is under `.devforgeai/` | An earlier draft of this spec had `adr_writer` carry each ADR's text in the receipt because no path admitted it, which left the phase unable to satisfy its `document` oracle | `examples/hooks/policy.py` now carries `.devforgeai/provenance/adr/**` in `PRODUCER_EXCEPTIONS` for `(architect, adr)` and `(amend, adr)`, and `architect`'s fence lists it. `adr_writer` writes `NNNN-<slug>.md` files inside the candidate root; the sequencer validates each against the `adr` template header — required frontmatter, `^ADR-[0-9]{4}$`, the four required sections, forbidden text — and against the filename shape before checkpointing, refuses a number already allocated, and provides no rewind for the path. The files reach the canonical tree only at promotion. Installing an ADR by hand is no longer a step in this spec. |
@@ -931,7 +931,7 @@ Quick-mode results are generation feedback only: one enabled run per eval and no
 
 | Kind | Value |
 |------|-------|
-| Tools | SKILL.md: `Read`, `Agent`, and a Bash grammar no wider than the five model-callable operations `devforgeai status \| phase start <skill> <arg> \| phase fail --reason \| validate \| promote <run>`. Document writers (`constitution_writer`, `sourcetree_writer`, `techstack_writer`, `architecture_writer`, `design_writer`, `adr_writer`): `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` plus `Edit` and `Write`, which Codex serves as `apply_patch`, denied outside `candidate.root` and outside the phase's fence. Judges (`option_comparer`, `gap_analyzer`, `architect_critic`): the same read set with no `Write`, `Edit` or `apply_patch`; their reports travel in the receipt's bounded `findings` string. No `architect` phase grants a stack command key, so no worker carries `Bash(devforgeai run *)`. |
+| Tools | SKILL.md: `Read`, `Agent`, and a Bash grammar no wider than the five model-callable operations `devforgeai status \| phase start <skill> <arg> \| phase fail --reason \| validate \| promote <run>`. Document writers (`constitution_writer`, `sourcetree_writer`, `techstack_writer`, `architecture_writer`, `design_writer`, `adr_writer`): `Read`, `Grep`, `Glob`, `Bash` plus `Edit` and `Write`, which Codex serves as `apply_patch`, denied outside `candidate.root` and outside the phase's fence. Judges (`option_comparer`, `gap_analyzer`, `architect_critic`): the same read set with no `Write`, `Edit` or `apply_patch`; their reports travel in the receipt's bounded `findings` string. No `architect` phase grants a stack command key, so no worker is granted a `devforgeai run` key. |
 | MCP servers | none |
 | Runtime | Python 3.11+ for the three bundled scripts; PyYAML 6+ for frontmatter and `stack.yaml` parsing; `jsonschema` 4+ for `check_stack_section.py`, which validates against `schemas/devforgeai/v1/stack.schema.json` |
 | Project commands | none brokered. No `architect` phase declares a `run_keys` entry, so the run brokers no command and the run file carries `granted_keys: []`. The `techstack` phase writes the `build`, `test`, `lint` and `format` keys other skills later name; it names keys and `argv` inside the section it writes and writes no literal command into `techstack.md`. |
