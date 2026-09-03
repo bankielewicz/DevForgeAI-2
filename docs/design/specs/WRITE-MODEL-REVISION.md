@@ -115,6 +115,9 @@ The generator reported "SPEC GAPS: none" and then listed seven deviations. Each 
 6. `metadata.provenance.hash` is computed with the doc 01 section rule over section 3; say so instead of the placeholder sentence.
 7. `evals/evals.json` lives in `out/dev/evals/` and is excluded from the installed skill; section 8's layout lists it as build-time only.
 
+8. (added after live run 3) A custom subagent's `tools:` frontmatter accepts tool names and MCP server patterns only (Claude Code subagents reference, 2026-09-03); `Bash(devforgeai status)` or `Bash(devforgeai run *)` written there does not restrict commands. Every agent file and section 7g lists `Bash` and states that the hook dispatcher bounds it per role: a judge may run `devforgeai status` and the dispatcher's read-only command set (`cat cmp cut diff echo grep head jq ls pwd rg sha256sum tail test tr wc`, plus read-only git subcommands inside the root); a producer additionally runs `devforgeai run KEY` for its granted keys. `allowed-tools` in SKILL.md frontmatter does accept permission patterns and keeps the five-form grammar.
+9. (added after live run 3) The read-only command set above is part of the judge contract and is named in section 7e/7g and in doc 05, not left implicit in the dispatcher.
+
 Also from the eval transcripts, two SKILL.md defects: every dispatch and every sequencer call is the bare command with no `; echo` or redirect (the dispatcher's single-argv rule denies compounds), and on any block or refusal the skill prints the handoff and stops; it never inspects hook files, sequencer sources or logs, never messages other sessions and never writes memory.
 
 ## D15 `--fix` in the grammar; clarify exempt from STORY_IN_FLIGHT; resume re-gates (2026-09-03)
