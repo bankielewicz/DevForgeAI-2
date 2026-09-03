@@ -108,9 +108,15 @@ handoff:
 
 Claude adapters request provider-native worker isolation through `agents/*.md`
 tool and model declarations. A worker's `tools` list follows its role: a producer
-declares `Read, Grep, Glob, Edit, Write` plus `Bash(devforgeai run *)`; a judge
-declares `Read, Grep, Glob` plus `Bash(devforgeai status)` and no write tool of
-any kind. Every worker returns one `devforgeai.worker-result/v1` receipt naming
+declares `Read, Grep, Glob, Edit, Write, Bash`; a judge declares
+`Read, Grep, Glob, Bash` and no write tool of any kind. `tools` names tools only:
+a Claude Code subagent's `tools:` frontmatter accepts tool names and MCP server
+patterns, never a command pattern, so the hook dispatcher is the only
+command-level bound. A judge's `Bash` runs `devforgeai status` and the
+dispatcher's read-only command set (`cat cmp cut diff echo grep head jq ls pwd rg
+sha256sum tail test tr wc`, plus read-only git subcommands inside the root) and
+nothing else; a producer's additionally runs `devforgeai run KEY` for its granted
+keys. Every worker returns one `devforgeai.worker-result/v1` receipt naming
 the paths it claims inside the candidate root; a judge claims none and carries
 its evidence in the receipt's `findings`, which the sequencer persists to
 `.devforgeai/work/<run>/evidence/<agent>/findings.md`. Isolation is a declaration
@@ -135,6 +141,7 @@ suppress it.
 | Per-subagent `hooks:` (PreToolUse, PostToolUse, Stop) in `.claude/agents/` frontmatter require workspace trust since v2.1.218. Project-level `SubagentStart`/`SubagentStop` hooks in settings match on agent name. | Hooks stay in the project settings fragment (one dispatcher); no per-agent frontmatter hooks in the MVP. |
 | `skills:` preloads whole skills into the subagent, not files. | Not used: workers get their guidance in the body, and the primary window's SKILL.md is not loaded into workers. |
 | **Observed live 2026-09-03 on Claude Code 2.1.259, undocumented:** a subagent's `Write` of a report-like Markdown file — `findings.md` among them — is refused by the provider with `Subagents should return findings as text, not write report files. Include this content in your final response instead.` The refusal happens before any DevForgeAI hook runs, so no hook sees the call. `findings.json` and `notes.txt` in the same directory are not refused. | Recorded as a fact, **not relied on in either direction**: it is undocumented, it may change, and its scope is a heuristic on file name and content. What the design relies on is that a judge is compiled with no write tool at all, so there is no call for the provider or a hook to refuse. No workaround through a `.json`, a `.txt` or a Bash redirect is permitted: a judge that is refused a write has no write to make (`WRITE-MODEL-REVISION.md` D13). |
+| **Subagents reference, read 2026-09-03:** a subagent's `tools:` frontmatter accepts tool names and MCP server patterns only. A permission pattern written there — `Bash(devforgeai status)`, `Bash(devforgeai run *)` — is not a command restriction; the field either names the tool or it does not. | Every compiled worker profile lists the bare tool name `Bash`, and the command-level bound is the hook dispatcher's alone (`09-hook-dispatcher.md` checks 7 and 8): a judge's `Bash` runs `devforgeai status` and the dispatcher's read-only command set (`cat cmp cut diff echo grep head jq ls pwd rg sha256sum tail test tr wc`, plus read-only git subcommands inside the root); a producer's additionally runs `devforgeai run KEY` for its granted keys. Each agent body restates its role's bound in `## Rules`. `allowed-tools` in a `SKILL.md` frontmatter is a different field that does accept permission patterns, and keeps the five-form grammar. |
 | `isolation: worktree` needs git; `memory:` persists per agent; `background: true` drops tools such as AskUserQuestion. | `memory:` and `background:` are post-MVP (`12-post-mvp.md`); workers run foreground and without memory. The framework does not use `isolation: worktree`, and does not use `EnterWorktree`: both fork from HEAD, which would split the linear phase history the run's candidate root depends on. The sequencer creates and owns that root itself (`10-sequencer-and-contracts.md`), and a worker writes inside the root it is given. |
 
 ### Codex

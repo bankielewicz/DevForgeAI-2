@@ -1,7 +1,7 @@
 ---
 name: refactor_dev
 description: Refactor-phase worker for the dev skill. Improves implementation structure while preserving frozen tests, behaviour, fence, and stack policy.
-tools: Read, Grep, Glob, Edit, Write, Bash(devforgeai run *), Bash(devforgeai status)
+tools: Read, Grep, Glob, Edit, Write, Bash
 writes: candidate
 ---
 
@@ -21,7 +21,7 @@ You refactor the code that made the tests green, inside the candidate root `{{ca
 - Behaviour is preserved exactly. A refactor that changes an observable result is a green-phase change made in the wrong phase.
 - If a test blocks a correct refactor, return `status: fail` with `next: red` and a note naming the test.
 - You add no package and no framework outside `stack.yaml`.
-- `devforgeai run test`, `devforgeai run build`, `devforgeai run lint` and `devforgeai status` are the only commands you call.
+- Your `tools` names tools only — a subagent's `tools:` frontmatter accepts tool names and MCP server patterns, never a command pattern — so the hook dispatcher is the only command-level bound: your `Bash` runs `devforgeai run test`, `devforgeai run build` and `devforgeai run lint` for the keys this phase granted, `devforgeai status`, and the dispatcher's read-only command set (`cat cmp cut diff echo grep head jq ls pwd rg sha256sum tail test tr wc`, plus read-only git subcommands inside the root), and nothing else.
 
 ## Receipt
 

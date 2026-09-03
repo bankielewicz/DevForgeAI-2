@@ -9,7 +9,7 @@ author: "DevForgeAI plan skill, wave 2 spec author"
 date: 2026-09-02
 depends_on:
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:5afb88c46aa635c961564af8e58c799a44f387c6bd877eeac2ec7568f73aba7e
+    hash: sha256:6556607035516c49ee43fe2bbeffe1a74e898889d84be00c9a05fdf751d209b6
     excerpt: "**The model dispatches, the sequencer decides.** For an anatomy-governed skill, the primary window (provider entry adapter + skill orchestration) does light, trivial work only."
   - source: docs/design/01-skill-anatomy.md#handoff-contract
     hash: sha256:dc50836dc15a928b0c4758ef3a671c6f78d5c7db7ea207c923b917d89faa9e96
@@ -277,7 +277,7 @@ The primary window stays in the canonical checkout and never opens the idea sour
 | 7 | Record | sequencer: `devforgeai phase next` | sequencer | n/a |
 | 8 | Handoff | sequencer: `devforgeai phase next`, which on the last passing transition marks the run `ready_to_promote` and renders the first block, a `REQUIRE_HUMAN` handoff naming `devforgeai promote <run>`; that command, run only after the user confirms in the session, renders the second | sequencer | n/a |
 
-`idea_capturer` is the persona and `brainstorm_critic` is the critic: different files, different prompts, and the critic changes nothing. A persona reviewing its own output is the hallucination vector this separation removes. `research_requester` is a judge too: it decides which claims need sealed evidence and returns the request body in `findings`. A judge carries no write tool. After receipt validation, the sequencer persists its `findings` to the fixed `.devforgeai/work/<run>/evidence/<agent>/findings.md` path, which is gitignored, lies outside the candidate root, and is never promoted; `issues[]` stays the bounded summary the handoff carries. A judge's `claimed_paths` is empty on every status.
+`idea_capturer` is the persona and `brainstorm_critic` is the critic: different files, different prompts, and the critic changes nothing. A persona reviewing its own output is the hallucination vector this separation removes. `research_requester` is a judge too: it decides which claims need sealed evidence and returns the request body in `findings`. A judge carries no write tool. After receipt validation, the sequencer persists its `findings` to the fixed `.devforgeai/work/<run>/evidence/<agent>/findings.md` path, which is gitignored, lies outside the candidate root, and is never promoted; `issues[]` stays the bounded summary the handoff carries. A judge's `claimed_paths` is empty on every status. `tools` names tools only: a Claude Code subagent's `tools:` frontmatter accepts tool names and MCP server patterns, never a command pattern, so the hook dispatcher is the only command-level bound. A judge's `Bash` runs `devforgeai status` and the dispatcher's read-only command set (`cat cmp cut diff echo grep head jq ls pwd rg sha256sum tail test tr wc`, plus read-only git subcommands inside the root) and nothing else; a producer's additionally runs `devforgeai run KEY` for its granted keys.
 
 The `Isolation` column is the DevForgeAI worker-contract value compiled into the generated target profile, not Claude's `isolation` frontmatter field. The framework does not use Claude's worktree isolation or `EnterWorktree`: both fork from HEAD, and the run's phases build linearly on one candidate root instead.
 
@@ -299,7 +299,7 @@ Two limits this table does not overstate. Every `devforgeai phase start` defect 
 
 ### 7d. Worker contracts
 
-Each block is the body of `agents/<role>.md` and compiles to one provider profile per target. `name` is the canonical registry worker name, which is what a hook receives as `agent_type`; the compiled filename carries the skill prefix so two skills' profiles cannot collide. `tools` are the Claude names; on Codex `apply_patch` stands in for `Edit` and `Write`. `model: inherit` keeps the worker on the session's model, which is what the terminal-only constraint leaves available. No brainstorm phase grants a stack command key, so no worker here carries `Bash(devforgeai run *)`. Claude-only frontmatter — `hooks`, `memory`, `background`, `permissionMode`, and Claude's own `isolation` — is omitted from every profile.
+Each block is the body of `agents/<role>.md` and compiles to one provider profile per target. `name` is the canonical registry worker name, which is what a hook receives as `agent_type`; the compiled filename carries the skill prefix so two skills' profiles cannot collide. `tools` are the Claude names; on Codex `apply_patch` stands in for `Edit` and `Write`. `model: inherit` keeps the worker on the session's model, which is what the terminal-only constraint leaves available. No brainstorm phase grants a stack command key, so no worker here is granted a `devforgeai run` key. Claude-only frontmatter — `hooks`, `memory`, `background`, `permissionMode`, and Claude's own `isolation` — is omitted from every profile.
 
 ```yaml
 name: idea_capturer
@@ -307,7 +307,7 @@ description: Dispatch this worker at the capture phase to write the brainstorm d
 skill: brainstorm
 writes: candidate
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Edit, Write]
+tools: [Read, Grep, Glob, Bash, Edit, Write]
 skills: []
 compiled_to: [.claude/agents/brainstorm-idea_capturer.md, .codex/agents/brainstorm-idea_capturer.toml]
 responsibility: Write `docs/brainstorm/<slug>.md` inside the candidate root with one identified entry per idea present in the named source, carrying every existing entry forward unchanged.
@@ -327,7 +327,7 @@ must_not:
   - reuse an IDEA id for a different idea, or renumber an existing one
   - state a rationale the source does not state
   - write outside the candidate root, or outside the run's fence inside it
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+tools_codex: [Read, Grep, Glob, Bash, apply_patch]
 isolation: required
 returns: devforgeai.worker-result/v1
 body:
@@ -343,7 +343,7 @@ description: Dispatch this worker at the research_request phase to judge which c
 skill: brainstorm
 writes: none
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status)]
+tools: [Read, Grep, Glob, Bash]
 skills: []
 compiled_to: [.claude/agents/brainstorm-research_requester.md, .codex/agents/brainstorm-research_requester.toml]
 responsibility: Report which captured claims need sealed external evidence and carry one complete research request body, or the sealed dossier references that already cover them.
@@ -361,7 +361,7 @@ must_not:
   - invoke research, or treat an unconfirmed request as persistent evidence
   - cite a dossier by digest alone, without RUN, Source, Evidence and Claim ids
   - write any file, including a request file, or run any stack command key
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status)]
+tools_codex: [Read, Grep, Glob, Bash]
 isolation: required
 returns: devforgeai.worker-result/v1
 body:
@@ -377,7 +377,7 @@ description: Dispatch this worker at the cluster phase to replace the document's
 skill: brainstorm
 writes: candidate
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Edit, Write]
+tools: [Read, Grep, Glob, Bash, Edit, Write]
 skills: []
 compiled_to: [.claude/agents/brainstorm-idea_clusterer.md, .codex/agents/brainstorm-idea_clusterer.toml]
 responsibility: Edit the document inside the candidate root so its `## Clusters` section holds themed groups, each naming the idea ids it contains and nothing else.
@@ -394,7 +394,7 @@ must_not:
   - place an id in two clusters, or leave a captured id in none
   - name a cluster after a decision the document has not made
   - write outside the candidate root, or outside the run's fence inside it
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+tools_codex: [Read, Grep, Glob, Bash, apply_patch]
 isolation: required
 returns: devforgeai.worker-result/v1
 body:
@@ -410,7 +410,7 @@ description: Dispatch this worker at the write phase to complete the document's 
 skill: brainstorm
 writes: candidate
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Edit, Write]
+tools: [Read, Grep, Glob, Bash, Edit, Write]
 skills: []
 compiled_to: [.claude/agents/brainstorm-brainstorm_writer.md, .codex/agents/brainstorm-brainstorm_writer.toml]
 responsibility: Complete the document inside the candidate root: frontmatter with resolved provenance, the problem statement, the captured ideas, the clusters and the open questions.
@@ -428,7 +428,7 @@ must_not:
   - leave a claim without either a source citation or an ASSUMPTION tag
   - record a provenance entry whose source path does not exist
   - write outside the candidate root, or outside the run's fence inside it
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+tools_codex: [Read, Grep, Glob, Bash, apply_patch]
 isolation: required
 returns: devforgeai.worker-result/v1
 body:
@@ -444,7 +444,7 @@ description: Dispatch this worker at the critic phase to judge the finished docu
 skill: brainstorm
 writes: none
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status)]
+tools: [Read, Grep, Glob, Bash]
 skills: []
 compiled_to: [.claude/agents/brainstorm-brainstorm_critic.md, .codex/agents/brainstorm-brainstorm_critic.toml]
 responsibility: Report every idea whose id or source citation is missing, every cluster naming an id the document does not contain, and every claim carrying neither a citation nor an ASSUMPTION tag.
@@ -461,7 +461,7 @@ must_not:
   - repair, reword or renumber anything it reports
   - pass an idea whose source citation names a path that does not exist
   - write any file, or run any stack command key
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status)]
+tools_codex: [Read, Grep, Glob, Bash]
 isolation: required
 returns: devforgeai.worker-result/v1
 body:
@@ -734,7 +734,7 @@ Overlays, copied over the base fixture for the eval whose id they name:
 
 | Kind | Value |
 |------|-------|
-| Tools | `SKILL.md`: `Read`, `Agent`, and a Bash grammar no wider than the five model-callable operations `devforgeai status \| phase start <skill> <arg> \| phase fail --reason \| validate \| promote <run>`. Document writers (`idea_capturer`, `idea_clusterer`, `brainstorm_writer`): `Read`, `Grep`, `Glob`, `Bash(devforgeai status)`, plus `Edit` and `Write`, which Codex serves as `apply_patch`; every write is denied outside `candidate.root` and outside the phase's fence. Judges (`research_requester`, `brainstorm_critic`): `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` and no write tool; they return required `findings` for sequencer persistence. No brainstorm phase grants a stack command key, so no worker carries `Bash(devforgeai run *)` |
+| Tools | `SKILL.md`: `Read`, `Agent`, and a Bash grammar no wider than the five model-callable operations `devforgeai status \| phase start <skill> <arg> \| phase fail --reason \| validate \| promote <run>`. Document writers (`idea_capturer`, `idea_clusterer`, `brainstorm_writer`): `Read`, `Grep`, `Glob`, `Bash`, plus `Edit` and `Write`, which Codex serves as `apply_patch`; every write is denied outside `candidate.root` and outside the phase's fence. Judges (`research_requester`, `brainstorm_critic`): `Read`, `Grep`, `Glob`, `Bash` and no write tool; they return required `findings` for sequencer persistence. No brainstorm phase grants a stack command key, so no worker is granted a `devforgeai run` key |
 | MCP servers | none |
 | Runtime | Python 3.11+ for `scripts/check_brainstorm.py`, which imports `PyYAML` and the standard library only. Worktree mode additionally requires `git` with at least one commit on the project; without it the run falls back to copy mode |
 | Project commands | none. Every brainstorm phase declares an empty run-key set, so no `stack.yaml` key is brokered during this skill's run; a document run carries `commands: {}` (`10-sequencer-and-contracts.md` section 9) |

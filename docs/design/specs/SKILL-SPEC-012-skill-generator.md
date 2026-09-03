@@ -13,7 +13,7 @@ depends_on:
     hash: sha256:3ba95218e8c9c2dcbbe0ed870c729906bb92cefa3c70a33d8476b95562b9889e
     excerpt: "Lives in `.devforgeai/skills/<name>/skill.yaml`."
   - source: docs/design/04-dual-target.md#compiled-layouts
-    hash: sha256:2b036108637ac54c4cc7a7a16915bb3a61a1945633156d17fe627fb98d22f648
+    hash: sha256:44f02357b7a9e513985b6d3de6268cd0d178830cb1256c97267e46c64dde6a28
     excerpt: "portable `SKILL.md` frontmatter is exactly the six open-standard fields (`name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`), because the standard's validator rejects unknown keys."
   - source: docs/design/04-dual-target.md#validation
     hash: sha256:154da47d56b6186c38274dacc2cdd6ccffdab348221a4f3519b4ef835a99d8ba
@@ -52,7 +52,7 @@ depends_on:
     hash: sha256:f2957217c9af147e4a7ea03749cbe6efda266bd56d403f39aa25c9a655872609
     excerpt: "| skill-generator | spec-reader, skill-yaml-writer, subagent-writer, template-writer, claude-compiler, codex-compiler |"
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:5afb88c46aa635c961564af8e58c799a44f387c6bd877eeac2ec7568f73aba7e
+    hash: sha256:6556607035516c49ee43fe2bbeffe1a74e898889d84be00c9a05fdf751d209b6
     excerpt: "Model-callable CLI, closed set. Anything else is hook-only and is denied in the Bash allowlist:"
 ---
 
@@ -232,7 +232,7 @@ A judge, compiled from a `writes: none` contract:
 ---
 name: report_writer_critic
 description: Dispatch this worker at the review phase of a report-writer run to judge the written report against the story's acceptance criteria.
-tools: Read, Grep, Glob, Bash(devforgeai status)
+tools: Read, Grep, Glob, Bash
 model: inherit
 ---
 
@@ -247,7 +247,7 @@ A producer, compiled from a `writes: candidate` contract:
 ---
 name: report_writer
 description: Dispatch this worker at the report phase of a report-writer run to write the report the story names.
-tools: Read, Grep, Glob, Edit, Write, Bash(devforgeai status), Bash(devforgeai run *)
+tools: Read, Grep, Glob, Edit, Write, Bash
 model: inherit
 ---
 
@@ -379,7 +379,7 @@ name: spec_reader
 skill: skill-generator
 description: Dispatch this worker first in a skill-gen run to resolve the one specification for the argument and judge it against the skill-spec header and the anatomy preconditions, before any phase writes a file.
 writes: none
-tools: [Read, Grep, Glob, Bash(devforgeai status)]
+tools: [Read, Grep, Glob, Bash]
 model: inherit
 skills: []
 responsibility: Resolve the one skill specification for this run's argument, check it against the skill-spec template header and the anatomy preconditions in references/read_spec.md, and return the resolved path plus a bounded inventory; never repair it.
@@ -409,7 +409,7 @@ name: skill_yaml_writer
 skill: skill-generator
 description: Dispatch this worker after read_spec to write the generated skill's neutral definition, body and entry command from the resolved specification.
 writes: candidate
-tools: [Read, Grep, Glob, Edit, Write, Bash(devforgeai status)]
+tools: [Read, Grep, Glob, Edit, Write, Bash]
 model: inherit
 skills: []
 responsibility: Write the neutral skill definition, the neutral SKILL.md body, and the entry command file for the specified skill inside the candidate root, from the specification's sections 1, 3, 7, 11 and 12.
@@ -435,7 +435,7 @@ name: subagent_writer
 skill: skill-generator
 description: Dispatch this worker after skill_yaml to write one worker prompt per contract in the specification's section 7, plus one reference file per phase and the envelope reference.
 writes: candidate
-tools: [Read, Grep, Glob, Edit, Write, Bash(devforgeai status)]
+tools: [Read, Grep, Glob, Edit, Write, Bash]
 model: inherit
 skills: []
 responsibility: Write one worker prompt per worker contract in the specification's section 7 inside the candidate root, plus one reference file per phase and the envelope reference.
@@ -463,7 +463,7 @@ name: template_writer
 skill: skill-generator
 description: Dispatch this worker after subagents to write the templates the generated skill owns, each with its machine-readable header, plus its bundled scripts and output assets.
 writes: candidate
-tools: [Read, Grep, Glob, Edit, Write, Bash(devforgeai status)]
+tools: [Read, Grep, Glob, Edit, Write, Bash]
 model: inherit
 skills: []
 responsibility: Write the templates the generated skill owns inside the candidate root, each with the machine-readable header the gate reads, plus its bundled scripts and output assets.
@@ -490,7 +490,7 @@ name: claude_compiler
 skill: skill-generator
 description: Dispatch this worker after templates to write the staged Claude adapter for the generated skill: its SKILL.md, its subagent profiles and its install map.
 writes: candidate
-tools: [Read, Grep, Glob, Edit, Write, Bash(devforgeai status)]
+tools: [Read, Grep, Glob, Edit, Write, Bash]
 model: inherit
 skills: []
 responsibility: Write the staged Claude adapter inside the candidate root: its SKILL.md with the six portable fields plus the provider-specific keys the specification authorises, its subagent profiles, its copied references, scripts and assets, and its install map.
@@ -517,7 +517,7 @@ name: codex_compiler
 skill: skill-generator
 description: Dispatch this worker last in a skill-gen run to write the staged Codex adapter for the generated skill, its AGENTS.md section text and its install map.
 writes: candidate
-tools: [Read, Grep, Glob, Edit, Write, Bash(devforgeai status)]
+tools: [Read, Grep, Glob, Edit, Write, Bash]
 model: inherit
 skills: []
 responsibility: Write the staged Codex adapter inside the candidate root: its SKILL.md with exactly the six portable fields, its worker profiles in the target's profile format, its copied references, scripts and assets, the AGENTS.md section text, and its install map.
@@ -539,7 +539,7 @@ compiled_to:
 body: job, inputs, rules, receipt
 ```
 
-A judge's tools are `Read`, `Grep`, `Glob` and `Bash(devforgeai status)` and nothing else: no `Write`, no `Edit`, no `apply_patch`, its detail returned in the receipt's `findings` for the sequencer to persist. A producer holds `Edit` and `Write` inside the candidate root — `apply_patch` on the Codex target — and `Bash(devforgeai run *)` for the stack keys its phase grants; `skill-generator` grants none, so no worker here carries it. No worker holds a git write, a package manager, a network tool or a raw stack command. `isolation` in the blocks above is the framework's `required | preferred` declaration, not Claude's subagent `isolation` key, which the framework never sets. `hooks`, `memory`, `background` and `permissionMode` are Claude-only keys this skill leaves unset.
+A judge's tools are `Read`, `Grep`, `Glob` and `Bash` and nothing else: no `Write`, no `Edit`, no `apply_patch`, its detail returned in the receipt's `findings` for the sequencer to persist. A producer holds `Edit` and `Write` inside the candidate root — `apply_patch` on the Codex target — and a `Bash` the dispatcher lets reach `devforgeai run KEY` for the stack keys the phase grants; `skill-generator` grants none, so no worker here carries it. No worker holds a git write, a package manager, a network tool or a raw stack command. `isolation` in the blocks above is the framework's `required | preferred` declaration, not Claude's subagent `isolation` key, which the framework never sets. `hooks`, `memory`, `background` and `permissionMode` are Claude-only keys this skill leaves unset. `tools` names tools only: a Claude Code subagent's `tools:` frontmatter accepts tool names and MCP server patterns, never a command pattern, so the hook dispatcher is the only command-level bound. A judge's `Bash` runs `devforgeai status` and the dispatcher's read-only command set (`cat cmp cut diff echo grep head jq ls pwd rg sha256sum tail test tr wc`, plus read-only git subcommands inside the root) and nothing else; a producer's additionally runs `devforgeai run KEY` for its granted keys.
 
 ### Evidence and gate table
 
@@ -608,7 +608,7 @@ The portable package names the worker prompt directory `agents/`, which is the f
 | `check_spec.py` | Deterministic check of one skill specification against the `skill-spec` template header (frontmatter key set, id pattern, the 16 required sections in order, forbidden placeholder strings from the template header, `status: approved`, no unresolved authoring assumption) plus the anatomy preconditions in `references/read_spec.md`: every section 7 worker contract has `responsibility`, `must_not`, `tools` no wider than read, and a canonical worker name; every phase named has a reference file row in section 8; the section 3 description is at most 1024 characters and has no angle bracket; section 12 names only supported targets; section 0 names only the eval modes `skip` and `quick`; section 7 names no worker for Gate, Record or Handoff; the return envelope named is `devforgeai.worker-result/v1`. Prints one JSON object with `ok`, `gaps` and `inventory`. | `python scripts/check_spec.py <spec-path> [--json]` | 0 ok, 1 gaps listed on stdout, 2 usage |
 | `resolve_spec.py` | Resolve one skill name to exactly one specification path using the order in section 6, and print the match as JSON with the search roots it used. | `python scripts/resolve_spec.py <skill-name> [--spec <path>]` | 0 exactly one match, 1 zero or several matches, 2 usage |
 
-Both scripts are non-interactive, take arguments and never prompt, print data to stdout and diagnostics to stderr, and document a help flag. Neither is executed by a worker: no `skill-generator` phase grants a stack command key, so no worker holds `Bash(devforgeai run *)`, and the brokered surface is hook-only in any case. The scripts are the reference implementation of the rules the workers apply by reading, they are run by a human in section 14, and they are the sibling of `check_story.py` that the sequencer's gate library imports when the provenance half of the gate described in `01-skill-anatomy.md` is implemented. See section 9.
+Both scripts are non-interactive, take arguments and never prompt, print data to stdout and diagnostics to stderr, and document a help flag. Neither is executed by a worker: no `skill-generator` phase grants a stack command key, so no worker is granted a `devforgeai run` key, and the brokered surface is hook-only in any case. The scripts are the reference implementation of the rules the workers apply by reading, they are run by a human in section 14, and they are the sibling of `check_story.py` that the sequencer's gate library imports when the provenance half of the gate described in `01-skill-anatomy.md` is implemented. See section 9.
 
 ### references/
 | File | Content | Load when |
@@ -636,12 +636,12 @@ One file per worker in section 7. No file for Gate, Record or Handoff.
 
 | File | Worker (from section 7) | writes | tools | compiled to |
 |------|-------------------------|--------|-------|-------------|
-| `spec_reader.md` | `spec_reader` | none | Read, Grep, Glob, Bash(devforgeai status) | `.claude/agents/skill-generator-spec_reader.md`, `.codex/agents/skill-generator-spec_reader.toml` |
-| `skill_yaml_writer.md` | `skill_yaml_writer` | candidate | Read, Grep, Glob, Edit, Write, Bash(devforgeai status) | `.claude/agents/skill-generator-skill_yaml_writer.md`, `.codex/agents/skill-generator-skill_yaml_writer.toml` |
-| `subagent_writer.md` | `subagent_writer` | candidate | Read, Grep, Glob, Edit, Write, Bash(devforgeai status) | `.claude/agents/skill-generator-subagent_writer.md`, `.codex/agents/skill-generator-subagent_writer.toml` |
-| `template_writer.md` | `template_writer` | candidate | Read, Grep, Glob, Edit, Write, Bash(devforgeai status) | `.claude/agents/skill-generator-template_writer.md`, `.codex/agents/skill-generator-template_writer.toml` |
-| `claude_compiler.md` | `claude_compiler` | candidate | Read, Grep, Glob, Edit, Write, Bash(devforgeai status) | `.claude/agents/skill-generator-claude_compiler.md`, `.codex/agents/skill-generator-claude_compiler.toml` |
-| `codex_compiler.md` | `codex_compiler` | candidate | Read, Grep, Glob, Edit, Write, Bash(devforgeai status) | `.claude/agents/skill-generator-codex_compiler.md`, `.codex/agents/skill-generator-codex_compiler.toml` |
+| `spec_reader.md` | `spec_reader` | none | Read, Grep, Glob, Bash | `.claude/agents/skill-generator-spec_reader.md`, `.codex/agents/skill-generator-spec_reader.toml` |
+| `skill_yaml_writer.md` | `skill_yaml_writer` | candidate | Read, Grep, Glob, Edit, Write, Bash | `.claude/agents/skill-generator-skill_yaml_writer.md`, `.codex/agents/skill-generator-skill_yaml_writer.toml` |
+| `subagent_writer.md` | `subagent_writer` | candidate | Read, Grep, Glob, Edit, Write, Bash | `.claude/agents/skill-generator-subagent_writer.md`, `.codex/agents/skill-generator-subagent_writer.toml` |
+| `template_writer.md` | `template_writer` | candidate | Read, Grep, Glob, Edit, Write, Bash | `.claude/agents/skill-generator-template_writer.md`, `.codex/agents/skill-generator-template_writer.toml` |
+| `claude_compiler.md` | `claude_compiler` | candidate | Read, Grep, Glob, Edit, Write, Bash | `.claude/agents/skill-generator-claude_compiler.md`, `.codex/agents/skill-generator-claude_compiler.toml` |
+| `codex_compiler.md` | `codex_compiler` | candidate | Read, Grep, Glob, Edit, Write, Bash | `.claude/agents/skill-generator-codex_compiler.md`, `.codex/agents/skill-generator-codex_compiler.toml` |
 
 ## 9. Gotchas and edge cases
 
@@ -652,7 +652,7 @@ One file per worker in section 7. No file for Gate, Record or Handoff.
 | Expecting a failed phase to leave earlier files as they were | No phase declares `rewind_to`, so a `fail` never rewinds to an earlier phase: the failed phase retries against the same checkpoint, which holds the previous phases' files exactly as they were. | Every phase rewrites every file it owns, so a re-run overwrites rather than patches. A partially generated package is a legitimate on-disk state after a failure, and `/skill-validate {skill}` reports it. |
 | Passing the specification path as the run argument | The fence becomes `.devforgeai/skills/docs/plan/.../SKILL-SPEC-004.md/**` and the gate refuses it. | The run argument is the skill name; the specification path is resolved by `spec_reader`, optionally overridden by `--spec`. The roster's `/skill-gen <spec>` names the specification by the skill it specifies. |
 | The skill name and the command differ | A cross-reference check that compares a slash command to a skill name reports a false orphan. | The skill is `skill-generator` and its command is `/skill-gen`; the registry records both, and `11-artifact-registry.md` records this as divergence 4. The command file is `commands/skill-gen.md`. |
-| Expecting a worker to run `check_spec.py` | No `skill-generator` phase grants a stack command key, so no worker holds `Bash(devforgeai run *)` and the call is denied at `PreToolUse`. | `spec_reader` applies the enumerated rules by reading and returns them in the receipt's `findings`, with the bounded routing summary in `issues` and `note`. The script is the reference implementation, run by a human in section 14. |
+| Expecting a worker to run `check_spec.py` | No `skill-generator` phase grants a stack command key, so no worker is granted a `devforgeai run` key and the call is denied at `PreToolUse`. | `spec_reader` applies the enumerated rules by reading and returns them in the receipt's `findings`, with the bounded routing summary in `issues` and `note`. The script is the reference implementation, run by a human in section 14. |
 | Expecting the `phase start` gate to check the specification | The document gate validates the fence only; it does not open the specification. | `read_spec` performs the specification check and returns `needs_user` with `SPEC GAPS`. Template and provenance conformance at the gate is a requirement on the gate library, recorded in `10-sequencer-and-contracts.md#3-2-defect-to-action-map-as-implemented` note 3 as designed and unimplemented, not as behaviour this run relies on. |
 | The specification's `target` selects one provider | The unselected compile phase produces no file and the `document` oracle fails the transition. | That phase writes exactly one file, its `install-map.json`, marked unselected with an empty copy list, and claims that one path. |
 | The registry gives this skill no Slice phase and no Review phase | A validator applying `04-dual-target.md#validation` item 1 literally reports two missing sub-phase kinds. | `read_spec` carries the Slice duty, and Review is externalised: this skill's handoff names `/skill-validate {skill}` as the first next step, which is the roster's "always runs skill-validator on its output". `skill-validator` records both as recorded divergences, not defects. |
@@ -662,14 +662,14 @@ One file per worker in section 7. No file for Gate, Record or Handoff.
 | A generated adapter is treated as installed | A run assumes provider-native workers exist that no one copied into place. | A generated adapter is an uninstalled candidate (`06-skill-specification.md#cold-session-protocol` step 5). Runtime verification of declared isolation is `12-post-mvp.md#pm-01`. |
 | Expecting a Slice worker | A generated package grows a seventh agent file with no registry phase to run it. | Slice is a sequencer step inside `devforgeai phase start`: it writes `.devforgeai/work/<run>/context.json`, whose path every worker of the run is handed. No framework worker performs it and this package ships no agent file for it. |
 | Expecting the document gate to re-resolve `depends_on` or `provenance` hashes | A specification is assumed to have been checked against its upstream sources, because a story gate would have done so. A document run has no story to carry `provenance[]`, `context[]` or `commands.hash`, so it re-resolves nothing. | `spec_reader` records the specification's `depends_on` entries in its returned `findings` and does not re-resolve them. Re-resolving would refuse every specification whose digests are still placeholders, which `01-skill-anatomy.md` hash rule 6 classes as `unresolvable-source` and a defect inside a project. Staleness of a generated skill against its specification is detected downstream: by `skill-validator`'s conformance rule 1 against `metadata.devforgeai-spec`, and by `/drift`. |
-| Deciding a compiled profile's tool list | A compiler that gives every profile the same list either lets a judge repair what it found, or leaves a producer with no way to write. | The contract's `writes` declaration selects the list, and the enum is exactly two values. `writes: none` compiles to `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` and no write tool of any kind; its detail comes back in the receipt's `findings`. `writes: candidate` adds `Edit` and `Write` inside the candidate root — `apply_patch` and `sandbox_mode = "workspace-write"` on the Codex target — plus `Bash(devforgeai run *)` for the stack keys the phase grants. Nothing wider is emitted: no git write, no package manager, no network tool, no raw stack command. |
+| Deciding a compiled profile's tool list | A compiler that gives every profile the same list either lets a judge repair what it found, or leaves a producer with no way to write. | The contract's `writes` declaration selects the list, and the enum is exactly two values. `writes: none` compiles to `Read`, `Grep`, `Glob`, `Bash` and no write tool of any kind; its detail comes back in the receipt's `findings`. `writes: candidate` adds `Edit` and `Write` inside the candidate root — `apply_patch` and `sandbox_mode = "workspace-write"` on the Codex target — plus a `Bash` the dispatcher lets reach `devforgeai run KEY` for the stack keys the phase grants. Nothing wider is emitted: no git write, no package manager, no network tool, no raw stack command. |
 | A worker returns `status: fail` with no `next` | The phase is expected to stop or to be treated as a soft warning. | The sequencer inserts a transition problem row naming the worker, so the phase retries to its `max_attempts` of 2 and then blocks `REQUIRE_HUMAN`. A failing phase is a retry, then a human, never a silent pass. |
 | Treating `--fix` as a resume | The user expects `--fix` to continue from the phase that failed, and the earlier phases' files are assumed intact. | Resuming is not a flag. `devforgeai phase start skill-generator <name>` resumes a **blocked** run — one a `needs_user` result or an exhausted attempt budget left `active` with `run.yaml#blocked_at` set — at that phase in the same candidate root with attempts reset (`10-sequencer-and-contracts.md` sections 2 and 3.1); `/skill-gen {skill}` is that command, with or without `--fix`. With no blocked run to resume, the same call opens a fresh run with a fresh candidate root from `read_spec`, and `--fix` changes only what the workers read: the validate report is added to `spec_reader`'s inputs. It never merges two runs' files. |
 | Treating "skill-generator calls skill-validator" as an in-run invocation | `devforgeai phase start` refuses a second run while one is active, so the call is refused and the run cannot finish. | No skill invokes another skill's run. The calls edge in `02-skill-roster.md` is a handoff row: this run's `next` names `/skill-validate {skill}`, and a human or a fresh session runs it. The procedure in section 7 contains no such call. |
 | Using the hyphenated worker names from `05-subagent-sets.md` | The stop event's `agent_type` is compared against the registry name, so `skill-yaml-writer` does not resolve and the receipt is refused at `ingest-result`. | The registry name in `10-sequencer-and-contracts.md#4-per-skill-phase-registry` is canonical: `spec_reader`, `skill_yaml_writer`, `subagent_writer`, `template_writer`, `claude_compiler`, `codex_compiler`. The hyphenated form is a display alias. Canonical names are used in section 7, in the `subagents/<role>.md` filenames, in each compiled profile's `name` field, and in the evidence table. The compiled provider file is named `<skill>-<role>` so two skills' profiles never collide in one `.claude/agents/` directory, while `name` stays the canonical worker name the stop event carries. |
 | Reading the section 7 handoff table as what a run prints | The declared rows and the rendered block differ, and a reader follows a next step the sequencer never wrote. | The declared table is the contract the skill carries in `skill.yaml`; the current sequencer writes `/status` for a document run that passes and for a `REQUIRE_HUMAN` block, the runner repair then the skill command for a `COULD_NOT_RUN` block, and the skill command with `--fix` for a `WARN` or `OFF` block. Both are recorded in section 7. |
 | Which worker may write, and where | A compiler that treats every worker alike either lets `spec_reader` repair the specification it was asked to judge, or leaves the five writing phases with no way to produce a file | Roles follow the registry's `writes` column: `read_spec` compiles to a judge declaring `writes: none`, which holds no write tool at all and returns its inventory in the receipt's `findings`, and the other five compile to producers that write inside the candidate root with Edit and Write and name what they wrote in `claimed_paths`. The sequencer derives what actually changed from the checkpoint diff, so the split is enforced by the diff and not by the worker's word. |
-| D13 (2026-09-03): the judge had an evidence-directory `Write`, and the compiled tool table had three `writes` cases | Claude Code 2.1.259 refuses a subagent's `Write` of a report-like Markdown file before any hook runs, so `spec_reader` could not be relied on to write `inventory.json`, and every generated skill would inherit the same defect from this compiler's tool table | `WRITE-MODEL-REVISION.md` D13 applied here: the `writes` enum is `candidate` or `none`, with `evidence` removed from R5, from the compiled-tool-list row above, from `spec_reader`'s `must_not` acceptance rule and from section 14's constitution check. `spec_reader` declares `writes: none`, carries `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` and no `Write`, `Edit` or `apply_patch`, and returns its inventory in the receipt's `findings` string, required on a pass or fail and optional otherwise, at most 16,384 UTF-8 bytes, which the sequencer persists verbatim at `SubagentStop` to `.devforgeai/work/<run>/evidence/spec_reader/findings.md` and records in `read_spec-result.json`; `inventory.json` is gone. No judge names its own findings path in `evidence_refs`, because that file does not exist when the receipt is validated. The bounded `findings` body does enter the primary context as part of the subagent's result (D13 item 4); what stays isolated is the worker's transcript, reads and tool traffic. Earlier revisions of `10-sequencer-and-contracts.md` and `09-hook-dispatcher.md` carried the superseded evidence-writing branch; D13 is now applied in those documents and here. |
+| D13 (2026-09-03): the judge had an evidence-directory `Write`, and the compiled tool table had three `writes` cases | Claude Code 2.1.259 refuses a subagent's `Write` of a report-like Markdown file before any hook runs, so `spec_reader` could not be relied on to write `inventory.json`, and every generated skill would inherit the same defect from this compiler's tool table | `WRITE-MODEL-REVISION.md` D13 applied here: the `writes` enum is `candidate` or `none`, with `evidence` removed from R5, from the compiled-tool-list row above, from `spec_reader`'s `must_not` acceptance rule and from section 14's constitution check. `spec_reader` declares `writes: none`, carries `Read`, `Grep`, `Glob`, `Bash` and no `Write`, `Edit` or `apply_patch`, and returns its inventory in the receipt's `findings` string, required on a pass or fail and optional otherwise, at most 16,384 UTF-8 bytes, which the sequencer persists verbatim at `SubagentStop` to `.devforgeai/work/<run>/evidence/spec_reader/findings.md` and records in `read_spec-result.json`; `inventory.json` is gone. No judge names its own findings path in `evidence_refs`, because that file does not exist when the receipt is validated. The bounded `findings` body does enter the primary context as part of the subagent's result (D13 item 4); what stays isolated is the worker's transcript, reads and tool traffic. Earlier revisions of `10-sequencer-and-contracts.md` and `09-hook-dispatcher.md` carried the superseded evidence-writing branch; D13 is now applied in those documents and here. |
 | Where the generated package ends up | A reader expects `.devforgeai/skills/<name>/` to appear in the working tree the moment a phase passes | Every write lands in the candidate root `.devforgeai/work/<run>/wt`, which is gitignored. The package reaches the canonical checkout only at `devforgeai promote <run>`, never at Handoff: the last passing `devforgeai phase next` marks the run `ready_to_promote` and writes a `REQUIRE_HUMAN` handoff whose only forward step is that command, and `SKILL.md` runs it only after the user confirms in the session. A promotion refused with `STALE_BASE`, `DIRTY_TARGET` or `MERGE_CONFLICT` — all three refuse the promote command, not the transition — leaves the run `ready_to_promote` with its candidate root intact, and `devforgeai promote <run>` retries it once the user has resolved the reason. |
 | A `REQUIRE_HUMAN` run treated as closed, with `/status` as its next step | `needs_user` and an exhausted attempt budget were described as closing the run, so the section 7e rows sent the user to `/status` and the OI-5 row said no flag could resume anything. A closed run has no candidate root, so the work the phases had already done appeared to be lost | Settled in `10-sequencer-and-contracts.md` (section 2's `phase start` row, section 3.1, section 5.4's `needs_user` row, section 6's `REQUIRE_HUMAN`, blocked-run row): such a run stays `active` with its lease released, keeps its candidate root and every checkpoint, and records `run.yaml#blocked_at`. `devforgeai phase start skill-generator <arg>` — the same skill and argument — resumes it at `blocked_at` with `attempts` reset. The three section 7e `needs_user` and attempt-limit rows and the "Treating `--fix` as a resume" row now name `/skill-gen {skill}` as the forward step, with `devforgeai phase fail --reason <text>` then `/status` as the abandon route; any other skill on the same story needs that `phase fail` first. |
 | The `compile_codex` evidence row promoted the run itself | "On pass this is the last phase: the sequencer promotes the run into the canonical checkout" made the last transition move canonical bytes with no point at which the user consents | Section 7b's candidate-root paragraph ("At Handoff the sequencer promotes the run"), the section 7c row and the section 9 row above now carry the two-block model of `WRITE-MODEL-REVISION.md` D7 and `10-sequencer-and-contracts.md` sections 5.4, 6 and 12.4: `devforgeai phase next` marks the run `ready_to_promote` and writes a `REQUIRE_HUMAN` block whose only forward step is `devforgeai promote <run>`; `SKILL.md` runs that command only after the user confirms; the promotion writes the second block. |
@@ -746,7 +746,7 @@ Eval workspace, identical for all three evals and required before any of them ca
 
 | Kind | Value |
 |------|-------|
-| Tools | SKILL.md: `Read` (limited to `.devforgeai/state.yaml`), `Agent`, and a Bash grammar no wider than `devforgeai status`, `devforgeai phase start <skill> <arg>`, `devforgeai phase fail --reason <text>`, `devforgeai validate`, plus `devforgeai promote <run>` after a `REQUIRE_HUMAN` block leaves a run `ready_to_promote` and the user asks for it. Judges: `Read`, `Grep`, `Glob` and `Bash(devforgeai status)`, with no `Write`, no `Edit` and no `apply_patch`; their detail is returned in the receipt's `findings` and persisted by the sequencer. Producers: the same read set plus `Edit` and `Write` (Codex `apply_patch`) inside the candidate root. No phase of this skill grants a stack command key, so no worker carries the `Bash(devforgeai run *)` surface. |
+| Tools | SKILL.md: `Read` (limited to `.devforgeai/state.yaml`), `Agent`, and a Bash grammar no wider than `devforgeai status`, `devforgeai phase start <skill> <arg>`, `devforgeai phase fail --reason <text>`, `devforgeai validate`, plus `devforgeai promote <run>` after a `REQUIRE_HUMAN` block leaves a run `ready_to_promote` and the user asks for it. Judges: `Read`, `Grep`, `Glob` and `Bash`, with no `Write`, no `Edit` and no `apply_patch`; their detail is returned in the receipt's `findings` and persisted by the sequencer. Producers: the same read set plus `Edit` and `Write` (Codex `apply_patch`) inside the candidate root. No phase of this skill grants a stack command key, so no worker is granted a `devforgeai run` key. |
 | MCP servers | none |
 | Runtime | Python 3.11+ and PyYAML 6+ for the two bundled scripts. No third-party library beyond PyYAML is imported. |
 | Project commands | none. This is a document run: the enforcement block carries `commands: {}`, no phase declares a run key, and no oracle brokers a command. `.devforgeai/stack.yaml` is not consulted. Contract: `10-sequencer-and-contracts.md`. |

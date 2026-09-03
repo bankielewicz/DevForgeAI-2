@@ -9,7 +9,7 @@ author: "DevForgeAI plan skill"
 date: 2026-09-02
 depends_on:
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:5afb88c46aa635c961564af8e58c799a44f387c6bd877eeac2ec7568f73aba7e
+    hash: sha256:6556607035516c49ee43fe2bbeffe1a74e898889d84be00c9a05fdf751d209b6
     excerpt: "For an anatomy-governed skill, the primary window (provider entry adapter + skill orchestration) does light, trivial work only. It dispatches workers and calls the sequencer. It never writes state, never advances a phase, and never decides that a phase passed."
   - source: docs/design/01-skill-anatomy.md#evidence-home
     hash: sha256:15bc1303729e997b8eeeefab8f9a406f5c8568e4f0932a28da3f02c14199a469
@@ -388,7 +388,7 @@ The `report` phase renders the criterion map, the evidence and the regression ro
 
 One block per worker. `must_not` is compiled into the agent prompt verbatim.
 
-`writes` is the header D1 requires of every worker: `none` for the three judging workers, `candidate` for `qa_writer`, which is this skill's only producer. A judge carries no `Write`, `Edit` or `apply_patch`; its detailed evidence is the receipt's required `findings` string. The writer carries `Edit` and `Write` — `apply_patch` on the Codex target — admitted under the candidate root. No worker carries a `devforgeai run` surface: the `test` key is granted to the `run_tests` phase and spent by the sequencer's oracle at ingest (D8a). Section 7g compiles these blocks into provider-native subagent files.
+`writes` is the header D1 requires of every worker: `none` for the three judging workers, `candidate` for `qa_writer`, which is this skill's only producer. A judge carries no `Write`, `Edit` or `apply_patch`; its detailed evidence is the receipt's required `findings` string. The writer carries `Edit` and `Write` — `apply_patch` on the Codex target — admitted under the candidate root. No worker carries a `devforgeai run` surface: the `test` key is granted to the `run_tests` phase and spent by the sequencer's oracle at ingest (D8a). Section 7g compiles these blocks into provider-native subagent files. `tools` names tools only: a Claude Code subagent's `tools:` frontmatter accepts tool names and MCP server patterns, never a command pattern, so the hook dispatcher is the only command-level bound. A judge's `Bash` runs `devforgeai status` and the dispatcher's read-only command set (`cat cmp cut diff echo grep head jq ls pwd rg sha256sum tail test tr wc`, plus read-only git subcommands inside the root) and nothing else; a producer's additionally runs `devforgeai run KEY` for its granted keys.
 
 ```yaml
 name: test_runner
@@ -404,7 +404,7 @@ must_not:
   - put a literal build, test, lint or format command into findings, note or issues
   - assert a test outcome; the sequencer runs the suite at the transition and records the outcomes
   - write any file, or run any build, test, lint or format command
-tools: [Read, Grep, Glob, Bash(devforgeai status)]
+tools: [Read, Grep, Glob, Bash]
 granted_keys: []
 writes: none
 returns: devforgeai.worker-result/v1
@@ -426,7 +426,7 @@ must_not:
   - decide a criterion by reading the implementation instead of a recorded outcome
   - report a criterion with no covering test as failed rather than uncovered
   - write any file, or run any build, test, lint or format command
-tools: [Read, Grep, Glob, Bash(devforgeai status)]
+tools: [Read, Grep, Glob, Bash]
 granted_keys: []
 writes: none
 returns: devforgeai.worker-result/v1
@@ -448,7 +448,7 @@ must_not:
   - omit a missing optional citation instead of recording its absence
   - add a verdict or a criterion judgement
   - write any file, or run any build, test, lint or format command
-tools: [Read, Grep, Glob, Bash(devforgeai status)]
+tools: [Read, Grep, Glob, Bash]
 granted_keys: []
 writes: none
 returns: devforgeai.worker-result/v1
@@ -472,7 +472,7 @@ must_not:
   - change any path other than docs/reports/qa-<story>.md
   - omit a required frontmatter key or a required section of the qa-report template
   - write outside the candidate root, or run any command other than devforgeai status
-tools: [Read, Grep, Glob, Edit, Write, Bash(devforgeai status)]
+tools: [Read, Grep, Glob, Edit, Write, Bash]
 granted_keys: []
 writes: candidate
 returns: devforgeai.worker-result/v1
@@ -515,14 +515,14 @@ Also possible in every rendered row: `/status` reprints the same block from the 
 
 ### 7g. Compiled subagent definitions
 
-Each section 7e contract compiles to one provider-native subagent file per target. The Claude file is Markdown with YAML frontmatter at `.claude/agents/qa-<role>.md`; the Codex file is TOML at `.codex/agents/qa-<role>.toml`. The filename is skill-scoped so two skills' worker sets can install side by side; `name` stays the canonical registry name, because that is the value the provider reports as `agent_type` and the sequencer compares against the active phase's worker. Claude's own rule is that a filename need not match the `name` it declares.
+Each section 7e contract compiles to one provider-native subagent file per target. The Claude file is Markdown with YAML frontmatter at `.claude/agents/qa-<role>.md`; the Codex file is TOML at `.codex/agents/qa-<role>.toml`. The filename is skill-scoped so two skills' worker sets can install side by side; `name` stays the canonical registry name, because that is the value the provider reports as `agent_type` and the sequencer compares against the active phase's worker. Claude's own rule is that a filename need not match the `name` it declares. The `tools` column below names tools only: a Claude Code subagent's `tools:` frontmatter accepts tool names and MCP server patterns, never a command pattern, so a compiled file writes `Bash` and never `Bash(devforgeai status)` or `Bash(devforgeai run *)`, and the hook dispatcher is the only command-level bound. A judge's `Bash` runs `devforgeai status` and the dispatcher's read-only command set (`cat cmp cut diff echo grep head jq ls pwd rg sha256sum tail test tr wc`, plus read-only git subcommands inside the root) and nothing else; a producer's additionally runs `devforgeai run KEY` for the keys its phase granted. Each compiled body restates its role's bound in its Rules section.
 
 | Worker | name | tools | model | writes | Claude file | Codex file |
 |---|---|---|---|---|---|---|
-| `test_runner` | `test_runner` | `Read, Grep, Glob, Bash(devforgeai status)` | `inherit` | none | `.claude/agents/qa-test_runner.md` | `.codex/agents/qa-test_runner.toml` |
-| `criteria_checker` | `criteria_checker` | `Read, Grep, Glob, Bash(devforgeai status)` | `inherit` | none | `.claude/agents/qa-criteria_checker.md` | `.codex/agents/qa-criteria_checker.toml` |
-| `evidence_collector` | `evidence_collector` | `Read, Grep, Glob, Bash(devforgeai status)` | `inherit` | none | `.claude/agents/qa-evidence_collector.md` | `.codex/agents/qa-evidence_collector.toml` |
-| `qa_writer` | `qa_writer` | `Read, Grep, Glob, Edit, Write, Bash(devforgeai status)` | `inherit` | candidate | `.claude/agents/qa-qa_writer.md` | `.codex/agents/qa-qa_writer.toml` |
+| `test_runner` | `test_runner` | `Read, Grep, Glob, Bash` | `inherit` | none | `.claude/agents/qa-test_runner.md` | `.codex/agents/qa-test_runner.toml` |
+| `criteria_checker` | `criteria_checker` | `Read, Grep, Glob, Bash` | `inherit` | none | `.claude/agents/qa-criteria_checker.md` | `.codex/agents/qa-criteria_checker.toml` |
+| `evidence_collector` | `evidence_collector` | `Read, Grep, Glob, Bash` | `inherit` | none | `.claude/agents/qa-evidence_collector.md` | `.codex/agents/qa-evidence_collector.toml` |
+| `qa_writer` | `qa_writer` | `Read, Grep, Glob, Edit, Write, Bash` | `inherit` | candidate | `.claude/agents/qa-qa_writer.md` | `.codex/agents/qa-qa_writer.toml` |
 
 `description` is one sentence naming when the primary dispatches the worker, because that is the field the provider matches a dispatch against:
 
@@ -613,7 +613,7 @@ Each row is a real behaviour of the current implementation or a resolved contrad
 |-----------|-----------------|--------------------|
 | The seven sub-phases give Slice to a framework worker, but no registry phase dispatches one (OI-1) | A receipt from a worker the active phase does not name is refused at ingest, because the active phase's worker is `test_runner`, and the run stalls on a protocol error that consumes no attempt | Dispatch no Slice worker. Slice is a sequencer step inside `phase start`: it writes the resolved bundle to `.devforgeai/work/<run>/context.json` and hands every worker that path. The story's `context[]` bundle is what it resolves. This specification promises no slice phase and names no framework worker for it. |
 | `01-skill-anatomy.md` describes provenance conformance as part of the gate while an earlier revision of `10-sequencer-and-contracts.md` limited the gate to `commands.hash` (OI-2) | A specification written against the older text understates the gate | The story gate re-resolves every `provenance[]` and `context[]` entry as well as `commands`, per `10-sequencer-and-contracts.md` section 3.4, and it runs for `qa` because the skill is story-anchored. A resolved source with a changed digest is `stale-hash` and is never downgradable. |
-| A worker's tool list is read as authorising the suite (OI-3) | `test_runner` runs the project's tests itself and reports its own output as the acceptance evidence, which is the claim this skill exists to replace | Tools are per role (D1), and `test_runner` is a judge: `Read`, `Grep`, `Glob` and `Bash(devforgeai status)`, with no `devforgeai run` surface. **Decision (D8a):** the `test` key is granted to the `run_tests` phase and spent by the sequencer's oracle at ingest; an earlier revision of this specification gave the worker `Bash(devforgeai run *)`, which D8a names a specification defect, and it is removed here rather than met by widening D1. |
+| A worker's tool list is read as authorising the suite (OI-3) | `test_runner` runs the project's tests itself and reports its own output as the acceptance evidence, which is the claim this skill exists to replace | Tools are per role (D1), and `test_runner` is a judge: `Read`, `Grep`, `Glob` and `Bash`, with no `devforgeai run` surface. **Decision (D8a):** the `test` key is granted to the `run_tests` phase and spent by the sequencer's oracle at ingest; an earlier revision of this specification gave the worker `Bash`, which D8a names a specification defect, and it is removed here rather than met by widening D1. |
 | A phase returns `status: fail` with no `next` (OI-4) | Section 5.4 lists no outcome row for it, so an author guesses the phase passes | The sequencer inserts the worker's failure as a transition problem row, the phase retries to its budget of 2, and the run then blocks `REQUIRE_HUMAN`. No `qa` phase declares `rewind_to`, so a `next` value is refused outright. |
 | A user runs `/qa {story} --fix` expecting the flag to resume the blocked run (OI-5) | An author reads the flag as the resume mechanism and writes a repair route that depends on it | The run does resume, but the flag is not what resumes it. A blocked run stays `active` with `run.yaml#blocked_at` naming the phase, and `devforgeai phase start qa {story}` — same skill, same argument, flags or not — resumes it there with `attempts` reset. `--fix` on this skill is only the `BLOCK` and `WARN` handoffs' rendered next step; it changes nothing the workers read. Another skill on the same story, such as `/dev {story} --fix`, needs `devforgeai phase fail --reason <text>` first, which abandons the root. |
 | The handoff says `/dev {next_story}` or `/retro {sprint}` and an author reads it as an invocation (OI-7) | The adapter tries to run the next skill in the same session and `devforgeai phase start` refuses because a run is active | A "calls" edge is a handoff row, not a call. The finishing run's `next` names the command; a human or a fresh session runs it. |
@@ -652,7 +652,7 @@ Each row is a real behaviour of the current implementation or a resolved contrad
 - Triggers on the nine section 4 positives and on none of the nine near-misses.
 - `SKILL.md` is under 500 lines and contains identity, the four-row phase list, the dispatch loop and the handoff table, and no phase guidance.
 - `agents/` holds exactly four files, named for the four canonical workers; `references/` holds exactly five.
-- Every `must_not` block ends with its role's closing line: the no-write line for the three judges, the candidate-root line for `qa_writer`. No judge's `tools` value exceeds `Read`, `Grep`, `Glob` and `Bash(devforgeai status)`; `qa_writer` adds `Edit` and `Write`. No agent file carries a `devforgeai run` surface.
+- Every `must_not` block ends with its role's closing line: the no-write line for the three judges, the candidate-root line for `qa_writer`. No judge's `tools` value exceeds `Read`, `Grep`, `Glob` and `Bash`; `qa_writer` adds `Edit` and `Write`. No agent file carries a `devforgeai run` surface.
 - A judge's run leaves both candidate and canonical tracked bytes unchanged; on `pass` or `fail` the sequencer persists exactly one validated findings file under `.devforgeai/work/<run>/evidence/<agent>/`.
 - Every agent file declares `writes`, and its value matches the phase's row in section 7c.
 - The `SKILL.md` Bash grammar is no wider than `devforgeai status`, `devforgeai phase start qa <story> [--lenient]`, `devforgeai phase fail --reason <text>`, `devforgeai validate` and `devforgeai promote <run>`.
@@ -732,7 +732,7 @@ Quick-mode results are generation feedback only: one enabled run per eval and no
 
 | Kind | Value |
 |------|-------|
-| Tools | `SKILL.md`: `Read`, `Agent`, and a Bash grammar no wider than `devforgeai status \| phase start qa <story> [--lenient] \| phase fail --reason \| validate \| promote <run>`. Judges (`test_runner`, `criteria_checker`, `evidence_collector`): `Read`, `Grep`, `Glob` and `Bash(devforgeai status)`, and no write tool of any kind on either target. Producer (`qa_writer`): those plus `Edit` and `Write`, with writes admitted under the candidate root. No worker carries a `devforgeai run` surface; the `test` key is the `run_tests` phase's and the sequencer spends it. |
+| Tools | `SKILL.md`: `Read`, `Agent`, and a Bash grammar no wider than `devforgeai status \| phase start qa <story> [--lenient] \| phase fail --reason \| validate \| promote <run>`. Judges (`test_runner`, `criteria_checker`, `evidence_collector`): `Read`, `Grep`, `Glob` and `Bash`, and no write tool of any kind on either target. Producer (`qa_writer`): those plus `Edit` and `Write`, with writes admitted under the candidate root. No worker carries a `devforgeai run` surface; the `test` key is the `run_tests` phase's and the sequencer spends it. |
 | MCP servers | none |
 | Runtime | Python 3.11+ and PyYAML 6+ for the sequencer and the hook dispatcher. Worktree mode additionally needs `git` with a repository at the project root, at least one commit, `.devforgeai/work/` ignored, and both the provider's settings file and `.devforgeai/stack.yaml` tracked; the `SessionStart` self-test checks all five and fails `phase start` with `could_not_run: prerequisite_missing` rather than falling back to copy mode. The project under test supplies the runner behind its `test` key, which must write JUnit XML to the section's `junit_path`, because the oracle reads per-test outcomes from that file rather than from stdout. For the fixture's `python` section that runner is `pytest`. |
 | Project commands | `.devforgeai/stack.yaml#<anchor>`, resolved from the story's `commands.source` and pinned by `commands.hash`. Keys granted: `test` at `run_tests`, and `build` when the anchored section has `compiled: true`, because the `green` oracle runs the build before the suite; none at `criteria`, `evidence` or `report`. The sequencer spends both in the transition oracle, inside the candidate root. Keys are named, never literal commands. Contract: `10-sequencer-and-contracts.md` section 7. |
@@ -819,7 +819,7 @@ grep -rnE 'T[O]DO|T[B]D|\{\{' <output-dir>/qa || echo clean
 python3 docs/design/specs/verify.py --only v1,v2,v4
 ```
 
-For non-Research anatomy skills, DevForgeAI skill-validator additionally checks: all sub-phase kinds present with Gate, Record and Handoff bound to sequencer operations; the inspection workers and the writer are different files; `must_not` and `writes` present in every agent file, `writes` in `candidate | none`, no judge's `tools` exceed `Read`, `Grep`, `Glob` and `Bash(devforgeai status)`, and the writer adds only its required edit tools; the `SKILL.md` Bash grammar is no wider than the five model-callable operations; handoff outcomes cover every status the skill can return, including `could_not_run` with every `reason_code` the skill can return.
+For non-Research anatomy skills, DevForgeAI skill-validator additionally checks: all sub-phase kinds present with Gate, Record and Handoff bound to sequencer operations; the inspection workers and the writer are different files; `must_not` and `writes` present in every agent file, `writes` in `candidate | none`, no judge's `tools` exceed `Read`, `Grep`, `Glob` and `Bash`, and the writer adds only its required edit tools; the `SKILL.md` Bash grammar is no wider than the five model-callable operations; handoff outcomes cover every status the skill can return, including `could_not_run` with every `reason_code` the skill can return.
 
 ## 15. Provenance
 

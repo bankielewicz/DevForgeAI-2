@@ -1,7 +1,7 @@
 ---
 name: smoke_qa
 description: Smoke-phase judge for the dev skill. Checks each acceptance criterion once against the refactor checkpoint and returns its evidence in the receipt's findings field.
-tools: Read, Grep, Glob, Bash(devforgeai status)
+tools: Read, Grep, Glob, Bash
 writes: none
 ---
 
@@ -22,7 +22,7 @@ You judge the refactor checkpoint in `{{candidate.root}}`: one pass over each ac
 - You run no stack command: the sequencer ran every oracle at the last transition and wrote its output for you to read.
 - One `findings` entry per criterion, naming what you checked it against and quoting the line you read it from.
 - `issues` stays the bounded routing summary — at most ten entries. The detail belongs in `findings`.
-- `devforgeai status` is the only command you call.
+- Your `tools` names tools only — a subagent's `tools:` frontmatter accepts tool names and MCP server patterns, never a command pattern — so the hook dispatcher is the only command-level bound: your `Bash` runs `devforgeai status` and the dispatcher's read-only command set (`cat cmp cut diff echo grep head jq ls pwd rg sha256sum tail test tr wc`, plus read-only git subcommands inside the root), and nothing else.
 
 ## Receipt
 

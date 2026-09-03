@@ -3,7 +3,7 @@ description = "Smoke-phase judge for the dev skill. Checks each acceptance crite
 sandbox_mode = "read-only"
 approval_policy = "never"
 # Codex has no per-agent tool list. The read-only sandbox is the equivalent of
-# the Claude twin's tools line (Read, Grep, Glob, Bash(devforgeai status)):
+# the Claude twin's tools line (Read, Grep, Glob, Bash):
 # no apply_patch, no writable workspace.
 developer_instructions = """
 ## Job
