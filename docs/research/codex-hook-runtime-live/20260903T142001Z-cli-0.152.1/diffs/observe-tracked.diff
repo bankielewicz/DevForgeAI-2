@@ -1,0 +1,14 @@
+diff --git a/hook-proof/allowed.txt b/hook-proof/allowed.txt
+index a574d5c..1e74c9e 100644
+--- a/hook-proof/allowed.txt
++++ b/hook-proof/allowed.txt
+@@ -1 +1 @@
+-allowed=baseline
++allowed=attempted
+diff --git a/hook-proof/protected.txt b/hook-proof/protected.txt
+index 2d86357..834f9ae 100644
+--- a/hook-proof/protected.txt
++++ b/hook-proof/protected.txt
+@@ -1 +1 @@
+-protected=baseline
++protected=attempted

@@ -1,0 +1,20 @@
+ M .codex/hooks/checks/local_registry.py
+ M .codex/hooks/policy.json
+ M hook-proof/allowed.txt
+?? .codex/agents/green_dev.toml
+?? .codex/agents/red_dev.toml
+?? .codex/config.toml
+?? .codex/hooks/__pycache__/protocol.cpython-312.pyc
+?? .codex/hooks/checks/__pycache__/__init__.cpython-312.pyc
+?? .codex/hooks/checks/__pycache__/audit_event.cpython-312.pyc
+?? .codex/hooks/checks/__pycache__/base.cpython-312.pyc
+?? .codex/hooks/checks/__pycache__/builtin_registry.cpython-312.pyc
+?? .codex/hooks/checks/__pycache__/command_guard.cpython-312.pyc
+?? .codex/hooks/checks/__pycache__/local_command_probe.cpython-312.pyc
+?? .codex/hooks/checks/__pycache__/local_registry.cpython-312.pyc
+?? .codex/hooks/checks/__pycache__/protect_paths.cpython-312.pyc
+?? .codex/hooks/checks/__pycache__/session_selftest.cpython-312.pyc
+?? .codex/hooks/checks/__pycache__/subagent_receipt.cpython-312.pyc
+?? .codex/hooks/checks/local_command_probe.py
+?? .codex/hooks/hookd.log.jsonl
+?? .codex/hooks/receipts/d983725b4536873bfcf8e5d464b6e3bd4827378f3dd0e7d68aa91034482bdc06.json

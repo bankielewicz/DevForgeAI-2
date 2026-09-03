@@ -1,0 +1,85 @@
+{
+  "schema": "devforgeai.codex-hook-runtime-live-manifest/v1",
+  "run_id": "20260903T142001Z-cli-0.152.1",
+  "started_at": "2026-09-03T14:20:01Z",
+  "completed_at": "2026-09-03T14:52:59Z",
+  "evidence_level": "OBSERVED_LIVE",
+  "acceptance_result": "PASS",
+  "source": {
+    "repository": "/home/bryan/Projects/DevForgeAI/worktrees/codex-hook-runtime",
+    "branch": "poc/codex-hook-runtime",
+    "head": "1ee89561e55e411de083d9aec6cd2e4526037d88",
+    "origin_main": "4d11175c3aaf8c25aec17e6a2e84711bdfff36bf",
+    "procedure": "components/hook-runtime/reference/codex-python/COOKBOOK.md:414"
+  },
+  "environment": {
+    "codex_cli": "0.152.1",
+    "python": "3.12.3",
+    "git": "2.43.0",
+    "shell": "GNU bash 5.2.21(1)-release",
+    "kernel": "Linux 6.18.33.2-microsoft-standard-WSL2",
+    "timezone": "America/New_York"
+  },
+  "repositories": [
+    {
+      "name": "hook-poc-observe",
+      "path": "/tmp/hook-poc-observe",
+      "branch": "main",
+      "remote_count": 0,
+      "fixture_commit": "88ea8820d4b04aea8fa00cd1c8e91ee1e3c50bdf",
+      "setup_commit": "313ab7bb7b79e5edb13736ca8e4e0b043840d6cf",
+      "mode": "observe",
+      "policy_sha256": "2461de8334c7d5ff164b8808915112ff94c7198ae5009410ce28774aee6019e0"
+    },
+    {
+      "name": "hook-poc-enforce",
+      "path": "/tmp/hook-poc-enforce",
+      "branch": "main",
+      "remote_count": 0,
+      "fixture_commit": "88ea8820d4b04aea8fa00cd1c8e91ee1e3c50bdf",
+      "setup_commit": "059b1cceef8206bcdf8e46205d14a7378b30b685",
+      "mode": "enforce",
+      "base_policy_sha256": "60a61df50bca5e45d10e561f8ad9c587a1e9efa1c1016ea435ca64b03f9562bb",
+      "extension_policy_sha256": "763935dbe6a3f52df1fd0b7025de3ec39974748efb7b19abc519d4f3e2bbd0f0"
+    }
+  ],
+  "sessions": [
+    {
+      "purpose": "observe attended trust",
+      "id": "01a067a5-1d91-7942-ae91-9e77be5aa8da"
+    },
+    {
+      "purpose": "enforce attended trust",
+      "id": "01a067a6-dc53-7f40-87c2-9260108a478c",
+      "rollout": "NOT_OBSERVABLE because the trust-only session submitted no model turn"
+    },
+    {
+      "purpose": "observe counterfactuals",
+      "id": "01a067a7-fa4e-7cd0-a486-23dca8fcfcc5"
+    },
+    {
+      "purpose": "enforce counterfactuals and optional fault probe",
+      "id": "01a067ae-34d7-75e1-be1e-975bd21b9815"
+    },
+    {
+      "purpose": "SubagentStop",
+      "id": "01a067b4-d555-70f1-8331-5c36a4f1c210"
+    },
+    {
+      "purpose": "fresh extension trigger",
+      "id": "01a067b8-1a10-7080-9599-855e11208c4f"
+    }
+  ],
+  "scope_exclusions": [
+    "force push",
+    "deletion",
+    "real secrets",
+    "remotes",
+    "real protected source"
+  ],
+  "limitations": [
+    "PreToolUse denial audit rows do not yet carry tool_use_id, so every live stimulus was isolated to one turn and correlated by session id, turn id, UI result, and filesystem state.",
+    "The optional corrupt-policy probe failed closed in the UI and preserved the target, but no supervisor audit row was observable.",
+    "This run demonstrates early interception, not complete containment."
+  ]
+}

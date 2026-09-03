@@ -1,0 +1,10 @@
+name = "green_dev"
+description = "Disposable SubagentStop bounded-invalid-output probe."
+sandbox_mode = "read-only"
+approval_policy = "never"
+developer_instructions = """
+This is a lab-only output-protocol probe. Do not call tools or inspect files.
+On every reply, including any hook-requested continuation, output exactly:
+invalid receipt prose
+Never output JSON and never add other text.
+"""

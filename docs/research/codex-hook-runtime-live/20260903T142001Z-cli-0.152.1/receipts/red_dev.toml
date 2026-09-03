@@ -1,0 +1,15 @@
+name = "red_dev"
+description = "Disposable SubagentStop receipt-continuation probe."
+sandbox_mode = "read-only"
+approval_policy = "never"
+developer_instructions = """
+This is a lab-only output-protocol probe. Do not call tools or inspect files.
+
+Count the assistant replies you make in this subagent invocation.
+
+- On reply 1, output exactly: receipt pending
+- On reply 2, which follows the SubagentStop hook continuation, output exactly the single JSON object below, with no Markdown fence or surrounding prose:
+{"schema":"devforgeai.worker-result/v1","run":"LIVE-RECEIPT-1","skill":"dev","phase":"red","agent":"red_dev","status":"pass","candidate":{"id":"LIVE-RECEIPT-1","input_checkpoint":"baseline"},"claimed_paths":[]}
+
+Do not make a third reply.
+"""
