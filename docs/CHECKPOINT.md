@@ -16,6 +16,8 @@ Updated at the end of every wave. Newest entry first. Each entry says what exist
 
 **Known limits recorded**: `node --check` accepts one path, so lint covers `tinyapp/text.mjs` only; the node dialect treats a leaf test literally named like a file as file-level (fails closed either way); `runner_probe` is declared but not yet invoked by the sequencer; no `commands.format` for node; network isolation is structural, not enforced.
 
+**Addendum (skills-guide conformance, 2026-09-03)**: spec 001's skill design was checked against Anthropic's "Complete Guide to Building Skills for Claude". Structure, naming, description, progressive disclosure, specificity, error handling, examples and testing conform. Fixed: `templates/skill-md.md` now requires `compatibility` and `metadata`, carries `allowed-tools` as the skill's Bash grammar, and puts `provenance` under `metadata` (the top-level key would have failed skill-validator's six-field rule); the Identity section opens with the two critical rules; spec 001 and doc 11's registry row updated. `agents/` is documented as a DevForgeAI extension of the standard layout.
+
 ## Check-in 10 — 2026-09-03, defect pass and error-taxonomy draft
 
 **Made**

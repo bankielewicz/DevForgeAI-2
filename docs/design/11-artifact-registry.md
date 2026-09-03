@@ -34,7 +34,7 @@ Header keys are the machine-readable block the gate reads without a model. Every
 | `clarification` | `.devforgeai/skills/clarify/templates/clarification.md` | 1 | `^CLR-[0-9]{3}$` | id, story, template, template_version, date, status | Question, Answer, Authority |
 | `analyze-report` | `.devforgeai/skills/analyze/templates/analyze-report.md` | 1 | `^FIND-[0-9]{3}$` | slug, template, template_version, status, depends_on | Orphans, Gaps, Stale Hashes, Actions |
 | `skill-yaml` | `.devforgeai/skills/skill-generator/templates/skill.yaml` | 1 | `^[a-z][a-z0-9-]*$` | name, version, target, handoff, workers | not a Markdown artifact; the neutral skill definition |
-| `skill-md` | `.devforgeai/skills/skill-generator/templates/SKILL.md` | 1 | `^[a-z][a-z0-9-]*$` | name, description | Identity, Phases, Dispatch Loop, Handoff |
+| `skill-md` | `.devforgeai/skills/skill-generator/templates/SKILL.md` | 1 | `^[a-z][a-z0-9-]*$` | name, description, compatibility, metadata | Identity, Phases, Dispatch Loop, Handoff |
 | `agent-md` | `.devforgeai/skills/skill-generator/templates/agent.md` | 1 | `^[a-z][a-z0-9_]*$` | name, description, tools, writes | Job, Inputs, Rules, Receipt |
 | `command-md` | `.devforgeai/skills/skill-generator/templates/command.md` | 1 | `^[a-z][a-z-]*$` | name, description, argument-hint | Usage, Arguments, Handoff |
 | `validate-report` | `.devforgeai/skills/skill-validator/templates/validate-report.md` | 1 | `^VAL-[0-9]{3}$` | skill, template, template_version, status, verdict, depends_on | Anatomy, Provider, Spec Conformance, Fixes |

@@ -716,7 +716,7 @@ dev/SKILL.md               # at most 500 lines: identity, phase list, dispatch l
   assets/dev-notes.md      # the dev-notes template
 ```
 
-`SKILL.md` links to `references/`, `agents/` and `assets/`; an `agents/*.md` links to its own `references/<phase>.md` and to `references/envelope.md`; nothing links further. No `README.md` exists inside the skill directory.
+`SKILL.md` links to `references/`, `agents/` and `assets/`; an `agents/*.md` links to its own `references/<phase>.md` and to `references/envelope.md`; nothing links further. No `README.md` exists inside the skill directory. `agents/` is a DevForgeAI extension of the Agent Skills layout, not one of the standard `scripts/`, `references/`, `assets/` folders: no provider discovers agents there, skill-generator compiles them out to `.claude/agents/` and `.codex/agents/`, and skill-validator accepts the folder by name. The compiled `SKILL.md` opens its Identity section with the two rules the design rests on, before any persona text: the skill never writes a file and never advances a phase.
 
 ### scripts/
 
@@ -925,7 +925,12 @@ metadata:
   devforgeai-spec: "SKILL-SPEC-001"
   devforgeai-target: "both"
   devforgeai-anatomy: "true"
+  provenance:
+    - source: "docs/design/specs/SKILL-SPEC-001-dev.md#3-description"
+      hash: "sha256 of this specification's section 3, written by skill-generator"
 ```
+
+`provenance` sits under `metadata`, never at the top level: the portable frontmatter is exactly the six Agent Skills fields, and skill-validator rule 1 refuses a seventh.
 
 Not produced by skill-creator (deferred to DevForgeAI's skill-generator): provider-native `.claude/agents/*.md` and `.codex/agents/*.toml` worker profiles, provider-specific frontmatter keys for the Claude target, and concise `AGENTS.md` sections. Hook definitions are not per-skill: `init` installs the one dispatcher and its provider fragments from `09-hook-dispatcher.md`, and this specification ships none.
 
