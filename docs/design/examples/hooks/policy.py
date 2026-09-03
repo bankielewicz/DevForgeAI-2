@@ -121,8 +121,23 @@ VERDICT_NEXT: dict[str, str] = {
 # `review` and `qa` stay refused.
 STORY_IN_FLIGHT_EXEMPT = {"clarify"}
 
-# The two reports a `--fix` run may be routed here by, newest first at the gate.
-FIX_REPORT_SOURCES = ("docs/reports/qa-{arg}.md", "docs/reports/review-{arg}.md")
+# Which reports a `--fix` run of each skill may have been routed here by, in the
+# registry's own terms: a skill declares its fix-report sources or it has none,
+# and `--fix` on a skill with none is a usage error rather than a silent no-op.
+# The gate resolves the newest declared file that exists.
+FIX_REPORT_SOURCES: dict[str, tuple[str, ...]] = {
+    "dev": ("docs/reports/qa-{arg}.md", "docs/reports/review-{arg}.md"),
+    "skill-generator": ("docs/reports/validate-{arg}.md",),
+}
+
+
+def fix_report_sources(skill: str) -> tuple[str, ...]:
+    """The declared `--fix` report patterns for a skill, `()` when it declares none.
+
+    Keyed by the canonical skill name, so a variant (`dev-tdd`) inherits the
+    sources of the skill it is a variant of.
+    """
+    return FIX_REPORT_SOURCES.get(skill_key(skill), ())
 
 # The options `devforgeai phase start` accepts, closed. Dispatch check 8 admits
 # any subset of these in any order and refuses every other option.

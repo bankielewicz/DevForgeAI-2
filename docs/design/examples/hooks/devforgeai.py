@@ -85,6 +85,7 @@ from policy import (
     phase_names,
     phase_run_keys,
     phase_spec,
+    fix_report_sources,
     project_relative,
     refused_tool,
     run_id,
@@ -2343,28 +2344,38 @@ def fence_conflicts(state: dict, run: str, skill: str, fence: list[str]) -> list
     return conflicts
 
 
-def resolve_fix_report(kind: str, arg: str, wants_fix: bool) -> str | None:
+def resolve_fix_report(skill: str, arg: str, wants_fix: bool) -> str | None:
     """`--fix` names the report that routed this run here (D14 item 2).
 
-    A story run started with `--fix` was sent back by `qa` or `review`, and the
-    worker needs the report by path. The sequencer resolves it at the gate — the
-    newest of the two declared paths, by mtime, `review` winning an exact tie —
-    and refuses the run if neither exists, because `--fix` with nothing to fix
-    is a caller mistake, not a run. Every other kind records `null`.
+    A run started with `--fix` was sent back by the judging skill that reads its
+    output: `qa` or `review` for `dev`, `skill-validator` for `skill-generator`.
+    The worker needs that report by path, so the sequencer resolves it at the
+    gate — the newest declared path that exists, by mtime, the later-declared
+    pattern winning an exact tie — and refuses the run when the skill declares
+    no source at all (`NO_FIX_SOURCE`, a usage error) or when every declared
+    source is absent (`NO_FIX_REPORT`). `--fix` with nothing to fix is a caller
+    mistake, never a silently recorded null.
     """
-    if not wants_fix or kind != "story":
+    if not wants_fix:
         return None
-    rows = []
-    for pattern in FIX_REPORT_SOURCES:
-        relative = pattern.format(arg=arg)
-        path = ROOT / relative
-        if path.is_file():
-            rows.append((path.stat().st_mtime, relative))
-    if not rows:
+    patterns = fix_report_sources(skill)
+    if not patterns:
         raise Refuse(
-            "NO_FIX_REPORT: --fix names the qa or review report that sent this story back, "
-            "and neither " + " nor ".join(p.format(arg=arg) for p in FIX_REPORT_SOURCES)
-            + " exists. Run /qa or /review first, or start the run without --fix.",
+            f"NO_FIX_SOURCE: skill {skill} declares no fix-report source, so --fix names "
+            "nothing it could read. Skills that accept --fix: "
+            + ", ".join(sorted(FIX_REPORT_SOURCES))
+            + ". Start the run without --fix.",
+            USAGE,
+        )
+    declared = [pattern.format(arg=arg) for pattern in patterns]
+    rows = [((ROOT / relative).stat().st_mtime, relative)
+            for relative in declared if (ROOT / relative).is_file()]
+    if not rows:
+        absent = (f"{declared[0]} does not exist" if len(declared) == 1
+                  else "neither " + " nor ".join(declared) + " exists")
+        raise Refuse(
+            f"NO_FIX_REPORT: --fix names the report that sent {arg} back to {skill}, "
+            f"and {absent}. Produce that report first, or start the run without --fix.",
             REFUSED,
         )
     return max(rows)[1]
@@ -2457,7 +2468,7 @@ def resume_run(state: dict, e: dict, args) -> None:
     if getattr(args, "fix", False):
         # A resume that repeats `--fix` re-resolves the report; a resume without
         # it keeps whatever the run already recorded.
-        e["fix_report"] = resolve_fix_report(e.get("kind", ""), e["arg"], True)
+        e["fix_report"] = resolve_fix_report(e["skill"], e["arg"], True)
     if e.get("kind") == "story":
         state.setdefault("stories", {}).setdefault(e["arg"], {})["status"] = "in_dev"
     e["phase"] = phase
@@ -2614,7 +2625,7 @@ def cmd_phase_start(args) -> None:
         )
 
     e["granted_keys"] = sorted(phase_run_keys(e))
-    e["fix_report"] = resolve_fix_report(spec["kind"], args.arg, bool(args.fix))
+    e["fix_report"] = resolve_fix_report(skill, args.arg, bool(args.fix))
     if warnings:
         e["gate_warnings"] = warnings
 
@@ -3379,9 +3390,9 @@ def build_parser() -> argparse.ArgumentParser:
     start.add_argument("arg")
     start.add_argument(
         "--fix", action="store_true",
-        help="this run was sent back by qa or review: record the newest of "
-             "docs/reports/qa-<story>.md and docs/reports/review-<story>.md as "
-             "run.yaml#fix_report and print it in the status block",
+        help="this run was sent back by the skill that judges its output: record the "
+             "newest of the skill's declared fix-report sources as run.yaml#fix_report "
+             "and print it in the status block; refused for a skill that declares none",
     )
     start.add_argument(
         "--lenient", action="store_true",

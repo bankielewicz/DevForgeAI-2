@@ -33,7 +33,7 @@ depends_on:
     hash: sha256:f51716b6cfb1f4a48f4efbcff03947b3adab879dac1b6de7720564c85c87c43c
     excerpt: "Producers: `architect`'s `techstack` phase emits the INTENDED sections beside `techstack.md`; `onboard`'s `code_map` phase emits the OBSERVED sections."
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:3c4c95bbd73b5499e5569e650f84eea84cb68404c0909f5f1819c0f3a5c7b3d4
+    hash: sha256:52cf474c332c7d8a02ad1b1abac51d852d5f54c30bf5126deb8a5b18cde77206
     excerpt: "`next` is never empty and is never a description. One exact command."
   - source: docs/design/11-artifact-registry.md#1-template-registry
     hash: sha256:fabb8d2f142dcde1a31bc53768f8a46d01cac3ea4a7f6b73db22479cc89b5553

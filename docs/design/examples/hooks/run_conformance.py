@@ -2064,7 +2064,7 @@ def fence_overlap_backstop() -> tuple[bool, str]:
 
 
 def fix_report_backstop() -> tuple[bool, str]:
-    """`--fix` resolves the report that sent the story back, or refuses (D14 item 2)."""
+    """`--fix` resolves the report that sent this run back, per skill (D14 item 2)."""
     missing = make_project("fix-missing")
     none_code, none_out = sequence(missing, "phase", "start", "dev", "STORY-001",
                                    "--lenient", "--fix")
@@ -2092,9 +2092,20 @@ def fix_report_backstop() -> tuple[bool, str]:
     plain = started_project("fix-none")
     plain_status = sequence(plain, "status")[1]
 
-    # A document run has no story report to resolve, so `--fix` records null.
+    # `skill-generator` declares one source of its own: the skill-validator
+    # report. `--fix` is not a story-skill option.
+    gen = make_project("fix-skillgen")
+    gen_missing = sequence(gen, "phase", "start", "skill-generator", "tinyapp", "--fix")
+    (gen / "docs" / "reports").mkdir(parents=True)
+    (gen / "docs/reports/validate-tinyapp.md").write_text("# validate\n")
+    gen_code, gen_out = sequence(gen, "phase", "start", "skill-generator", "tinyapp", "--fix")
+
+    # A skill that declares no source refuses `--fix` as a usage error rather
+    # than silently recording null.
     doc = make_project("fix-document")
-    doc_code, _ = sequence(doc, "phase", "start", "pm", "tinyapp", "--fix")
+    doc_code, doc_out = sequence(doc, "phase", "start", "pm", "tinyapp", "--fix")
+    plain_doc = make_project("fix-document-plain")
+    plain_doc_code, _ = sequence(plain_doc, "phase", "start", "pm", "tinyapp")
 
     passed = all((
         none_code == 1 and "NO_FIX_REPORT" in none_out
@@ -2107,11 +2118,21 @@ def fix_report_backstop() -> tuple[bool, str]:
         "fix_report" in status and "docs/reports/qa-STORY-001.md" in status,
         record(plain).get("fix_report") is None,
         "fix_report" not in plain_status,     # never named when it is not set
-        doc_code == 0 and record(doc, "pm-tinyapp").get("fix_report") is None,
+        gen_missing[0] == 1 and "NO_FIX_REPORT" in gen_missing[1]
+        and "docs/reports/validate-tinyapp.md does not exist" in gen_missing[1],
+        gen_code == 0,
+        record(gen, "skill-generator-tinyapp").get("fix_report")
+        == "docs/reports/validate-tinyapp.md",
+        "fix_report: docs/reports/validate-tinyapp.md" in gen_out,
+        doc_code == 2 and "NO_FIX_SOURCE" in doc_out and "skill pm" in doc_out
+        and "dev, skill-generator" in doc_out,
+        not (doc / ".devforgeai/work/pm-tinyapp").exists(),   # nothing was opened
+        plain_doc_code == 0,                  # the same run without --fix is fine
     ))
     return passed, (f"missing={none_code} fix={fix_code} recorded={recorded!r} "
-                    f"review_wins={record(older).get('fix_report')!r} document={doc_code}\n"
-                    + none_out[-200:])
+                    f"review_wins={record(older).get('fix_report')!r} "
+                    f"skillgen={gen_missing[0]}/{gen_code} no_source={doc_code}\n"
+                    + none_out[-160:] + " | " + doc_out[-160:])
 
 
 def clarify_in_flight_backstop() -> tuple[bool, str]:

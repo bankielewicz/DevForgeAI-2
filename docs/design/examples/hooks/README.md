@@ -95,12 +95,14 @@ copy of the project's `.devforgeai/` too.
 
 ## Deliberate limits
 
-The `--fix` option of `devforgeai phase start` records the qa or review report
-that sent the story back as `run.yaml#fix_report` and prints it in the status
-block, and that is all it does: the red oracle still requires every `test_plan`
-row to fail. Narrowing
-the required-fail set to the criteria the report named is designed and
-unimplemented.
+The `--fix` option of `devforgeai phase start` records the report that sent this
+run back — `policy.FIX_REPORT_SOURCES` declares them per skill, `qa` or `review`
+for `dev` and `skill-validator` for `skill-generator` — as `run.yaml#fix_report`
+and prints it in the status block, and that is all it does: `dev`'s red oracle
+still requires every `test_plan` row to fail. Narrowing the required-fail set to
+the criteria the report named is designed and unimplemented. A skill that
+declares no source refuses `--fix` (`NO_FIX_SOURCE`); a declared source with no
+file behind it refuses too (`NO_FIX_REPORT`).
 
 The dispatcher trusts the provider's event fields, the sequencer trusts its own
 filesystem, and neither sandboxes anything: the OS sandbox is post-MVP. Copy

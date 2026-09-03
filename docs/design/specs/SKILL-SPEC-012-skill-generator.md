@@ -31,7 +31,7 @@ depends_on:
     hash: sha256:9cf7115cdfa637023edc22cbdf5f64c106b1eba340598c8dc97b68361cb76b0f
     excerpt: "It is `.devforgeai/state.yaml`, `.devforgeai/stack.yaml`, `.devforgeai/work/**`, `.devforgeai/provenance/**`, `.devforgeai/sessions/**`, `.devforgeai/hooks/**`, `.devforgeai/research-cas/**`, `.claude/**`, `.codex/**`, `.agents/**`, `.git/**`, `CLAUDE.md`, `AGENTS.md`."
   - source: docs/design/10-sequencer-and-contracts.md#9-enforcement-block
-    hash: sha256:fb2caa96dcd1b9657eb01e5f2e2bdafaf00f92b9303292580d2c71e0af58bf03
+    hash: sha256:c4ef5db527d878b1b1302d8912abfe770cc2f5da41917033dba11494461dcfbf
     excerpt: "`skill-generator`'s fence `.devforgeai/skills/<arg>/**` is checkpointed and rewound like any other path; **the \"no rewind promise for `skill-generator`\" caveat is withdrawn**"
   - source: docs/design/10-sequencer-and-contracts.md#11-per-skill-evidence-and-gate-table
     hash: sha256:21b4e5d8b01ebbca643e6e4725154ebadb0dd02ad84001495ae703f6ccee4a56
@@ -43,7 +43,7 @@ depends_on:
     hash: sha256:858455b885ac6c1ddbe427a433ba715f7266d08b90e105135172877e29ea0ecc
     excerpt: "| `.devforgeai/skills/<name>/skill.yaml` | `skill-yaml` | skill-generator | sequencer |"
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:3c4c95bbd73b5499e5569e650f84eea84cb68404c0909f5f1819c0f3a5c7b3d4
+    hash: sha256:52cf474c332c7d8a02ad1b1abac51d852d5f54c30bf5126deb8a5b18cde77206
     excerpt: "| 1 | `next` is never empty and is never a description. One exact command. |"
   - source: docs/design/02-skill-roster.md#handoff-decision-tables
     hash: sha256:1dac784b4670cc7559f323011dfe304dfe8c0baf349063162f90d76d902c5d3c
