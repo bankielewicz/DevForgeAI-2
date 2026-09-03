@@ -27,7 +27,7 @@ depends_on:
     hash: sha256:ffa41b5d270dc260e28fa9f6bdbc855069a6e922d1148c74b25860dba63484dc
     excerpt: "`red` | build first when the section is compiled; broker `test`; classification is not `NO_TESTS` or `COLLECTION_ERROR`; the command exits non-zero; every `test_plan` name is present and `failed`, never `error`; no test outside `test_plan`; records `red_hashes`"
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:747b6340fc5c2348aad33ca5488012808670b3503b311d7b7d0f1204625afd4c
+    hash: sha256:bca72c10668178e0f4da43e03aaafbf24d2a57ec12f71a16b078880dd496677a
     excerpt: "| story run, promoted | `/review <arg>` |"
   - source: docs/design/11-artifact-registry.md#2-artifact-path-patterns
     hash: sha256:2d2e97afff50edf6b35bf674b1de217c684d5091361e5f1deae12de52b95fb51
@@ -82,7 +82,7 @@ Install the dev variant worker bodies from section 7e unless the invocation name
    - Any other mode name is a spec defect. The deferred interactive mode is `12-post-mvp.md#pm-06`.
 6. **Output location** is given in the prompt. Create `<output-dir>/dev/`. Do not write anywhere else except the `dev-workspace/` sibling that eval runs require.
 7. **On ambiguity, stop before output.** If the spec is still `draft`, contains an unresolved authoring assumption, omits a section, contradicts itself, or leaves a decision this document does not make, do not guess and do not write candidate skill files. End with a list titled `SPEC GAPS` naming each section and question. The spec author fixes and approves the spec before re-running.
-8. **Fidelity over creativity.** Use the description in section 3 verbatim. Use the selected variant's worker contracts in section 7e verbatim as `agents/<role>.md` bodies, adding only the framing the grader agent in skill-creator uses (Role, Inputs, Process, Output). Use the phase guidance in section 7d verbatim as `references/<phase>.md`. Do not add steps, tools, or behaviours the spec does not mention.
+8. **Fidelity over creativity.** Use the description in section 3 verbatim. Use the selected variant's worker contracts in section 7e verbatim as `agents/<role>.md` bodies, adding only the four-section framing `templates/agent-md.md` fixes (Job, Inputs, Rules, Receipt). Use the phase guidance in section 7d verbatim as `references/<phase>.md`. Do not add steps, tools, or behaviours the spec does not mention.
 9. **Finish with the acceptance checks** in section 14 and include their output in your final message.
 
 ## 1. Identity

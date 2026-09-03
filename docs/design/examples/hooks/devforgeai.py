@@ -2509,7 +2509,10 @@ def block(state: dict, e: dict, problems: list[str], policy: str) -> None:
     # 10 section 6: the forward command of a blocked run resumes it, or asks the
     # human for the one thing that would let it resume. It is never `/status`,
     # which reports and changes nothing.
-    if any(p.startswith("COULD_NOT_RUN") for p in problems):
+    if any(p.startswith("COULD_NOT_RUN: hook_fault") for p in problems):
+        nxt = (f"inspect .devforgeai/sessions/raw-events.jsonl and the hook dispatcher "
+               f"(.devforgeai/hooks), then /{e['skill']} {e['arg']}")
+    elif any(p.startswith("COULD_NOT_RUN") for p in problems):
         nxt = f"install the missing runner, then /{e['skill']} {e['arg']}"
     elif policy == "REQUIRE_HUMAN":
         nxt = f"/{e['skill']} {e['arg']}"

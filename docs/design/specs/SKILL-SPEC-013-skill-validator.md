@@ -28,7 +28,7 @@ depends_on:
     hash: sha256:f5dc9ad016c382d9d033b25878267bd8e1ef240cb0ecaafeff33af16637e906e
     excerpt: "- **deterministic gate check** — what a script verifies before or after this phase, with no model judgement, against the candidate root rather than against the worker's account of it. \"The worker confirms\" is not a gate check."
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:747b6340fc5c2348aad33ca5488012808670b3503b311d7b7d0f1204625afd4c
+    hash: sha256:bca72c10668178e0f4da43e03aaafbf24d2a57ec12f71a16b078880dd496677a
     excerpt: "| 5 | A gate or critic failure names the owning skill and the command that re-runs it, from `repair_route`. |"
   - source: docs/design/11-artifact-registry.md#1-template-registry
     hash: sha256:fabb8d2f142dcde1a31bc53768f8a46d01cac3ea4a7f6b73db22479cc89b5553
