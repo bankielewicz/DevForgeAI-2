@@ -24,13 +24,13 @@ depends_on:
     hash: sha256:511733ee35ca74fd5a5c0b59f225d7d975788e7d43d939f44c23b7aa8460cff0
     excerpt: "| drift | document | `docs/reports/drift-<arg>.md` | 3 |"
   - source: docs/design/10-sequencer-and-contracts.md#5-worker-result
-    hash: sha256:cee716ddb3ae9b6b4405037ede3bb7c6445e0e6c8ac28382344a655d31754dcd
+    hash: sha256:8f6ea846d243f9c319728b01fef7c5617fb8652b2c4165e761d493cde7fb381d
     excerpt: "One schema, both providers, every skill. The worker's final message is exactly this object, with no Markdown fence and no surrounding prose."
   - source: docs/design/10-sequencer-and-contracts.md#3-status-vocabulary-and-gate-policy
     hash: sha256:620b4cfcd770a5c653047f88fb4a09afb53a59ece78948c18e970bc9beaec5e6
     excerpt: "A document run carries the fixed map `{unresolvable_source: BLOCK}`, because it has no story to declare a wider one."
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:747b6340fc5c2348aad33ca5488012808670b3503b311d7b7d0f1204625afd4c
+    hash: sha256:bca72c10668178e0f4da43e03aaafbf24d2a57ec12f71a16b078880dd496677a
     excerpt: "| document run, promoted, no verdict or `verdict: pass` | `/status` |"
   - source: docs/design/11-artifact-registry.md#1-template-registry
     hash: sha256:fabb8d2f142dcde1a31bc53768f8a46d01cac3ea4a7f6b73db22479cc89b5553
@@ -75,7 +75,7 @@ Follow its section 0 exactly. Output directory: ./out. Eval mode: quick.
    - Any other mode name is a spec defect. The deferred interactive mode is `12-post-mvp.md#pm-06`.
 6. **Output location** is given in the prompt. Create `./out/drift/`. Do not write anywhere else except the `drift-workspace/` sibling that eval runs require.
 7. **On ambiguity, stop before output.** If the spec is still `draft`, contains an unresolved authoring assumption, omits a section, contradicts itself, or leaves a decision this document does not make, do not guess and do not write candidate skill files. End with a list titled `SPEC GAPS` naming each section and question. The spec author fixes and approves the spec before re-running.
-8. **Fidelity over creativity.** Use the description in section 3 verbatim. Use the worker contracts in section 7d verbatim as `agents/<role>.md` bodies, adding only the framing the grader agent in skill-creator uses (Role, Inputs, Process, Output). This skill ships two agent files, not three: section 8 says which worker file it does not own. Do not add steps, tools, or behaviours the spec does not mention.
+8. **Fidelity over creativity.** Use the description in section 3 verbatim. Use the worker contracts in section 7d verbatim as `agents/<role>.md` bodies, adding only the four-section framing `templates/agent-md.md` fixes (Job, Inputs, Rules, Receipt). This skill ships two agent files, not three: section 8 says which worker file it does not own. Do not add steps, tools, or behaviours the spec does not mention.
 9. **Finish with the acceptance checks** in section 14 and include their output in your final message.
 
 ## 1. Identity

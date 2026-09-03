@@ -540,8 +540,12 @@ def hook_fault_backstop() -> tuple[bool, str]:
     """A stop event with no worker identity records hook_fault and hands off."""
     root = started_project("hookfault")
     author(root, "STORY-001", {"tests/test_text.py": RED_TEXT})
-    code, output = stop(root, {"agent_id": "", "agent_type": ""},
-                        receipt("red", "red_dev", claimed=["tests/test_text.py"]))
+    # The dispatcher drops a stop with no agent_type (an internal helper). The
+    # sequencer's hook_fault path is reached only by a forwarded event that
+    # carries agent_type but no agent_id, so drive ingest-result directly.
+    code, output = sequence(root, "ingest-result", "--agent", "red_dev", "--agent-id", "",
+                            "--session-id", "s", hook_event="SubagentStop",
+                            stdin=receipt("red", "red_dev", claimed=["tests/test_text.py"]))
     work = root / ".devforgeai/work/STORY-001"
     result = json.loads((work / "red-result.json").read_text()) \
         if (work / "red-result.json").exists() else {}
@@ -2063,6 +2067,36 @@ def story_in_flight_backstop() -> tuple[bool, str]:
                     f"after_promote={after_code}\n" + review_out[-220:])
 
 
+def stray_subagent_backstop() -> tuple[bool, str]:
+    """Claude Code's internal helper subagents (agent_id, no agent_type) fire
+    SubagentStart/Stop while a worker runs. Observed live 2026-09-03; the first
+    such stop used to block the run and release the lease. They must be ignored."""
+    root = started_project("stray")
+    target = croot(root) / "tests" / "test_text.py"
+    bound = bind(root, RED)
+    helper = {"agent_id": "a-helper-1"}          # no agent_type, like the classifier
+    stray_start = run(root, event("SubagentStart", sub=helper))
+    stray_stop = run(root, event("SubagentStop", sub=helper, stop_reason="end_turn",
+                                 last_assistant_message="internal helper output"))
+    lease_after = record(root)["lease"]
+    status_after = state_of(root)["runs"]["STORY-001"]["status"]
+    still_writes = run(root, event("PreToolUse", "Write", write_input(target), RED))
+    author(root, "STORY-001", {"tests/test_text.py": RED_TEXT})
+    real = stop(root, RED, receipt("red", "red_dev", claimed=["tests/test_text.py"]))
+    passed = all((
+        bound[0] == 0,
+        stray_start[0] == 0,
+        stray_stop[0] == 0,
+        (lease_after or {}).get("agent_id") == RED["agent_id"],
+        status_after == "active",
+        record(root).get("blocked_at") in (None, ""),
+        still_writes[0] == 0,
+        real[0] == 0,
+    ))
+    return passed, (f"start={stray_start[0]} stop={stray_stop[0]} lease={lease_after} "
+                    f"status={status_after} write={still_writes[0]} real={real[0]}\n" + real[1][-200:])
+
+
 def lease_backstop() -> tuple[bool, str]:
     """One producer writes in a root at a time, on both providers."""
     root = started_project("lease")
@@ -2410,7 +2444,7 @@ DISPATCHER_CASES = [
     ("SubagentStart wrong worker denied", 2, event("SubagentStart", sub=GREEN), "red", "codex"),
 
     # SubagentStop receipt validation.
-    ("stop without agent identity records hook_fault", 0, "STOP_NO_IDENTITY", "red", "claude"),
+    ("stop without agent identity is ignored at the dispatcher (internal helper), no hook_fault", 0, "STOP_NO_IDENTITY", "red", "claude"),
     ("stop with wrong schema refused", 2, "STOP_BAD_SCHEMA", "red", "claude"),
     ("stop with no receipt refused", 2, "STOP_NO_ENVELOPE", "red", "claude"),
     ("stop with two receipts refused", 2, "STOP_TWO_ENVELOPES", "red", "codex"),
@@ -2566,6 +2600,8 @@ BACKSTOPS = [
      dirty_target_backstop),
     ("DIRTY_TARGET refuses a canonical path written outside the root during the run",
      stray_write_backstop),
+    ("internal helper SubagentStart/Stop without agent_type are ignored, lease and run intact",
+     stray_subagent_backstop),
     ("FENCE_OVERLAP refuses a second run over the same paths", fence_overlap_backstop),
     ("STORY_IN_FLIGHT refuses review and qa until the story's run is promoted",
      story_in_flight_backstop),

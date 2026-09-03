@@ -43,7 +43,7 @@ depends_on:
     hash: sha256:2d2e97afff50edf6b35bf674b1de217c684d5091361e5f1deae12de52b95fb51
     excerpt: "| `.devforgeai/skills/<name>/skill.yaml` | `skill-yaml` | skill-generator | sequencer |"
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:747b6340fc5c2348aad33ca5488012808670b3503b311d7b7d0f1204625afd4c
+    hash: sha256:bca72c10668178e0f4da43e03aaafbf24d2a57ec12f71a16b078880dd496677a
     excerpt: "| 1 | `next` is never empty and is never a description. One exact command. |"
   - source: docs/design/02-skill-roster.md#handoff-decision-tables
     hash: sha256:1dac784b4670cc7559f323011dfe304dfe8c0baf349063162f90d76d902c5d3c

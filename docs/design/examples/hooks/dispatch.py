@@ -640,6 +640,12 @@ def handle(ev: dict, provider: str, root: Path) -> int:
     enf = active(state, root, ev)
 
     if event == "SubagentStart" and enf:
+        if not agent_type:
+            # Claude Code runs internal helper subagents (observed live 2026-09-03:
+            # the auto-mode classifier fires SubagentStart/Stop with an agent_id and
+            # no agent_type, every 10-30 s while a worker runs). They are not
+            # workers: no lease, no check, no block. The raw-event log keeps them.
+            return 0
         check_worker(enf, agent_type)
         bind_lease(root, enf, ev)
         ev["_hook_output"] = {
@@ -694,6 +700,11 @@ def handle(ev: dict, provider: str, root: Path) -> int:
         return 0
 
     if event == "SubagentStop" and enf:
+        if not agent_type:
+            # An internal helper subagent stopping, not the worker (see
+            # SubagentStart above). Ingesting it would record a hook fault and
+            # release the worker's lease mid-phase; ignore it instead.
+            return 0
         ev["_system_message"] = ingest_result(root, ev, enf)
         return 0
 
@@ -702,6 +713,34 @@ def handle(ev: dict, provider: str, root: Path) -> int:
         return 0
 
     return 0
+
+
+def record_raw_event(root: Path, ev: dict) -> None:
+    """Append the shape of every hook event (keys and identity, never bodies)
+    to `.devforgeai/sessions/raw-events.jsonl`. This is the evidence that tells
+    a stray or identity-less event apart from a dispatcher bug."""
+    try:
+        import time as _t
+        row = {
+            "at": _t.strftime("%Y-%m-%dT%H:%M:%SZ", _t.gmtime()),
+            "event": ev.get("hook_event_name"),
+            "keys": sorted(ev.keys()),
+            "agent_id": ev.get("agent_id"),
+            "agent_type": ev.get("agent_type"),
+            "tool_name": ev.get("tool_name"),
+            "stop_hook_active": ev.get("stop_hook_active"),
+            "session_id": ev.get("session_id"),
+            "message_len": len(ev.get("last_assistant_message") or "") if isinstance(ev.get("last_assistant_message"), str) else None,
+        }
+        base = Path(root) / ".devforgeai"
+        if not base.is_dir():
+            return  # not a DevForgeAI project: never create state on SessionStart
+        path = base / "sessions" / "raw-events.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(row, sort_keys=True) + "\n")
+    except Exception:
+        pass
 
 
 def main() -> int:
@@ -716,6 +755,7 @@ def main() -> int:
         return 1
     start = args.root or os.environ.get("CLAUDE_PROJECT_DIR") or ev.get("cwd") or os.getcwd()
     root = discover_root(start)
+    record_raw_event(root, ev)
     try:
         result = handle(ev, args.provider, root)
         if ev.get("_hook_output"):

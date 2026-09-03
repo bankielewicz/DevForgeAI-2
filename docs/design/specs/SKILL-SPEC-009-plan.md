@@ -30,7 +30,7 @@ depends_on:
     hash: sha256:ffa41b5d270dc260e28fa9f6bdbc855069a6e922d1148c74b25860dba63484dc
     excerpt: "the phase declared `writes: docs` and `changed[]` is non-empty, unless it is marked conditional, in which case an empty change set needs a non-empty `note`; every changed path exists in the root with the bytes the checkpoint will hold"
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:747b6340fc5c2348aad33ca5488012808670b3503b311d7b7d0f1204625afd4c
+    hash: sha256:bca72c10668178e0f4da43e03aaafbf24d2a57ec12f71a16b078880dd496677a
     excerpt: "`next` is never empty and is never a description. One exact command."
   - source: docs/design/11-artifact-registry.md#1-template-registry
     hash: sha256:fabb8d2f142dcde1a31bc53768f8a46d01cac3ea4a7f6b73db22479cc89b5553
@@ -102,7 +102,7 @@ Follow its section 0 exactly. Output directory: ./out. Eval mode: quick.
    - Any other mode name is a spec defect. The deferred interactive mode is `12-post-mvp.md#pm-06`.
 6. **Output location** is given in the prompt. Create `./out/plan/`. Do not write anywhere else except the `plan-workspace/` sibling that eval runs require.
 7. **On ambiguity, stop before output.** If the spec is still `draft`, contains an unresolved authoring assumption, omits a section, contradicts itself, or leaves a decision this document does not make, do not guess and do not write candidate skill files. End with a list titled `SPEC GAPS` naming each section and question. The spec author fixes and approves the spec before re-running.
-8. **Fidelity over creativity.** Use the description in section 3 verbatim. Use the worker contracts in section 7d verbatim as `agents/<role>.md` bodies, adding only the framing the grader agent in skill-creator uses (Role, Inputs, Process, Output). Do not add steps, tools, or behaviours the spec does not mention.
+8. **Fidelity over creativity.** Use the description in section 3 verbatim. Use the worker contracts in section 7d verbatim as `agents/<role>.md` bodies, adding only the four-section framing `templates/agent-md.md` fixes (Job, Inputs, Rules, Receipt). Do not add steps, tools, or behaviours the spec does not mention.
 9. **Finish with the acceptance checks** in section 14 and include their output in your final message.
 
 ## 1. Identity

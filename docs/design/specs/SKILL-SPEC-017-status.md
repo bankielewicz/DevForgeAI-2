@@ -16,7 +16,7 @@ depends_on:
     hash: sha256:4aa0d2e9acd265d11271008b3e5e748bbf34c4b2b9e5c624ad8dc8d6d9cebb02
     excerpt: "`.devforgeai/work/<run>/run.yaml`, `schemas/devforgeai/v1/run.schema.json`. Written by the sequencer at `devforgeai phase start` and updated at every transition. It outlives the candidate root: promotion and abandonment remove the root, branch, tags and copy-aside, and leave `run.yaml` with the final status so `devforgeai status`, inspection and `NO_CANDIDATE` still resolve."
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:747b6340fc5c2348aad33ca5488012808670b3503b311d7b7d0f1204625afd4c
+    hash: sha256:bca72c10668178e0f4da43e03aaafbf24d2a57ec12f71a16b078880dd496677a
     excerpt: |
       | 7 | The run-end block and the `devforgeai status` block are the same rendering of the same file. |
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
