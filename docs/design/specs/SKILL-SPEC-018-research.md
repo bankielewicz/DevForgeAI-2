@@ -37,18 +37,18 @@ depends_on:
     excerpt: |
       | Next action | Exactly one copy-pasteable provider-specific invocation with all required arguments |
   - source: docs/reviews/2026-09-02-research-core-0.1.0-review.md#7-required-before-merge
-    hash: sha256:a0b51e1453e93569d9290036a95af1e6c7090f9d6b8d38f5935f3e3adb3f7ac5
+    hash: sha256:c846323d4b8fb69de9d553453b1ff29ead6ab80b44091eee6474d49370a38d7d
     excerpt: "1. Close the run-directory file set: validate against an explicit allowlist per phase, reject unknown paths before seal, cover with a test that plants a stray file."
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:37b51ea5748164510e7687527aeab55bc92af9524ee771b293989640cecf8cce
+    hash: sha256:511733ee35ca74fd5a5c0b59f225d7d975788e7d43d939f44c23b7aa8460cff0
     excerpt: |
       | research | external | runner `devforgeai-research`; fence `docs/research/<arg>/**` | none here; the Research Core CLI executes it under `framework/skills/research/`, and `devforgeai phase start` refuses it (exit 3 when the runner is absent) |
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:de637edceb588df104a40b57738eb263989f6603f90ece6f4d0e64fef07ffb6a
+    hash: sha256:747b6340fc5c2348aad33ca5488012808670b3503b311d7b7d0f1204625afd4c
     excerpt: |
       Research is the exception. Its typed handoff contract is `framework/skills/research/contracts/handoff.md`; on the successful path Research Core writes it and the framework does not restate it.
   - source: docs/design/02-skill-roster.md#research
-    hash: sha256:c09858d8ebe3bd88b0e5035cf27bbf8aefbe9f681243983fd7784005b1f07b0d
+    hash: sha256:4360053f675c6f406f22920e9635bc4ef61eb57a283908614ed582861309a7ca
     excerpt: |
       - Research defines contracts for read-only discovery, evidence-extraction, contrary-evidence, and fresh-verification workers. Core 0.1.0 does not launch provider workers or validate the illustrative worker-result objects. Research Core remains the sole canonical writer.
   - source: docs/design/11-artifact-registry.md#4-upstream-and-downstream-per-skill

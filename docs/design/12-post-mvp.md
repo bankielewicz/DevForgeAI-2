@@ -82,7 +82,7 @@ Three things the root does not give, and a sandbox would:
 2. **Containment outside the root.** A hostile or buggy subprocess started by `devforgeai run <key>` can write anywhere the agent's own process can — the user's home directory, another project. That is out of scope of every check this framework performs; only an OS boundary bounds it.
 3. **A hard boundary that survives a disabled hook.** Every check in `09` is a hook, and hooks are user-disableable and fail open on infrastructure faults. A mount is not.
 
-Codex's native `workspace-write` sandbox in `config.codex.toml` is not deferred; it runs today, is pointed at the candidate root, and stays in `09`.
+Codex's native `workspace-write` sandbox in `config.codex.toml` is not deferred and stays in `09`, but it bounds writes to the session workspace, not to the candidate root: a per-agent TOML can set `sandbox_mode` and not writable roots or cwd (Codex subagents reference, read 2026-09-03). On Codex the only fence on the root is therefore the identity-free path check in the PreToolUse hook; running the Codex session from inside the story worktree is the one configuration in which the sandbox itself becomes the fence, and is the recommended shape there.
 
 ## PM-05
 

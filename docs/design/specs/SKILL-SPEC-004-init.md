@@ -9,11 +9,11 @@ author: "DevForgeAI spec author (wave 2)"
 date: 2026-09-02
 depends_on:
   - source: docs/design/10-sequencer-and-contracts.md#2-cli-grammar
-    hash: sha256:a20ea3c182031afa87dfe7a67fd57f04845ce083d255ee723202460651020066
+    hash: sha256:231b93094676198b131720e581f044d8c66b4f0b8dcd3dcb35e4350100807090
     excerpt: |
       Skills whose kind is `none` have no phases and never open a run; their command is a thin wrapper over a deterministic operation. `status` wraps `devforgeai status`; the installer skill wraps the installer, which is not part of this grammar.
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:37b51ea5748164510e7687527aeab55bc92af9524ee771b293989640cecf8cce
+    hash: sha256:511733ee35ca74fd5a5c0b59f225d7d975788e7d43d939f44c23b7aa8460cff0
     excerpt: |
       | init | none | — | none; the command is a thin wrapper over the deterministic installer, and `devforgeai phase start` refuses it |
   - source: docs/design/09-hook-dispatcher.md#5-provider-configuration-and-installation
@@ -24,7 +24,7 @@ depends_on:
     hash: sha256:0917d5a622cc649b55fb714b637903ed5496d60836de49881a8ee199d0d74290
     excerpt: "- Zero LLM workers. `SKILL.md` is a thin wrapper over its bundled `scripts/install.py`; everything below is deterministic."
   - source: docs/design/02-skill-roster.md#handoff-decision-tables
-    hash: sha256:6edc7499ee163453f3be6390b0dda08b3fab885f1399ff944056040596ec3801
+    hash: sha256:1dac784b4670cc7559f323011dfe304dfe8c0baf349063162f90d76d902c5d3c
     excerpt: |
       | init | greenfield | `/brainstorm {slug}` |
       | init | brownfield | `/onboard` |
@@ -37,7 +37,7 @@ depends_on:
     hash: sha256:cec96cadc465f6269eaf0756ef40ff4299302e0754cd4cd887a2c44e50d4851d
     excerpt: "`/status` renders this file. Only the `devforgeai` sequencer writes it, and only at `phase start` (registering the run), at promotion or abandonment, and at `phase fail`; Research state is written only by Research Core."
   - source: docs/design/01-skill-anatomy.md#handoff-contract
-    hash: sha256:4feb33747f3dc13225e4b6fe0b111c66ccec97d25902bb6850780bdd894e6a1d
+    hash: sha256:dc50836dc15a928b0c4758ef3a671c6f78d5c7db7ea207c923b917d89faa9e96
     excerpt: |
       4. **Cold-session safe.** Every command works from a fresh session with no memory of this run, because it reads `state.yaml`.
   - source: docs/design/05-subagent-sets.md#sets-per-skill

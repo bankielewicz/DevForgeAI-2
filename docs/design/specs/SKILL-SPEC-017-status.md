@@ -9,18 +9,18 @@ author: "DevForgeAI spec author (wave 2)"
 date: 2026-09-02
 depends_on:
   - source: docs/design/10-sequencer-and-contracts.md#2-cli-grammar
-    hash: sha256:a20ea3c182031afa87dfe7a67fd57f04845ce083d255ee723202460651020066
+    hash: sha256:231b93094676198b131720e581f044d8c66b4f0b8dcd3dcb35e4350100807090
     excerpt: |
       | `devforgeai status` | none | none | nothing | `0` | model |
   - source: docs/design/10-sequencer-and-contracts.md#9-enforcement-block
     hash: sha256:4aa0d2e9acd265d11271008b3e5e748bbf34c4b2b9e5c624ad8dc8d6d9cebb02
     excerpt: "`.devforgeai/work/<run>/run.yaml`, `schemas/devforgeai/v1/run.schema.json`. Written by the sequencer at `devforgeai phase start` and updated at every transition. It outlives the candidate root: promotion and abandonment remove the root, branch, tags and copy-aside, and leave `run.yaml` with the final status so `devforgeai status`, inspection and `NO_CANDIDATE` still resolve."
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:de637edceb588df104a40b57738eb263989f6603f90ece6f4d0e64fef07ffb6a
+    hash: sha256:747b6340fc5c2348aad33ca5488012808670b3503b311d7b7d0f1204625afd4c
     excerpt: |
       | 7 | The run-end block and the `devforgeai status` block are the same rendering of the same file. |
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:37b51ea5748164510e7687527aeab55bc92af9524ee771b293989640cecf8cce
+    hash: sha256:511733ee35ca74fd5a5c0b59f225d7d975788e7d43d939f44c23b7aa8460cff0
     excerpt: |
       | status | none | — | none; the command is a thin wrapper over `devforgeai status` |
   - source: docs/design/01-skill-anatomy.md#state-file
@@ -35,7 +35,7 @@ depends_on:
     excerpt: |
       - Zero LLM workers. `SKILL.md` is a thin wrapper over `devforgeai status`, which renders `.devforgeai/work/<run>/handoff.json` and the `next` recorded in `state.yaml`. It writes nothing.
   - source: docs/design/02-skill-roster.md#handoff-decision-tables
-    hash: sha256:6edc7499ee163453f3be6390b0dda08b3fab885f1399ff944056040596ec3801
+    hash: sha256:1dac784b4670cc7559f323011dfe304dfe8c0baf349063162f90d76d902c5d3c
     excerpt: |
       | status | any | the `next` recorded in `state.yaml`; status decides nothing itself |
   - source: docs/design/11-artifact-registry.md#4-upstream-and-downstream-per-skill

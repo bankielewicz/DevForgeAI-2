@@ -9,7 +9,7 @@ author: "DevForgeAI wave-2 specification author"
 date: 2026-09-02
 depends_on:
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:de7d775e46bd44c52089a3998b114a5ebb5ce6875be3ebf3dca126f5a9bbaa32
+    hash: sha256:a6bbaf9af2d69f7ede18d7c40f242c42edb26d79be964ffec3f386d6347014c2
     excerpt: "**The model dispatches, the sequencer decides.** For an anatomy-governed skill, the primary window (provider entry adapter + skill orchestration) does light, trivial work only."
   - source: docs/design/01-skill-anatomy.md#gate-validating-the-incoming-artifact
     hash: sha256:01d7f4e0e09db70d8d4869ab22646d7cea27959c936571db4850b11df4000dc8
@@ -18,7 +18,7 @@ depends_on:
     hash: sha256:7b068feb30e7cc2f66292b512ac179cd217df225fb58517d2aaadd30b25236dc
     excerpt: "A literal placeholder hash (`sha256:fixture...`, `sha256:PENDING`) is reported as `unresolvable-source`."
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:37b51ea5748164510e7687527aeab55bc92af9524ee771b293989640cecf8cce
+    hash: sha256:511733ee35ca74fd5a5c0b59f225d7d975788e7d43d939f44c23b7aa8460cff0
     excerpt: "| clarify | 1 | `find_ambiguity` | `ambiguity_finder` | none | 2 | — | report_only | — |"
   - source: docs/design/10-sequencer-and-contracts.md#3-2-defect-to-action-map-as-implemented
     hash: sha256:700e29f7b7eb3b6883d0895d79e3822bf06c32e633eb10b44155761fe4c5ef28
@@ -30,10 +30,10 @@ depends_on:
     hash: sha256:ffa41b5d270dc260e28fa9f6bdbc855069a6e922d1148c74b25860dba63484dc
     excerpt: "the phase declared `writes: docs` and `changed[]` is non-empty, unless it is marked conditional, in which case an empty change set needs a non-empty `note`; every changed path exists in the root with the bytes the checkpoint will hold"
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:de637edceb588df104a40b57738eb263989f6603f90ece6f4d0e64fef07ffb6a
+    hash: sha256:747b6340fc5c2348aad33ca5488012808670b3503b311d7b7d0f1204625afd4c
     excerpt: "`next` is never empty and is never a description. One exact command."
   - source: docs/design/11-artifact-registry.md#1-template-registry
-    hash: sha256:25886acb1c2963b15938f0c577c3bfd28b9807dd2dd961c59ff2b43fa00b62e2
+    hash: sha256:09607ea79839ab215871d87e8221166e14eeb6ca26f8372e4ead4173f1d92907
     excerpt: "| `clarification` | `.devforgeai/skills/clarify/templates/clarification.md` | 1 | `^CLR-[0-9]{3}$` | id, story, template, template_version, date, status | Question, Answer, Authority |"
   - source: docs/design/11-artifact-registry.md#2-artifact-path-patterns
     hash: sha256:2d2e97afff50edf6b35bf674b1de217c684d5091361e5f1deae12de52b95fb51
@@ -45,7 +45,7 @@ depends_on:
     hash: sha256:55d952cce82953a09287f353d9b85050896890886f4ad6548f4e38cf8ca1f8eb
     excerpt: "- Question-generator lists ambiguities in a story."
   - source: docs/design/02-skill-roster.md#handoff-decision-tables
-    hash: sha256:6edc7499ee163453f3be6390b0dda08b3fab885f1399ff944056040596ec3801
+    hash: sha256:1dac784b4670cc7559f323011dfe304dfe8c0baf349063162f90d76d902c5d3c
     excerpt: "| clarify | resolved | `/dev {story}` |"
   - source: docs/design/05-subagent-sets.md#sets-per-skill
     hash: sha256:9e12f3beb236a025c18d40e741c09ba675bd71d2d87f56e2b205c7556b944bf9

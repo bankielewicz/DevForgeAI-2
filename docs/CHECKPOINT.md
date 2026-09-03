@@ -2,13 +2,39 @@
 
 Updated at the end of every wave. Newest entry first. Each entry says what exists, what is verified, what is open, and the decision the owner is asked to make at that check-in.
 
+## Check-in 10 — 2026-09-03, defect pass and error-taxonomy draft
+
+**Made**
+- Reference hook component: `bash_guard` now matches per command segment with heredoc bodies removed and patterns anchored at command position; interpreter escapes (`bash -c`, `eval`) moved to the ask list; deny reasons name the pattern, never the command text. Tests 19/19 (three new: heredoc mention passes, denied command after `&&` caught, `bash -c` asks). Installer no longer appends gitignore lines when `.claude/` is already ignored. Reinstalled locally.
+- Prototype settings (`docs/design/examples/hooks/settings.claude.json`): `Write(...)` rules removed (the host consults `Edit(path)`/`Read(path)` only); every path rule anchored with `/` at the settings source instead of the session cwd.
+- Sequencer: `candidate open` records the canonical dirty set (`run.yaml#candidate.dirty_at_open`, worktree mode); `promote` refuses `DIRTY_TARGET` when a canonical path outside the run's change set became dirty during the run, closing the hole a fail-open hook or an unseen subprocess leaves. Sequencer-owned `.devforgeai/` paths are excluded. New conformance row; doc 10 §2 row, §12.4 step 3, brief D2 and `run.schema.json` updated.
+- Doc 12 PM-04: the Codex `workspace-write` sandbox bounds the session workspace, not the candidate root (per-agent TOML sets `sandbox_mode` only); the root fence on Codex is the hook's path check unless the Codex session runs from the worktree. Memory corrected.
+- Withdrawn: the `hookSpecificOutput.decision.behavior` item from check-in 8; it is the PermissionRequest output shape, used only on that event.
+- Error taxonomy draft, per the owner's placement decision: normative `framework/contracts/error-taxonomy.yaml` (`taxonomy_version: 1`), `framework/contracts/README.md` with install guidance for the future installer (destination `.devforgeai/contracts`, verbatim copy, digest pin, install before hooks), `schemas/devforgeai/v1/error-taxonomy.schema.json` (forbids `allow`), narrative `docs/design/13-error-taxonomy.md`. Every existing code kept verbatim; new layers are the phase-outcome roll-up (COMPLETE, NEEDS_DECISION, BLOCKED, FAILED, COULD_NOT_RUN, INFRA_FAILURE, per research D-023) and the hook failure classes. Three open items recorded for version 2. `install-manifest.yaml` untouched.
+
+**Verified**: hookd tests 19/19; demo green in copy and worktree modes; verify.py V1–V4, V8, V9 ok with hashes recomputed; taxonomy validates against its schema; conformance 198/198 rows hold (124 dispatcher, 35 grammar, 39 backstops).
+
+**Not done**: the manifest entry for `framework/contracts` (manifest owner); the receipt-bounce live probe; language-neutral fixture conversion (next).
+
+## Check-in 9 — 2026-09-03, first live hook proof
+
+**Made**: hookd installed into this repository from `components/hook-runtime/reference/claude-python/install.sh` (staged: self-test, audit and receipt first; protect_paths and bash_guard enabled after the audit line was observed). `.claude/settings.json` now carries one hookd entry per event; `.claude/hooks/` holds the dispatcher, checks and policy; log and receipts are gitignored.
+
+**Observed live in session b6bbdd44 (first DevForgeAI hooks ever to fire from a real Claude Code session)**: PreToolUse Edit on `CLAUDE.md` denied with reason `CLAUDE.md is protected (rule CLAUDE.md)`, file unchanged; PreToolUse Bash on a forced-push dry run denied by bash_guard before execution; PostToolUse Write logged with the session id; SubagentStop fired for an Explore subagent with `agent_id` and `agent_type` populated and the receipt check passing through. Deny latency 0.1 to 0.2 ms. Hook config changes were picked up without a restart.
+
+**Observed limit**: bash_guard scans the whole Bash command text, so a heredoc whose body merely mentions a denied command is denied too (a false positive hit while writing this entry). Fix for the cookbook: match patterns against command positions (first token of each pipeline segment), not the full text.
+
+**Not yet observed**: SessionStart context (needs a new session); the receipt bounce on a listed agent (no listed agent exists in this repo yet); Codex.
+
+**Consequence**: the hook layer moves from "documented" to "observed" for Claude Code on the four events the sequencer design uses. The candidate-root sequencer itself is still unproven live.
+
 ## Check-in 8 — 2026-09-03, hook cookbook proof of concept
 
 **Made**: `components/hook-runtime/reference/claude-python/` (relocated from `poc/hooks/` on 2026-09-03 after layout commit 0cf4656) — one dispatcher (`hookd.py`) registered once per event, an explicit check registry, five checks (SessionStart self-test, protected-path fence with symlink and redirect handling, Bash deny/ask guard, PostToolUse audit, SubagentStop receipt bounce), `policy.json`, a check template, `install.sh` (idempotent merge into `.claude/settings.json`, gitignores runtime files), `settings.claude.json` snippet and `COOKBOOK.md` (protocol per event, failure policy, add-a-check recipe, twelve best practices tied to doc facts and claim IDs, live smoke test).
 
 **Verified**: `python3 components/hook-runtime/reference/claude-python/tests/run_tests.py` 16/16 (pass-through, path deny, symlink deny, redirect deny, outside-project deny, command deny, `ask`, SessionStart context, receipt accept/reject/ignore, critical exception fails closed, malformed stdin fails closed, alarm beats host timeout, log without bodies); install tested on an empty-settings scratch project. Doc facts re-read 2026-09-03: `permissionDecision` is `allow|deny|ask` and `allow` bypasses the permission prompt; `last_assistant_message` on SubagentStop; `agent_id`/`agent_type` on PreToolUse inside subagents; exit 2 keeps a subagent working; only `Edit(path)`/`Read(path)` permission rules are consulted; bare relative rule paths anchor at the session cwd.
 
-**Defects found in the older prototype** (`docs/design/examples/hooks/`): `dispatch.py` emits `hookSpecificOutput.decision.behavior`, a form not in the current hooks reference; `settings.claude.json` carries `Write(...)` rules the host ignores and bare relative deny paths. Not yet fixed.
+**Defects found in the older prototype** (`docs/design/examples/hooks/`): `settings.claude.json` carried `Write(...)` rules the host ignores and bare relative deny paths (fixed 2026-09-03: Edit rules only, `/path` anchoring). The `hookSpecificOutput.decision.behavior` form in `dispatch.py` was re-checked: it is the PermissionRequest output shape, used only on that event, not a PreToolUse defect; withdrawn.
 
 **Not done**: nothing has fired from a live session. Installing hookd into this repository is the live proof and awaits the owner's go; this repo's `.claude/settings.json` is currently zero bytes, so install replaces it with valid JSON.
 

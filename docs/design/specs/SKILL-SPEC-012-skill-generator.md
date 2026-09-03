@@ -13,10 +13,10 @@ depends_on:
     hash: sha256:aca8c8d49d77a22b9905650f9d65f62d1458338e95ba1425024301d82d3047c5
     excerpt: "Lives in `.devforgeai/skills/<name>/skill.yaml`."
   - source: docs/design/04-dual-target.md#compiled-layouts
-    hash: sha256:56e0e577fd32297a28ba3c1257ada03d487e3dfbb554e8912c45e11376180608
+    hash: sha256:faa1184ccf0d4d78a4c46900323d7f9570133b0c53cb886520cd1197e338e844
     excerpt: "portable `SKILL.md` frontmatter is exactly the six open-standard fields (`name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`), because the standard's validator rejects unknown keys."
   - source: docs/design/04-dual-target.md#validation
-    hash: sha256:f9f32d90e5f6f84ca928790da8cba4e1e3bdeb0be7a12f94aeee8f29508585ed
+    hash: sha256:cc996fc4c545d08ef116b3a7657b36064247e278ca8301be0f0d9715a0d996f3
     excerpt: "skill-validator runs after every compile and checks:"
   - source: docs/design/06-skill-specification.md#deferred-to-devforgeai-s-skill-generator
     hash: sha256:7c73717a4098a383d070bd0b2897276f3700ffc269045018efa5ab9800c0fdaa
@@ -25,7 +25,7 @@ depends_on:
     hash: sha256:ab73600267ef7b6721cf5c7599e7432f096b116b2b5aac12405ac933f9c17576
     excerpt: "If any section is ambiguous or any unresolved authoring assumption remains, the generator stops with a `SPEC GAPS` list instead of guessing. The author fixes the spec and re-runs."
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:37b51ea5748164510e7687527aeab55bc92af9524ee771b293989640cecf8cce
+    hash: sha256:511733ee35ca74fd5a5c0b59f225d7d975788e7d43d939f44c23b7aa8460cff0
     excerpt: "| skill-generator | document | `.devforgeai/skills/<arg>/**` | 6 |"
   - source: docs/design/10-sequencer-and-contracts.md#5-2-validation-order
     hash: sha256:9f1bf77b7e84302ff6f3f20260228d57390cc97ab8e8d3f68f52c3ff2658aab8
@@ -37,22 +37,22 @@ depends_on:
     hash: sha256:f5dc9ad016c382d9d033b25878267bd8e1ef240cb0ecaafeff33af16637e906e
     excerpt: "Every skill specification fills this table in its section 7, one row per phase, in phase order:"
   - source: docs/design/11-artifact-registry.md#1-template-registry
-    hash: sha256:25886acb1c2963b15938f0c577c3bfd28b9807dd2dd961c59ff2b43fa00b62e2
+    hash: sha256:09607ea79839ab215871d87e8221166e14eeb6ca26f8372e4ead4173f1d92907
     excerpt: "| `skill-yaml` | `.devforgeai/skills/skill-generator/templates/skill.yaml` | 1 | `^[a-z][a-z0-9-]*$` | name, version, target, handoff, workers | not a Markdown artifact; the neutral skill definition |"
   - source: docs/design/11-artifact-registry.md#2-artifact-path-patterns
     hash: sha256:2d2e97afff50edf6b35bf674b1de217c684d5091361e5f1deae12de52b95fb51
     excerpt: "| `.devforgeai/skills/<name>/skill.yaml` | `skill-yaml` | skill-generator | sequencer |"
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:de637edceb588df104a40b57738eb263989f6603f90ece6f4d0e64fef07ffb6a
+    hash: sha256:747b6340fc5c2348aad33ca5488012808670b3503b311d7b7d0f1204625afd4c
     excerpt: "| 1 | `next` is never empty and is never a description. One exact command. |"
   - source: docs/design/02-skill-roster.md#handoff-decision-tables
-    hash: sha256:6edc7499ee163453f3be6390b0dda08b3fab885f1399ff944056040596ec3801
+    hash: sha256:1dac784b4670cc7559f323011dfe304dfe8c0baf349063162f90d76d902c5d3c
     excerpt: "| skill-generator | pass | `/skill-validate {skill}`, then the command that requested the generation. The generator's run is closed first; nothing is auto-run inside it |"
   - source: docs/design/05-subagent-sets.md#sets-per-skill
     hash: sha256:9e12f3beb236a025c18d40e741c09ba675bd71d2d87f56e2b205c7556b944bf9
     excerpt: "| skill-generator | spec-reader, skill-yaml-writer, subagent-writer, template-writer, claude-compiler, codex-compiler |"
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:de7d775e46bd44c52089a3998b114a5ebb5ce6875be3ebf3dca126f5a9bbaa32
+    hash: sha256:a6bbaf9af2d69f7ede18d7c40f242c42edb26d79be964ffec3f386d6347014c2
     excerpt: "Model-callable CLI, closed set. Anything else is hook-only and is denied in the Bash allowlist:"
 ---
 

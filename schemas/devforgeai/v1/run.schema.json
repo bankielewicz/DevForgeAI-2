@@ -194,6 +194,13 @@
           "minLength": 1,
           "maxLength": 200,
           "description": "worktree mode only: the run branch, devforgeai/<run>."
+        },
+        "dirty_at_open": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Canonical paths git reported modified or untracked when the root was opened (worktree mode). Promotion refuses DIRTY_TARGET when a canonical path outside the run's change set is dirty now and was not then."
         }
       }
     },

@@ -10,16 +10,16 @@ author: "DevForgeAI plan skill"
 date: 2026-09-02
 depends_on:
   - source: docs/design/04-dual-target.md#validation
-    hash: sha256:f9f32d90e5f6f84ca928790da8cba4e1e3bdeb0be7a12f94aeee8f29508585ed
+    hash: sha256:cc996fc4c545d08ef116b3a7657b36064247e278ca8301be0f0d9715a0d996f3
     excerpt: "1. For non-Research anatomy skills, anatomy compliance: all seven sub-phase kinds present; Gate, Slice, Record and Handoff bound to the sequencer operations that perform them; Work, Write and Review each bound to a named worker; persona and critic separated; Work may repeat."
   - source: docs/design/04-dual-target.md#compiled-layouts
-    hash: sha256:56e0e577fd32297a28ba3c1257ada03d487e3dfbb554e8912c45e11376180608
+    hash: sha256:faa1184ccf0d4d78a4c46900323d7f9570133b0c53cb886520cd1197e338e844
     excerpt: "A shared capability or skill specification owns provider-neutral semantics, but its Claude Code and Codex adapters are separate generated artifacts whenever frontmatter, invocation policy, or agent configuration differs."
   - source: docs/design/06-skill-specification.md#cold-session-protocol
     hash: sha256:ab73600267ef7b6721cf5c7599e7432f096b116b2b5aac12405ac933f9c17576
     excerpt: "Treat the generated output as a candidate. A non-Research adapter may install at `.claude/skills/<name>` and/or `.agents/skills/<name>` only after its section 12 release gates pass and a human accepts it."
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:37b51ea5748164510e7687527aeab55bc92af9524ee771b293989640cecf8cce
+    hash: sha256:511733ee35ca74fd5a5c0b59f225d7d975788e7d43d939f44c23b7aa8460cff0
     excerpt: "| skill-validator | document | `docs/reports/validate-<arg>.md` | 4 |"
   - source: docs/design/10-sequencer-and-contracts.md#5-2-validation-order
     hash: sha256:9f1bf77b7e84302ff6f3f20260228d57390cc97ab8e8d3f68f52c3ff2658aab8
@@ -28,22 +28,22 @@ depends_on:
     hash: sha256:f5dc9ad016c382d9d033b25878267bd8e1ef240cb0ecaafeff33af16637e906e
     excerpt: "- **deterministic gate check** — what a script verifies before or after this phase, with no model judgement, against the candidate root rather than against the worker's account of it. \"The worker confirms\" is not a gate check."
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:de637edceb588df104a40b57738eb263989f6603f90ece6f4d0e64fef07ffb6a
+    hash: sha256:747b6340fc5c2348aad33ca5488012808670b3503b311d7b7d0f1204625afd4c
     excerpt: "| 5 | A gate or critic failure names the owning skill and the command that re-runs it, from `repair_route`. |"
   - source: docs/design/11-artifact-registry.md#1-template-registry
-    hash: sha256:25886acb1c2963b15938f0c577c3bfd28b9807dd2dd961c59ff2b43fa00b62e2
+    hash: sha256:09607ea79839ab215871d87e8221166e14eeb6ca26f8372e4ead4173f1d92907
     excerpt: "| `validate-report` | `.devforgeai/skills/skill-validator/templates/validate-report.md` | 1 | `^VAL-[0-9]{3}$` | skill, template, template_version, status, verdict, depends_on | Anatomy, Provider, Spec Conformance, Fixes |"
   - source: docs/design/11-artifact-registry.md#2-artifact-path-patterns
     hash: sha256:2d2e97afff50edf6b35bf674b1de217c684d5091361e5f1deae12de52b95fb51
     excerpt: "| `docs/reports/validate-<skill>.md` | `validate-report` | skill-validator | sequencer |"
   - source: docs/design/02-skill-roster.md#handoff-decision-tables
-    hash: sha256:6edc7499ee163453f3be6390b0dda08b3fab885f1399ff944056040596ec3801
+    hash: sha256:1dac784b4670cc7559f323011dfe304dfe8c0baf349063162f90d76d902c5d3c
     excerpt: "| skill-validator | pass (`verdict: pass`) | `/status`; then the command that requested the validation |"
   - source: docs/design/05-subagent-sets.md#sets-per-skill
     hash: sha256:9e12f3beb236a025c18d40e741c09ba675bd71d2d87f56e2b205c7556b944bf9
     excerpt: "| skill-validator | anatomy-checker, provider-checker, spec-conformance-checker, report-writer |"
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:de7d775e46bd44c52089a3998b114a5ebb5ce6875be3ebf3dca126f5a9bbaa32
+    hash: sha256:a6bbaf9af2d69f7ede18d7c40f242c42edb26d79be964ffec3f386d6347014c2
     excerpt: "For anatomy-governed skills, skill-validator rejects a compiled SKILL.md that contains a direct file read of anything except `state.yaml`, an inline prompt longer than a dispatch instruction, an LLM sub-phase without a named worker, or a Bash grammar wider than the model-callable operations above."
   - source: docs/design/01-skill-anatomy.md#the-seven-sub-phases
     hash: sha256:b3c1a62145dc7fd7ef4fb351242f6b67bb0838da1c70cc359b679bfa4986e7d1

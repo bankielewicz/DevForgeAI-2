@@ -9,7 +9,7 @@ author: "DevForgeAI plan skill (wave 2 spec authoring)"
 date: 2026-09-02
 depends_on:
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:de7d775e46bd44c52089a3998b114a5ebb5ce6875be3ebf3dca126f5a9bbaa32
+    hash: sha256:a6bbaf9af2d69f7ede18d7c40f242c42edb26d79be964ffec3f386d6347014c2
     excerpt: "**The model dispatches, the sequencer decides.** For an anatomy-governed skill, the primary window (provider entry adapter + skill orchestration) does light, trivial work only."
   - source: docs/design/01-skill-anatomy.md#context-bundle-format
     hash: sha256:7b068feb30e7cc2f66292b512ac179cd217df225fb58517d2aaadd30b25236dc
@@ -21,7 +21,7 @@ depends_on:
     hash: sha256:712484fa78944f1d90b6c6ac92ae40d63793d1be6b15bf99a8eee4132f246db5
     excerpt: "Persona: **Archaeologist**. Its job is to describe what exists, never to prescribe."
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:37b51ea5748164510e7687527aeab55bc92af9524ee771b293989640cecf8cce
+    hash: sha256:511733ee35ca74fd5a5c0b59f225d7d975788e7d43d939f44c23b7aa8460cff0
     excerpt: "| drift | document | `docs/reports/drift-<arg>.md` | 3 |"
   - source: docs/design/10-sequencer-and-contracts.md#5-worker-result
     hash: sha256:cee716ddb3ae9b6b4405037ede3bb7c6445e0e6c8ac28382344a655d31754dcd
@@ -30,10 +30,10 @@ depends_on:
     hash: sha256:36ffb340bd5d843cd945f7d17a590e335e491b11a60b08d4bf70e12a3a223620
     excerpt: "A document run carries the fixed map `{unresolvable_source: BLOCK}`, because it has no story to declare a wider one."
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:de637edceb588df104a40b57738eb263989f6603f90ece6f4d0e64fef07ffb6a
+    hash: sha256:747b6340fc5c2348aad33ca5488012808670b3503b311d7b7d0f1204625afd4c
     excerpt: "| document run, promoted, no verdict or `verdict: pass` | `/status` |"
   - source: docs/design/11-artifact-registry.md#1-template-registry
-    hash: sha256:25886acb1c2963b15938f0c577c3bfd28b9807dd2dd961c59ff2b43fa00b62e2
+    hash: sha256:09607ea79839ab215871d87e8221166e14eeb6ca26f8372e4ead4173f1d92907
     excerpt: "| `drift-report` | `.devforgeai/skills/drift/templates/drift-report.md` | 1 | `^DRIFT-[0-9]{3}$` | slug, template, template_version, status, depends_on | Sourcetree Drift, Techstack Drift, Architecture Drift, Actions |"
   - source: docs/design/11-artifact-registry.md#6-known-divergences
     hash: sha256:8a78656458735ce54ac73010da3b8fc87bbb7017a5a9268f85b210249736b82a

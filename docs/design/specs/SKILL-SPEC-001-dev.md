@@ -9,13 +9,13 @@ author: "DevForgeAI plan skill"
 date: 2026-09-02
 depends_on:
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:de7d775e46bd44c52089a3998b114a5ebb5ce6875be3ebf3dca126f5a9bbaa32
+    hash: sha256:a6bbaf9af2d69f7ede18d7c40f242c42edb26d79be964ffec3f386d6347014c2
     excerpt: "For an anatomy-governed skill, the primary window (provider entry adapter + skill orchestration) does light, trivial work only. It dispatches workers and calls the sequencer. It never writes state, never advances a phase, and never decides that a phase passed."
   - source: docs/design/01-skill-anatomy.md#the-seven-sub-phases
     hash: sha256:b3c1a62145dc7fd7ef4fb351242f6b67bb0838da1c70cc359b679bfa4986e7d1
     excerpt: "Gate, Slice, Record, and Handoff are deterministic sequencer operations, not workers. Only Work, Write, and Review dispatch an LLM."
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:37b51ea5748164510e7687527aeab55bc92af9524ee771b293989640cecf8cce
+    hash: sha256:511733ee35ca74fd5a5c0b59f225d7d975788e7d43d939f44c23b7aa8460cff0
     excerpt: "| dev | 1 | `red` | `red_dev` | tests | 2 | `test` | red | — |"
   - source: docs/design/10-sequencer-and-contracts.md#11-per-skill-evidence-and-gate-table
     hash: sha256:f5dc9ad016c382d9d033b25878267bd8e1ef240cb0ecaafeff33af16637e906e
@@ -27,13 +27,13 @@ depends_on:
     hash: sha256:ffa41b5d270dc260e28fa9f6bdbc855069a6e922d1148c74b25860dba63484dc
     excerpt: "`red` | build first when the section is compiled; broker `test`; classification is not `NO_TESTS` or `COLLECTION_ERROR`; the command exits non-zero; every `test_plan` name is present and `failed`, never `error`; no test outside `test_plan`; records `red_hashes`"
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:de637edceb588df104a40b57738eb263989f6603f90ece6f4d0e64fef07ffb6a
+    hash: sha256:747b6340fc5c2348aad33ca5488012808670b3503b311d7b7d0f1204625afd4c
     excerpt: "| story run, promoted | `/review <arg>` |"
   - source: docs/design/11-artifact-registry.md#2-artifact-path-patterns
     hash: sha256:2d2e97afff50edf6b35bf674b1de217c684d5091361e5f1deae12de52b95fb51
     excerpt: "`dev` has no document fence: its fence is the story's `write_fence`. `dev-notes` therefore exists only as evidence under `.devforgeai/work/<run>/` and as the rendered view above."
   - source: docs/design/02-skill-roster.md#handoff-decision-tables
-    hash: sha256:6edc7499ee163453f3be6390b0dda08b3fab885f1399ff944056040596ec3801
+    hash: sha256:1dac784b4670cc7559f323011dfe304dfe8c0baf349063162f90d76d902c5d3c
     excerpt: "| dev / dev-tdd | pass | `/review {story}` |"
   - source: docs/design/05-subagent-sets.md#worked-example-dev-tdd
     hash: sha256:66b4dd5370ee15bf1da2e4c790192943db299b150fd6fb56d9c58a92efefe32a

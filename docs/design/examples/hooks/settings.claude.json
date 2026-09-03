@@ -3,28 +3,18 @@
   "disableAllHooks": false,
   "permissions": {
     "deny": [
-      "Edit(.devforgeai/state.yaml)",
-      "Write(.devforgeai/state.yaml)",
-      "Edit(.devforgeai/stack.yaml)",
-      "Write(.devforgeai/stack.yaml)",
-      "Edit(.devforgeai/provenance/**)",
-      "Write(.devforgeai/provenance/**)",
-      "Edit(.devforgeai/sessions/**)",
-      "Write(.devforgeai/sessions/**)",
-      "Edit(.devforgeai/hooks/**)",
-      "Write(.devforgeai/hooks/**)",
-      "Edit(.claude/**)",
-      "Write(.claude/**)",
-      "Edit(.codex/**)",
-      "Write(.codex/**)",
-      "Edit(docs/design/**)",
-      "Write(docs/design/**)",
-      "Edit(CLAUDE.md)",
-      "Write(CLAUDE.md)",
-      "Edit(AGENTS.md)",
-      "Write(AGENTS.md)",
-      "Read(.env)",
-      "Read(.env.*)",
+      "Edit(/.devforgeai/state.yaml)",
+      "Edit(/.devforgeai/stack.yaml)",
+      "Edit(/.devforgeai/provenance/**)",
+      "Edit(/.devforgeai/sessions/**)",
+      "Edit(/.devforgeai/hooks/**)",
+      "Edit(/.claude/**)",
+      "Edit(/.codex/**)",
+      "Edit(/docs/design/**)",
+      "Edit(/CLAUDE.md)",
+      "Edit(/AGENTS.md)",
+      "Read(/.env)",
+      "Read(/.env.*)",
       "Bash(curl *)",
       "Bash(wget *)",
       "Bash(git add *)",
@@ -45,7 +35,7 @@
       "Agent(claude)"
     ],
     "allow": [
-      "Read(**)",
+      "Read(/**)",
       "Bash(devforgeai status)",
       "Bash(devforgeai phase start *)",
       "Bash(devforgeai phase fail *)",
@@ -65,8 +55,7 @@
       "Bash(git status *)",
       "Bash(git diff *)",
       "Bash(git log *)",
-      "Edit(**)",
-      "Write(**)",
+      "Edit(/**)",
       "Bash(git show *)",
       "Bash(git ls-files *)",
       "Bash(git blame *)"
@@ -196,5 +185,6 @@
         ]
       }
     ]
-  }
+  },
+  "_permissions_note": "Edit(/path) rules anchor at the settings source; a bare path anchors at the session cwd. Write(path) rules are not consulted by the host (Edit rules cover Write), so none are listed."
 }

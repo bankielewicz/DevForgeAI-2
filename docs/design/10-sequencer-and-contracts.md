@@ -59,7 +59,7 @@ Refusal reasons this grammar names, beyond the gate defect classes in section 3.
 | `UNCLAIMED_CHANGE` | `ingest-result` | the change set derived from the checkpoint diff is not a subset of the receipt's `claimed_paths` |
 | `STALE_BASE` | `promote` | the canonical tree no longer matches `candidate.base_ref`. In worktree mode the sequencer rebases the run branch, re-runs the last transition oracle and retries once; in copy mode it returns `needs_user` |
 | `MERGE_CONFLICT` | `promote` | a rebase inside the root conflicted. `git rebase --abort` runs, the run is `needs_user`, and no canonical byte moved |
-| `DIRTY_TARGET` | `promote` | a canonical file among the run's changed paths has uncommitted local edits. The user resolves it; the sequencer does not merge |
+| `DIRTY_TARGET` | `promote` | a canonical file among the run's changed paths has uncommitted local edits, or (worktree mode) a canonical path outside the run's change set became dirty after `candidate open` recorded the canonical dirty set in `run.yaml#candidate.dirty_at_open`. The second form is how a write that escaped the root, through a fail-open hook or a subprocess no hook sees, is caught before it is carried forward. The user resolves it; the sequencer does not merge |
 | `NO_CANDIDATE` | `promote`, `candidate abandon` | the named run has no candidate root: it was never opened, or it was already promoted or abandoned |
 
 Notes that bind skill authors:
@@ -810,7 +810,7 @@ Promotion, in order, under `.devforgeai/lock`:
 |---|---|---|
 | 1 | the run exists and its status is `ready_to_promote` | `NO_CANDIDATE`, or a refusal naming the actual status |
 | 2 | the canonical base still matches `candidate.base_ref` | `STALE_BASE` — rebase and retry once in worktree mode, `needs_user` in copy mode |
-| 3 | worktree mode only: no canonical file among the run's changed paths has uncommitted edits | `DIRTY_TARGET`; the user resolves it, the sequencer never merges over a local edit. Copy mode has no committed baseline to call a file dirty against, so step 2's manifest comparison is its whole base check and every difference is `STALE_BASE` |
+| 3 | worktree mode only: no canonical file among the run's changed paths has uncommitted edits, and no canonical path outside the change set is dirty now that was clean at `candidate open` (`candidate.dirty_at_open`) | `DIRTY_TARGET`, naming the paths; the second form catches a write that escaped the root. The user resolves it, the sequencer never merges over a local edit. Copy mode has no committed baseline to call a file dirty against, so step 2's manifest comparison is its whole base check and every difference is `STALE_BASE` |
 | 4 | apply: `git merge --ff-only devforgeai/<run>` in the canonical checkout, or copy the changed paths' exact bytes and delete what the candidate deleted | `MERGE_CONFLICT` |
 | 5 | mark `runs.<run>.status: promoted`, write the promotion handoff, log `candidate.promote` | — |
 | 6 | remove the candidate root, its branch and its tags | — |
