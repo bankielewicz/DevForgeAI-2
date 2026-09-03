@@ -40,11 +40,11 @@ depends_on:
     hash: sha256:c846323d4b8fb69de9d553453b1ff29ead6ab80b44091eee6474d49370a38d7d
     excerpt: "1. Close the run-directory file set: validate against an explicit allowlist per phase, reject unknown paths before seal, cover with a test that plants a stray file."
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:511733ee35ca74fd5a5c0b59f225d7d975788e7d43d939f44c23b7aa8460cff0
+    hash: sha256:7c1d67f1154e49247e5dc178fcc1512bdbd53af378c360aeafe69bffed1136ab
     excerpt: |
       | research | external | runner `devforgeai-research`; fence `docs/research/<arg>/**` | none here; the Research Core CLI executes it under `framework/skills/research/`, and `devforgeai phase start` refuses it (exit 3 when the runner is absent) |
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:bca72c10668178e0f4da43e03aaafbf24d2a57ec12f71a16b078880dd496677a
+    hash: sha256:3c4c95bbd73b5499e5569e650f84eea84cb68404c0909f5f1819c0f3a5c7b3d4
     excerpt: |
       Research is the exception. Its typed handoff contract is `framework/skills/research/contracts/handoff.md`; on the successful path Research Core writes it and the framework does not restate it.
   - source: docs/design/02-skill-roster.md#research
@@ -56,7 +56,7 @@ depends_on:
     excerpt: |
       | research | any skill, by explicit human request | a confirmed `research-request/v1` | sealed dossier under `docs/research/<slug>/` | every skill, by reference |
   - source: docs/design/05-subagent-sets.md#sets-per-skill
-    hash: sha256:9e12f3beb236a025c18d40e741c09ba675bd71d2d87f56e2b205c7556b944bf9
+    hash: sha256:f2957217c9af147e4a7ea03749cbe6efda266bd56d403f39aa25c9a655872609
     excerpt: "| research | contracts for discovery, evidence-extractor, contrary-evidence, verifier, none of which write a canonical artifact; current Core does not launch them; deterministic Research Core is the sole canonical writer |"
   - source: docs/design/12-post-mvp.md#pm-07
     hash: sha256:6c32fea4129fbc79560090c5cb0cf1363916773b878572351fe441a0a3fcdac2

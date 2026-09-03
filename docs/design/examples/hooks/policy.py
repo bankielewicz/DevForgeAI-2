@@ -33,19 +33,36 @@ RESULT_SCHEMA = "devforgeai.worker-result/v1"
 # Closed worker status vocabulary (decision 1). `could_not_run` carries a
 # reason_code; nothing else does.
 WORKER_STATUS = {"pass", "fail", "needs_user", "could_not_run"}
-REASON_CODES = {"runner_missing", "timeout", "network", "hook_fault"}
+# `provider_tool_refused` (D13 item 6): the provider refused a tool call before
+# any DevForgeAI hook ran, so no hook decision exists to report.
+# `prerequisite_missing`: the worktree-mode self-test failed at `phase start` or
+# SessionStart, and copy mode is not a substitute inside a git repository.
+# `checkpoint_fault`: at ingest, the input checkpoint is missing or the diff
+# against it cannot be taken, so nothing about the run can be derived.
+# All three roll up with the other infra codes; `hook_fault` is now reserved for
+# exactly two causes — missing hook identity on the stop event, and a receipt
+# that cannot be parsed.
+REASON_CODES = {"runner_missing", "timeout", "network", "hook_fault",
+                "provider_tool_refused", "prerequisite_missing", "checkpoint_fault"}
 
 # The receipt (D4). The worker writes inside the candidate root and returns this
 # object; the sequencer derives what actually changed from the checkpoint diff.
 RECEIPT_KEYS = {
     "schema", "run", "skill", "phase", "agent", "status", "reason_code",
-    "candidate", "claimed_paths", "evidence_refs", "note", "issues", "next",
+    "candidate", "claimed_paths", "evidence_refs", "findings", "note", "issues",
+    "next",
 }
 RECEIPT_REQUIRED = {
     "schema", "run", "skill", "phase", "agent", "status", "candidate", "claimed_paths",
 }
 MAX_CLAIMED_PATHS = 64
 MAX_EVIDENCE_REFS = 16
+# D13 item 2: a judge returns its detailed evidence in the receipt, because the
+# provider refuses a subagent's report-file write before any hook runs. The
+# sequencer persists it verbatim and truncates nothing; an oversize `findings`
+# is refused like any other receipt defect.
+MAX_FINDINGS_BYTES = 16_384
+FINDINGS_NAME = "findings.md"
 
 # Refusal reasons the sequencer prints verbatim so a caller can match on them.
 REFUSALS = {
@@ -96,6 +113,21 @@ VERDICT_NEXT: dict[str, str] = {
     "skill-validator": "/skill-gen {arg} --fix",
 }
 
+# `STORY_IN_FLIGHT` refuses a second story-anchored run on a story that already
+# has a live one, because such a run would judge a canonical tree that does not
+# contain the work. `clarify` is exempt: its fence is the story document itself,
+# not the code, so a blocked dev run and a clarify run on the same story write
+# disjoint paths and the clarify run is exactly how the block gets answered.
+# `review` and `qa` stay refused.
+STORY_IN_FLIGHT_EXEMPT = {"clarify"}
+
+# The two reports a `--fix` run may be routed here by, newest first at the gate.
+FIX_REPORT_SOURCES = ("docs/reports/qa-{arg}.md", "docs/reports/review-{arg}.md")
+
+# The options `devforgeai phase start` accepts, closed. Dispatch check 8 admits
+# any subset of these in any order and refuses every other option.
+PHASE_START_OPTIONS = ("--fix", "--lenient")
+
 # The frontmatter keys a field-restricted phase (`writes: fields`) may change.
 STORY_FIELD_KEYS = ("blocked_by", "size", "sprint")
 
@@ -108,7 +140,7 @@ STORY_FIELD_KEYS = ("blocked_by", "size", "sprint")
 # sequencer executes the argv with cwd = candidate.root.
 MODEL_CALLABLE = {
     "status": "devforgeai status",
-    "phase start": "devforgeai phase start <skill> <arg> [--lenient]",
+    "phase start": "devforgeai phase start <skill> <arg> [--fix] [--lenient]",
     "phase fail": "devforgeai phase fail --reason <text>",
     "validate": "devforgeai validate",
     "promote": "devforgeai promote <run>",
@@ -333,6 +365,24 @@ SKILLS: dict[str, dict] = {
     "dev": {
         "kind": "story",
         "fence": None,  # the story's write_fence
+        # Per-skill handoff rows (D13 item 7), from SKILL-SPEC-001-dev.md
+        # section 7f. Declaration order is selection order.
+        "handoff": {
+            # red's oracle found a planned test already green: the story, not
+            # the code, is what must change, so the route is `/clarify`.
+            "red_test_already_passes": {
+                "match": "is passed, expected failed",
+                "next": "/clarify {arg}",
+            },
+            # The story gate's unresolved ASSUMPTION row.
+            "gate_assumption": {
+                "match": "unresolved ASSUMPTION",
+                "next": "/clarify {arg}",
+            },
+            # An exhausted attempt budget leaves the run active and blocked at
+            # its phase; `/dev {story}` resumes it there with attempts reset.
+            "attempt_limit": {"match": None, "next": "/{skill} {arg}"},
+        },
         "phases": [
             _phase("red", agent="red_dev", writes="tests", attempts=2,
                    run_keys={"test"}, oracle="red"),
@@ -400,23 +450,128 @@ SKILLS: dict[str, dict] = {
     },
 }
 
-# A phase that dispatches a worker and produces no artifact is a judge (D1): it
-# reads a checkpoint and reports. Its one write path is its own evidence
-# directory under the run's work tree, which is gitignored, never diffed and
-# never promoted, so `writes: evidence` is the mode, not `writes: none`.
-for _spec in SKILLS.values():
-    for _phase_spec in _spec.get("phases", []):
-        if _phase_spec["agent"] and _phase_spec["writes"] == "none":
-            _phase_spec["writes"] = "evidence"
+# A phase that dispatches a worker and produces no artifact is a judge (D1, as
+# revised by D13): it reads a checkpoint and reports. It holds no lease and
+# receives no write tool at all — the `writes` enum is `candidate | none`, and a
+# judge is `none`. Its detailed evidence comes back in the receipt's `findings`
+# string, which the sequencer persists under the run's work tree.
 
 # dev-tdd is a variant of dev (decision 15), not a separate phase list.
 SKILL_VARIANTS = {"dev-tdd": "dev"}
 
 
 def evidence_prefix(enforcement: dict) -> str:
-    """The one path a judge may write: its own directory in the run's work tree."""
+    """The sequencer-owned directory a judge phase's findings are persisted in.
+
+    No worker writes here: the judge returns `findings` in its receipt and the
+    sequencer writes the bytes at `SubagentStop` (D13 item 3). The path is fixed
+    by the run id and the phase's agent name, so the worker cannot choose it.
+    """
     spec = phase_spec(enforcement.get("skill", ""), enforcement.get("phase", "")) or {}
     return f".devforgeai/work/{enforcement.get('run')}/evidence/{spec.get('agent')}/"
+
+
+def findings_path(enforcement: dict) -> str:
+    """`.devforgeai/work/<run>/evidence/<agent>/findings.md`, canonical-relative."""
+    return evidence_prefix(enforcement) + FINDINGS_NAME
+
+
+def is_judge(skill: str, phase: str) -> bool:
+    """A dispatching phase that writes nothing: `writes: none` with an agent."""
+    spec = phase_spec(skill, phase) or {}
+    return bool(spec.get("agent")) and spec.get("writes", "none") == "none"
+
+
+def judge_write_denial(enforcement: dict, path: str) -> str:
+    """The one denial text a judge's write attempt gets, wherever it is caught."""
+    return (
+        f"phase {enforcement.get('phase')} judges this checkpoint and holds no write tool at "
+        f"all: {path} is denied. Return your evidence in the receipt's `findings` field; the "
+        f"sequencer persists it verbatim at {findings_path(enforcement)}."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Handoff-row selection (D13 item 7).
+# ---------------------------------------------------------------------------
+# A refusal names its row rather than defaulting to the generic repair route.
+# `HANDOFF_ROWS` below is the fallback table, taken from
+# `10-sequencer-and-contracts.md` section 6; a skill adds its own rows under the
+# registry key `handoff`, which are consulted first. A row is
+#   {"match": <substring of a problem line, or None>, "next": <template>}
+# and the templates take `{skill}`, `{arg}`, `{run}`, `{agent}` and `{tool}`.
+# `match` rows are tried in declaration order against the problem list, so a
+# specific cause wins over the policy-derived default.
+HANDOFF_ROWS: dict[str, dict] = {
+    "hook_fault": {
+        "match": "COULD_NOT_RUN: hook_fault",
+        "next": "inspect .devforgeai/sessions/raw-events.jsonl and the hook dispatcher "
+                "(.devforgeai/hooks), then /{skill} {arg}",
+    },
+    "provider_tool_refused": {
+        "match": "COULD_NOT_RUN: provider_tool_refused",
+        "next": "the provider refused the {tool} tool before any DevForgeAI hook ran; take "
+                "{tool} out of the {agent} definition or give the phase a worker that does "
+                "not need it, then /{skill} {arg}",
+    },
+    "prerequisite_missing": {
+        "match": "COULD_NOT_RUN: prerequisite_missing",
+        "next": "satisfy the worktree prerequisites the refusal names (git on PATH, a "
+                "commit on HEAD, a gitignored .devforgeai/work/, tracked hook config and "
+                "stack.yaml), then /{skill} {arg}",
+    },
+    "checkpoint_fault": {
+        "match": "COULD_NOT_RUN: checkpoint_fault",
+        "next": "inspect .devforgeai/work/{run}/ for the checkpoint the phase started from, "
+                "then /{skill} {arg}",
+    },
+    "could_not_run": {
+        "match": "COULD_NOT_RUN",
+        "next": "install the missing runner, then /{skill} {arg}",
+    },
+    "attempt_limit": {"match": None, "next": "/{skill} {arg}"},
+    "require_human": {"match": None, "next": "/{skill} {arg}"},
+    "blocked": {"match": None, "next": "/{skill} {arg} --fix"},
+}
+
+# The tool names a provider may name in a `provider_tool_refused` note. Closed,
+# so the rendered row cannot echo arbitrary worker text into the forward command.
+REFUSABLE_TOOLS = ("apply_patch", "NotebookEdit", "WebFetch", "WebSearch", "Write",
+                   "Edit", "Bash", "Read", "Grep", "Glob", "Task")
+
+
+def refused_tool(note: str) -> str:
+    """The tool a `provider_tool_refused` note names, or a stable placeholder."""
+    for tool in REFUSABLE_TOOLS:
+        if tool in (note or ""):
+            return tool
+    return "the tool the receipt note names"
+
+
+def handoff_kind(skill: str, problems, policy: str, at_limit: bool = False) -> str:
+    """Name the row a refusal selects: skill rows first, then the fallbacks."""
+    rows = (skill_spec(skill) or {}).get("handoff") or {}
+    # Infra first: a run that could not run at all is routed by its reason code,
+    # never by whatever the oracle happened to print before it gave up. Then the
+    # skill's own rows, then the remaining fallbacks.
+    infra = {k: HANDOFF_ROWS[k]
+             for k in ("hook_fault", "provider_tool_refused", "prerequisite_missing",
+                       "checkpoint_fault", "could_not_run")}
+    for table in (infra, rows, HANDOFF_ROWS):
+        for kind, row in table.items():
+            probe = row.get("match")
+            if probe and any(probe in str(problem) for problem in problems):
+                return kind
+    if policy == "REQUIRE_HUMAN":
+        return "attempt_limit" if at_limit else "require_human"
+    return "blocked"
+
+
+def handoff_next(skill: str, kind: str, **fields) -> str:
+    """Render the row's forward command. An unknown kind falls back to `blocked`."""
+    rows = (skill_spec(skill) or {}).get("handoff") or {}
+    row = rows.get(kind) or HANDOFF_ROWS.get(kind) or HANDOFF_ROWS["blocked"]
+    return str(row["next"]).format(skill=skill, **fields)
 
 
 def skill_key(name: str) -> str:
@@ -619,15 +774,10 @@ def validate_phase_write_path(root: Path, enforcement: dict, raw: str) -> str:
     path = project_relative(root, raw)
     skill = enforcement.get("skill", "")
     phase = enforcement.get("phase", "")
-    spec_mode = (phase_spec(skill, phase) or {}).get("writes", "none")
-    if spec_mode == "evidence":
-        prefix = evidence_prefix(enforcement)
-        if not path.startswith(prefix):
-            raise PolicyError(
-                f"phase {phase} judges this checkpoint; its only write path is {prefix}, "
-                f"not {path}"
-            )
-        return path
+    if (phase_spec(skill, phase) or {}).get("writes", "none") == "none":
+        # D13 item 1: a judge receives no write tool at all. Checked before the
+        # fence so the denial names the reason rather than the path list.
+        raise PolicyError(judge_write_denial(enforcement, path))
     if matches(path, ALWAYS_DENY) and not producer_exception(path, skill, phase):
         owners = sorted(producers_for(path))
         detail = f"; only {owners} may propose it" if owners else ""
@@ -639,10 +789,6 @@ def validate_phase_write_path(root: Path, enforcement: dict, raw: str) -> str:
     spec = phase_spec(enforcement.get("skill", ""), enforcement.get("phase", ""))
     mode = spec["writes"] if spec else "none"
     is_test = matches(path, tests)
-    if mode in ("none", "evidence"):
-        raise PolicyError(
-            f"phase {enforcement.get('phase')} changes no project file; it reports"
-        )
     if mode == "tests" and not is_test:
         raise PolicyError(f"phase red may write only test_plan files, not {path}")
     if mode == "code" and is_test:

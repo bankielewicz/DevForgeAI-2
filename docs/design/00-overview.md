@@ -5,7 +5,7 @@ DevForgeAI is a spec-driven development framework for AI coding agents (Claude C
 ## Design principles
 
 1. **Thin orchestration.** Provider entry adapters parse arguments, call the sequencer, load a skill, and print the handoff the sequencer rendered. Nothing else.
-2. **The model dispatches, the sequencer decides.** Write permission is per role: producer workers write inside the run's candidate root, judge workers write nothing. The primary window dispatches those workers and calls the model-callable sequencer operations; the deterministic `devforgeai` sequencer owns the candidate root, gates, checkpoints, runs the transition oracle, advances, promotes, and is the sole writer of canonical `.devforgeai/**`. See `01-skill-anatomy.md#primary-window-contract` and `10-sequencer-and-contracts.md`.
+2. **The model dispatches, the sequencer decides.** Write permission is per role: producer workers write inside the run's candidate root and return a receipt that names paths, never file bodies; judge workers write nothing and return their findings as a bounded `findings` string in the receipt (at most 16 KiB), which the sequencer persists to the run's evidence directory. That findings body reaches the primary window as the subagent's result, as the provider model requires; the worker's transcript, reads, tool traffic and reasoning stay isolated. The primary window dispatches those workers and calls the model-callable sequencer operations; the deterministic `devforgeai` sequencer owns the candidate root, gates, checkpoints, runs the transition oracle, advances, promotes, and is the sole writer of canonical `.devforgeai/**`. See `01-skill-anatomy.md#primary-window-contract` and `10-sequencer-and-contracts.md`.
 3. **The primary window does trivial work only.** Anatomy-governed phase skills delegate their bounded sub-phases. Research is the explicit exception: `framework/skills/research/` defines its P0-P9 workflow, contracts for four bounded worker roles that write nothing, typed records, and deterministic Research Core as the sole canonical writer. Those contracts do not make provider workers installed or executable.
 4. **Provenance over recall.** A non-Research artifact claim traces to a constitution section, code file, or sealed Research dossier reference, or is tagged `ASSUMPTION`. Research uses only its closed claim types and never treats `ASSUMPTION` as a claim or evidence class.
 5. **Context slicing.** Downstream phases never read entire constitution documents. They receive excerpts with anchors and hashes (see `01-skill-anatomy.md`).
@@ -122,7 +122,7 @@ Everything under canonical `.devforgeai/` is written by the `devforgeai` sequenc
   hooks/                  # dispatch.py, policy.py, devforgeai.py; installed by init
   work/<run>/             # evidence home: <phase>-report.md, <phase>-result.json, handoff.json
   work/<run>/run.yaml     # per-run enforcement: phase, fence, granted keys, lease (gitignored)
-  work/<run>/evidence/<agent>/  # the one place a judge writes its findings (gitignored, never promoted)
+  work/<run>/evidence/<agent>/  # findings.md, written by the sequencer from a judge's receipt (gitignored, never promoted)
   work/<run>/wt/          # the run's candidate root, where producers write (gitignored)
   sessions/<session_id>.json  # session evidence, written once by hook-only session-start
   provenance/

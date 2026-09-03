@@ -60,7 +60,7 @@ cat > "$TOOLS/agent.py" <<'PY'
 Language-neutral: it copies payload bytes to a path inside the candidate root
 and returns a receipt. Which bytes and which path come from the caller.
 """
-import json, pathlib, subprocess, sys
+import json, os, pathlib, subprocess, sys
 
 HERE, ROOT = sys.argv[1], pathlib.Path(sys.argv[2])
 PROVIDER = "claude"
@@ -96,6 +96,10 @@ def main():
     print(f"  SubagentStart -> exit {code}")
     if code:
         print("   " + out[:400])
+    # The dispatch context the provider hands the worker. Written out so the
+    # demo can assert what the next phase is told, exactly as the worker sees it.
+    if os.environ.get("DFAI_CTX_OUT"):
+        pathlib.Path(os.environ["DFAI_CTX_OUT"]).write_text(out)
 
     claimed = []
     for spec in writes:
@@ -129,6 +133,10 @@ def main():
                           if w.startswith(".devforgeai/")],
         "note": note, "issues": [],
     }
+    # A judge returns its evidence in the receipt (D13): it writes no file, and
+    # the sequencer persists these bytes at a path the worker cannot choose.
+    if os.environ.get("DFAI_FINDINGS"):
+        receipt["findings"] = pathlib.Path(os.environ["DFAI_FINDINGS"]).read_text()
     if nxt != "-":
         receipt["next"] = nxt
     message = "Done with this phase.\n\n```json\n" + json.dumps(receipt) + "\n```\n"
@@ -273,6 +281,16 @@ export function slugify(title) {
 }
 JS
 
+cat > "$TOOLS/python/review.md" <<'MD'
+# review findings for STORY-001
+
+- criterion 1: tests/test_text.py::test_slugify_basic asserts the slug, not a constant.
+- criterion 2: tests/test_text.py::test_slugify_unicode covers the accent rule.
+- criterion 3: tests/test_text.py::test_slugify_empty covers both empty forms.
+- tests unchanged since red: red_hashes match the refactor checkpoint.
+- fence held: the change set is tinyapp/text.py and tests/test_text.py.
+MD
+
 cat > "$TOOLS/node/evidence.md" <<'MD'
 # smoke evidence for STORY-001
 
@@ -281,6 +299,16 @@ cat > "$TOOLS/node/evidence.md" <<'MD'
 | 1 | tests/text.test.mjs::test_slugify_basic at checkpoint refactor | pass |
 | 2 | tests/text.test.mjs::test_slugify_unicode at checkpoint refactor | pass |
 | 3 | tests/text.test.mjs::test_slugify_empty at checkpoint refactor | pass |
+MD
+
+cat > "$TOOLS/node/review.md" <<'MD'
+# review findings for STORY-001
+
+- criterion 1: tests/text.test.mjs::test_slugify_basic asserts the slug, not a constant.
+- criterion 2: tests/text.test.mjs::test_slugify_unicode covers the accent rule.
+- criterion 3: tests/text.test.mjs::test_slugify_empty covers both empty forms.
+- tests unchanged since red: red_hashes match the refactor checkpoint.
+- fence held: the change set is tinyapp/text.mjs and tests/text.test.mjs.
 MD
 
 # ------------------------------------------------------------------- per-language
@@ -465,6 +493,61 @@ PY
   fi
 }
 
+assert_unchanged() {  # assert_unchanged <label> <before snapshot> <dir> [allowed path]...
+  local label="$1" before="$2" dir="$3"; shift 3
+  snapshot "$dir" > "$before.after"
+  if python3 - "$before" "$before.after" "$@" <<'PY'
+import sys
+
+
+def load(path):
+    rows = {}
+    for line in open(path):
+        line = line.rstrip("\n")
+        if line:
+            rel, digest = line.split("\t")
+            rows[rel] = digest
+    return rows
+
+
+before, after = load(sys.argv[1]), load(sys.argv[2])
+exact = {a for a in sys.argv[3:] if not a.endswith("/**")}
+prefixes = tuple(a[:-2] for a in sys.argv[3:] if a.endswith("/**"))
+delta = sorted(p for p in set(before) | set(after) if before.get(p) != after.get(p))
+undeclared = [p for p in delta
+              if p not in exact and not p.startswith(prefixes)]
+if undeclared:
+    print("undeclared: " + ", ".join(undeclared))
+    sys.exit(1)
+PY
+  then ok "$label"
+  else bad "$label"
+  fi
+}
+
+assert_findings() {  # assert_findings <project> <agent> <payload file>
+  local W="$1" agent="$2" payload="$3"
+  local persisted="$W/.devforgeai/work/STORY-001/evidence/$agent/findings.md"
+  if [ ! -f "$persisted" ]; then
+    bad "$agent findings persisted at .devforgeai/work/STORY-001/evidence/$agent/findings.md"
+    return
+  fi
+  if cmp -s "$persisted" "$payload"; then
+    ok "$agent findings are byte-for-byte what the receipt returned"
+  else
+    bad "$agent findings differ from the receipt body"
+  fi
+  local recorded
+  recorded="$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['findings_path'])" \
+    "$W/.devforgeai/work/STORY-001/$4-result.json" 2>/dev/null || echo none)"
+  assert_equal "$agent findings_path recorded in $4-result.json" \
+    "$recorded" ".devforgeai/work/STORY-001/evidence/$agent/findings.md"
+}
+
+assert_contains() {  # assert_contains <file> <needle> <label>
+  if [ -f "$1" ] && grep -qF -- "$2" "$1"; then ok "$3"; else bad "$3"; fi
+}
+
 assert_no_package_manager() {  # assert_no_package_manager <project> <section>
   if python3 - "$1/.devforgeai/stack.yaml" "$2" <<'PY'
 import sys, yaml
@@ -589,17 +672,44 @@ run_story() {  # run_story <language> <mode>
   assert_equal "refactor advanced with lint authorised" \
     "$(phase_of "$W") $(record_key "$W" commands.use)" 'smoke ["test", "lint"]'
 
-  echo; echo "=== a judge writing a project file is denied: its path is its evidence directory"
+  echo; echo "=== a judge holds no write tool at all: a project file is denied"
   local CR; CR="$(root_of "$W")"
   printf '%s' '{"hook_event_name":"PreToolUse","session_id":"demo-session","cwd":"'"$CR"'","agent_id":"a-smoke","agent_type":"smoke_qa","tool_name":"Write","tool_input":{"file_path":"'"$CR/$LANG_IMPL"'"}}' \
     | python3 "$HERE/dispatch.py" --provider claude --root "$W"; echo "[exit $?]"
 
-  echo; echo "=== SMOKE: a judge reads the refactor checkpoint and writes only evidence"
-  $A smoke_qa a-smoke smoke pass - "each criterion checked once against the checkpoint" \
-    ".devforgeai/work/STORY-001/evidence/smoke_qa/criteria.md=$LANG_PAY/evidence.md"
+  echo; echo "=== ... and so is the run's own evidence directory: there is no scratch path"
+  printf '%s' '{"hook_event_name":"PreToolUse","session_id":"demo-session","cwd":"'"$CR"'","agent_id":"a-smoke","agent_type":"smoke_qa","tool_name":"Write","tool_input":{"file_path":"'"$CR/.devforgeai/work/STORY-001/evidence/smoke_qa/notes.md"'"}}' \
+    | python3 "$HERE/dispatch.py" --provider claude --root "$W"; echo "[exit $?]"
 
-  echo; echo "=== REVIEW: the critic judges and the run is parked for a human"
-  $A dev_critic a-critic review pass - "criteria covered, tests frozen, fence held"
+  # What the two judge phases must leave exactly as they found it.
+  local JCAND="$TOOLS/$ECO-$MODE.judge-candidate" JCANON="$TOOLS/$ECO-$MODE.judge-canonical"
+  snapshot "$CR" > "$JCAND"
+  snapshot "$W" > "$JCANON"
+
+  echo; echo "=== SMOKE: the judge returns findings in the receipt; the sequencer persists them"
+  DFAI_FINDINGS="$LANG_PAY/evidence.md" DFAI_CTX_OUT="$TOOLS/$ECO-$MODE.smoke-ctx" \
+    $A smoke_qa a-smoke smoke pass - "each criterion checked once against the checkpoint"
+  echo "--- assertions after smoke"
+  assert_findings "$W" smoke_qa "$LANG_PAY/evidence.md" smoke
+  assert_contains "$TOOLS/$ECO-$MODE.smoke-ctx" \
+    "the receipt's \`findings\` field" "smoke_qa is told to return findings, not write a file"
+
+  echo; echo "=== REVIEW: the critic is handed smoke_qa's findings path and judges"
+  DFAI_FINDINGS="$LANG_PAY/review.md" DFAI_CTX_OUT="$TOOLS/$ECO-$MODE.review-ctx" \
+    $A dev_critic a-critic review pass - "criteria covered, tests frozen, fence held"
+  echo "--- assertions after review"
+  assert_findings "$W" dev_critic "$LANG_PAY/review.md" review
+  assert_contains "$TOOLS/$ECO-$MODE.review-ctx" \
+    ".devforgeai/work/STORY-001/evidence/smoke_qa/findings.md" \
+    "dev_critic's dispatch context names smoke_qa's findings path"
+  assert_unchanged "the judge phases changed nothing in the candidate root" "$JCAND" "$CR"
+  # The only canonical delta the two judge phases produce is the sequencer's own
+  # rendered phase report; no judge wrote it and no judge could have.
+  assert_unchanged "the judge phases changed nothing in the canonical project tree" \
+    "$JCANON" "$W" "docs/reports/**"
+  assert_equal "the handoff names both findings files" \
+    "$(python3 -c "import json,sys;print(len(json.load(open(sys.argv[1]))['findings_paths']))" \
+       "$W/.devforgeai/work/STORY-001/handoff.json")" 2
 
   echo; echo "=== the user reads the reports, then promotes: the fifth model-callable form"
   (cd "$W" && $D promote STORY-001)

@@ -93,7 +93,7 @@ Ownership decisions applied here:
 | `.devforgeai/work/<run>/<phase>-report.md` | none | sequencer | sequencer |
 | `.devforgeai/work/<run>/run.yaml` | none | sequencer | sequencer, hooks |
 | `.devforgeai/work/<run>/wt/**` (candidate root), `<phase>.manifest.json`, `cp/<phase>/**` (copy-mode checkpoints) | none | sequencer creates; producers write inside the fence | sequencer |
-| `.devforgeai/work/<run>/evidence/<agent>/**` | none | judge worker | sequencer, downstream producers |
+| `.devforgeai/work/<run>/evidence/<agent>/findings.md` | none | sequencer, from the judge receipt's `findings` at ingest; the judge holds no write tool | sequencer, downstream workers by path |
 | `.devforgeai/sessions/<session_id>.json` | none | sequencer | sequencer |
 | `.devforgeai/provenance/log.jsonl` | none | sequencer | sequencer |
 | `docs/research/<slug>/runs/RUN-NNNNNN/**` | Research typed schemas | research | Research Core |
@@ -689,9 +689,9 @@ registry:
   - pattern: .devforgeai/work/<run>/<phase>.manifest.json
     template: null
     writer: sequencer
-  - pattern: .devforgeai/work/<run>/evidence/<agent>/**
+  - pattern: .devforgeai/work/<run>/evidence/<agent>/findings.md
     template: null
-    writer: judge
+    writer: sequencer
   - pattern: .devforgeai/sessions/<session_id>.json
     template: null
     writer: sequencer

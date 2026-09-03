@@ -22,6 +22,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 import yaml
@@ -34,6 +35,9 @@ FIXTURE = HERE.parent / "fixtures" / "dev-tdd"
 NO_BYTECODE_ENV = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
 SCHEMA = "devforgeai.worker-result/v1"
 MARKER = ".devforgeai/candidate"
+
+sys.path.insert(0, str(HERE))
+from policy import is_judge, skill_key            # noqa: E402
 
 RED = {"agent_id": "a-red", "agent_type": "red_dev"}
 RED_LEGACY = {"agent_id": "a-red", "agent_type": "dev-tdd-red-tester"}
@@ -99,14 +103,29 @@ def patch(*body: str) -> str:
     return "\n".join(("*** Begin Patch", *body, "*** End Patch"))
 
 
+OMIT = object()          # `findings=OMIT` leaves the key out of the receipt
+JUDGE_FINDINGS = (
+    "# smoke evidence for STORY-001\n\n"
+    "| criterion | checked against | result |\n|---|---|---|\n"
+    "| 1 | tests/test_text.py::test_slugify_basic at the refactor checkpoint | pass |\n"
+)
+
+
 def receipt(phase, agent, claimed=(), status="pass", note="", nxt=None, run="STORY-001",
-            skill="dev", checkpoint="base", refs=(), **override) -> str:
+            skill="dev", checkpoint="base", refs=(), findings=None, **override) -> str:
     doc = {
         "schema": SCHEMA, "run": run, "skill": skill, "phase": phase, "agent": agent,
         "status": status, "candidate": {"id": run, "input_checkpoint": checkpoint},
         "claimed_paths": list(claimed), "evidence_refs": list(refs),
         "note": note, "issues": [],
     }
+    # A judge receipt carries `findings` on a verdict (pass or fail) and a
+    # producer receipt never does, so the default follows the phase and the
+    # status rather than each call site.
+    if findings is None and status in ("pass", "fail") and is_judge(skill_key(skill), phase):
+        findings = JUDGE_FINDINGS
+    if findings is not None and findings is not OMIT:
+        doc["findings"] = findings
     if nxt:
         doc["next"] = nxt
     doc.update(override)
@@ -612,7 +631,9 @@ def worktree_selftest_backstop() -> tuple[bool, str]:
     passed = all((
         ok_code == 0 and ok_mode == "worktree",
         bad_code == 3,                                    # could_not_run, not copy mode
-        "hook_fault" in bad_out and ".devforgeai/work/" in bad_out,
+        "prerequisite_missing" in bad_out and ".devforgeai/work/" in bad_out,
+        "hook_fault" not in bad_out,
+        "prerequisite_missing" in session[1],
         not (bad / ".devforgeai" / "work" / "STORY-001" / "wt").exists(),
         session[0] == 0,
         doc["worktree_prerequisites"] == [".devforgeai/work/ is not ignored by git"],
@@ -697,9 +718,8 @@ def story_anchored_backstop() -> tuple[bool, str]:
         len(rec["test_plan"]) == 3,
         run_code == 0 and "classification: PASS" in run_out,
         # `run_tests` reads the suite and reports: it is a judge, so a code path
-        # is refused by the evidence rule rather than by the fence
-        code_code == 2 and ("outside write_fence" in code_out
-                            or "only write path" in code_out),
+        # is refused by the judge rule (it holds no write tool) before the fence
+        code_code == 2 and "holds no write tool at all" in code_out,
         pass_code == 0,
         after["phase"] == "criteria",
         review_code == 0,
@@ -758,6 +778,7 @@ NODE_STACK = """node:
       argv:
         - node
         - --test
+        - --test-isolation=none
         - --test-reporter=junit
         - --test-reporter-destination=.devforgeai/work/junit.xml
         - "tests/*.test.mjs"
@@ -1193,8 +1214,9 @@ def stack_writer_backstop() -> tuple[bool, str]:
         # the canonical policy file is untouched until promotion
         "csharp" in (good / STACK_PATH).read_text(),
         bad_code == 2 and "stack.schema.json" in bad_out and "build" in bad_out,
-        # a judge phase refuses it by its own rule: its one path is its evidence
-        phase_code == 2 and ("sequencer-owned" in phase_out or "only write path" in phase_out),
+        # `constitution` is a document producer, so the sequencer-owned rule is
+        # what refuses it
+        phase_code == 2 and "sequencer-owned" in phase_out,
         other_code == 2 and "sequencer-owned" in other_out,
         onboard_start == 0 and onboard_code == 0,
     ))
@@ -1292,8 +1314,8 @@ def adr_producer_backstop() -> tuple[bool, str]:
         run_id="amend-constitution", skill="amend")
 
     passed = all((
-        # a judge phase refuses it by its own rule: its one path is its evidence
-        phase_code == 2 and ("sequencer-owned" in phase_out or "only write path" in phase_out),
+        # a judge phase refuses it by its own rule: it holds no write tool at all
+        phase_code == 2 and "holds no write tool at all" in phase_out,
         arch_code == 2 and "sequencer-owned" in arch_out,
         other_code == 2 and "sequencer-owned" in other_out,
         # the provenance log inside a root is the sequencer's, not an artifact:
@@ -2041,6 +2063,137 @@ def fence_overlap_backstop() -> tuple[bool, str]:
                     f"onboard={onboard_code}\n" + onboard_out[-240:])
 
 
+def fix_report_backstop() -> tuple[bool, str]:
+    """`--fix` resolves the report that sent the story back, or refuses (D14 item 2)."""
+    missing = make_project("fix-missing")
+    none_code, none_out = sequence(missing, "phase", "start", "dev", "STORY-001",
+                                   "--lenient", "--fix")
+
+    root = make_project("fix-report")
+    reports = root / "docs" / "reports"
+    reports.mkdir(parents=True)
+    (reports / "review-STORY-001.md").write_text("# review\n")
+    time.sleep(0.05)                       # the newest of the two wins, by mtime
+    (reports / "qa-STORY-001.md").write_text("# qa\n")
+    fix_code, fix_out = sequence(root, "phase", "start", "dev", "STORY-001",
+                                 "--lenient", "--fix")
+    recorded = record(root).get("fix_report")
+    status = sequence(root, "status")[1]
+
+    # The other order: review is newer, so review wins.
+    older = make_project("fix-report-review")
+    reports = older / "docs" / "reports"
+    reports.mkdir(parents=True)
+    (reports / "qa-STORY-001.md").write_text("# qa\n")
+    time.sleep(0.05)
+    (reports / "review-STORY-001.md").write_text("# review\n")
+    sequence(older, "phase", "start", "dev", "STORY-001", "--lenient", "--fix")
+
+    plain = started_project("fix-none")
+    plain_status = sequence(plain, "status")[1]
+
+    # A document run has no story report to resolve, so `--fix` records null.
+    doc = make_project("fix-document")
+    doc_code, _ = sequence(doc, "phase", "start", "pm", "tinyapp", "--fix")
+
+    passed = all((
+        none_code == 1 and "NO_FIX_REPORT" in none_out
+        and "docs/reports/qa-STORY-001.md" in none_out
+        and "docs/reports/review-STORY-001.md" in none_out,
+        fix_code == 0,
+        recorded == "docs/reports/qa-STORY-001.md",
+        record(older).get("fix_report") == "docs/reports/review-STORY-001.md",
+        "fix_report: docs/reports/qa-STORY-001.md" in fix_out,
+        "fix_report" in status and "docs/reports/qa-STORY-001.md" in status,
+        record(plain).get("fix_report") is None,
+        "fix_report" not in plain_status,     # never named when it is not set
+        doc_code == 0 and record(doc, "pm-tinyapp").get("fix_report") is None,
+    ))
+    return passed, (f"missing={none_code} fix={fix_code} recorded={recorded!r} "
+                    f"review_wins={record(older).get('fix_report')!r} document={doc_code}\n"
+                    + none_out[-200:])
+
+
+def clarify_in_flight_backstop() -> tuple[bool, str]:
+    """`clarify` may open on a story a blocked dev run holds; review and qa may not."""
+    root = started_project("clarify-flight")
+    bind(root, RED)
+    blocked = stop(root, RED, receipt("red", "red_dev", status="needs_user",
+                                      note="criterion 3 does not say what empty means"))
+    rec = record(root)
+
+    clarify_code, clarify_out = sequence(root, "phase", "start", "clarify", "STORY-001")
+    review_code, review_out = sequence(root, "phase", "start", "review", "STORY-001",
+                                       "--lenient")
+    qa_code, qa_out = sequence(root, "phase", "start", "qa", "STORY-001", "--lenient")
+
+    passed = all((
+        blocked[0] == 0,
+        rec["blocked_at"] == "red" and rec["lease"] is None,
+        clarify_code == 0,
+        record(root, "clarify-STORY-001")["write_fence"] == ["docs/plan/*/stories/STORY-001.md"],
+        state_of(root)["runs"]["STORY-001"]["status"] == "active",   # the dev run survives
+        review_code == 1 and "STORY_IN_FLIGHT" in review_out,
+        qa_code == 1 and "STORY_IN_FLIGHT" in qa_out,
+    ))
+    return passed, (f"clarify={clarify_code} review={review_code} qa={qa_code} "
+                    f"blocked_at={rec.get('blocked_at')}\n" + review_out[-200:])
+
+
+def resume_reslice_backstop() -> tuple[bool, str]:
+    """A resume after `/clarify` re-gates and re-slices; a failing gate stays blocked."""
+    def blocked(label: str) -> Path:
+        root = started_project(label)
+        bind(root, RED)
+        stop(root, RED, receipt("red", "red_dev", status="needs_user",
+                                note="criterion 3 is ambiguous"))
+        return root
+
+    def slice_of(root: Path) -> dict:
+        return json.loads((root / ".devforgeai/work/STORY-001/context.json").read_text())
+
+    def reblock(root: Path) -> None:
+        rec = record(root)
+        rec["blocked_at"], rec["lease"] = "red", None
+        save_record(root, rec)
+
+    same = blocked("resume-same")
+    before = slice_of(same)
+    same_code, same_out = sequence(same, "phase", "start", "dev", "STORY-001")
+
+    changed = blocked("resume-changed")
+    old_slice = slice_of(changed)
+    story = changed / "STORY-001.md"
+    story.write_text(story.read_text().replace("# STORY-001", "# STORY-001 (clarified)"))
+    reblock(changed)
+    changed_code, changed_out = sequence(changed, "phase", "start", "dev", "STORY-001")
+    new_slice = slice_of(changed)
+
+    refused = blocked("resume-refused")
+    story = refused / "STORY-001.md"
+    story.write_text(story.read_text().replace("status: ready", "status: draft"))
+    refused_code, refused_out = sequence(refused, "phase", "start", "dev", "STORY-001")
+    envelope = json.loads((refused / ".devforgeai/work/STORY-001/handoff.json").read_text())
+
+    passed = all((
+        before.get("incoming_sha256") and before.get("lenient") is True,
+        same_code == 0 and "re-ran" not in same_out,
+        slice_of(same)["resolved_at"] == before["resolved_at"],   # untouched
+        changed_code == 0 and "story changed since the last slice" in changed_out,
+        new_slice["incoming_sha256"] != old_slice["incoming_sha256"],
+        new_slice["lenient"] is True,          # the original gate's leniency is repeated
+        record(changed)["blocked_at"] is None and record(changed)["phase"] == "red",
+        refused_code == 1 and "stays blocked" in refused_out
+        and "status is draft" in refused_out,
+        record(refused)["blocked_at"] == "red",
+        envelope["reasons"] == ["gate failed on resume: story status is draft, not ready"],
+        envelope["next"] == "/dev STORY-001",
+    ))
+    return passed, (f"same={same_code} changed={changed_code} refused={refused_code} "
+                    f"resliced={new_slice['incoming_sha256'] != old_slice['incoming_sha256']}\n"
+                    + refused_out[-200:])
+
+
 def story_in_flight_backstop() -> tuple[bool, str]:
     """`review` and `qa` are refused while the story's dev run is unfinished."""
     root = started_project("in-flight")
@@ -2253,44 +2406,302 @@ def resume_backstop() -> tuple[bool, str]:
                     f"freed={freed[0]}\n" + (resumed[1] or user[1])[-220:])
 
 
-def judge_evidence_backstop() -> tuple[bool, str]:
-    """A judge writes in its evidence directory and nowhere else, on both providers."""
-    root = started_project("evidence", phase="smoke")
+FINDINGS_REL = ".devforgeai/work/STORY-001/evidence/smoke_qa/findings.md"
+
+FINDINGS_BODY = (
+    "# smoke evidence for STORY-001\n\n"
+    "| criterion | checked against | result |\n|---|---|---|\n"
+    "| 1 | tests/test_text.py::test_slugify_basic at checkpoint refactor | pass |\n"
+    "| 2 | tests/test_text.py::test_slugify_unicode at checkpoint refactor | pass |\n"
+    "| 3 | tests/test_text.py::test_slugify_empty at checkpoint refactor | pass |\n"
+    "\nQuoted lines contain a backtick `x` and a non-ASCII colon \u2014 nothing is re-encoded.\n"
+)
+
+
+def tree_digest(path: Path) -> str:
+    """A digest of every file under `path`, so 'unchanged' is checkable."""
+    rows = []
+    for item in sorted(p for p in path.rglob("*") if p.is_file()):
+        rows.append(f"{item.relative_to(path).as_posix()}:{hashlib.sha256(item.read_bytes()).hexdigest()}")
+    return hashlib.sha256("\n".join(rows).encode()).hexdigest()
+
+
+def judge_findings_backstop() -> tuple[bool, str]:
+    """A judge writes nothing; its `findings` are persisted at the fixed path (D13)."""
+    root = started_project("findings", phase="smoke")
     target = croot(root)
-    mine = target / ".devforgeai/work/STORY-001/evidence/smoke_qa/criteria.md"
+    old_evidence = target / ".devforgeai/work/STORY-001/evidence/smoke_qa/criteria.md"
     theirs = target / ".devforgeai/work/STORY-001/evidence/red_dev/criteria.md"
 
-    claude_in = run(root, event("PreToolUse", "Write", write_input(mine, "# evidence\n"), SMOKE))
-    claude_out = run(root, event("PreToolUse", "Write",
-                                 write_input(target / "tinyapp" / "text.py"), SMOKE))
+    # Every write a judge can attempt is denied, on both providers: the old
+    # evidence directory, another agent's, and a project path.
+    claude_evidence = run(root, event("PreToolUse", "Write",
+                                      write_input(old_evidence, "# evidence\n"), SMOKE))
+    claude_project = run(root, event("PreToolUse", "Write",
+                                     write_input(target / "tinyapp" / "text.py"), SMOKE))
     claude_other = run(root, event("PreToolUse", "Write", write_input(theirs), SMOKE))
-    codex_in = run(root, event("PreToolUse", "Write", write_input(mine, "# evidence\n"), SMOKE),
-                   "codex")
-    codex_out = run(root, event("PreToolUse", "Write",
-                                write_input(target / "tests" / "test_text.py"), SMOKE), "codex")
+    codex_evidence = run(root, event("PreToolUse", "Write",
+                                     write_input(old_evidence, "# evidence\n"), SMOKE), "codex")
+    codex_project = run(root, event("PreToolUse", "Write",
+                                    write_input(target / "tests" / "test_text.py"), SMOKE),
+                        "codex")
 
-    mine.parent.mkdir(parents=True, exist_ok=True)
-    mine.write_text("# evidence\n\n| criterion | result |\n|---|---|\n| 1 | pass |\n")
-    ingest = stop(root, SMOKE, receipt(
-        "smoke", "smoke_qa", checkpoint="base",
-        refs=[".devforgeai/work/STORY-001/evidence/smoke_qa/criteria.md"]))
+    before_candidate = tree_digest(target)
+    before_canonical = tree_digest(root / "tinyapp"), tree_digest(root / "tests")
+
+    ingest = stop(root, SMOKE, receipt("smoke", "smoke_qa", checkpoint="base",
+                                       findings=FINDINGS_BODY))
     result = json.loads((root / ".devforgeai/work/STORY-001/smoke-result.json").read_text())
+    persisted = root / FINDINGS_REL
     rows = promotion_rows_of(root)
 
     passed = all((
-        claude_in[0] == 0,
-        claude_out[0] == 2 and "only write path" in claude_out[1],
-        claude_other[0] == 2 and "only write path" in claude_other[1],
-        codex_in[0] == 0,
-        codex_out[0] == 2 and "only write path" in codex_out[1],
+        claude_evidence[0] == 2 and "holds no write tool at all" in claude_evidence[1],
+        claude_project[0] == 2 and "holds no write tool at all" in claude_project[1],
+        claude_other[0] == 2 and "holds no write tool at all" in claude_other[1],
+        codex_evidence[0] == 2 and "holds no write tool at all" in codex_evidence[1],
+        codex_project[0] == 2 and "holds no write tool at all" in codex_project[1],
         ingest[0] == 0,
-        result["changed"] == [],              # evidence is never a project change
+        persisted.is_file(),
+        persisted.read_bytes() == FINDINGS_BODY.encode(),   # verbatim, never truncated
+        result["findings_path"] == FINDINGS_REL,
+        result["findings"] == FINDINGS_BODY,
+        result["changed"] == [],              # a judge is never a project change
         result["claimed_paths"] == [],
+        tree_digest(target) == before_candidate,            # candidate root untouched
+        (tree_digest(root / "tinyapp"), tree_digest(root / "tests")) == before_canonical,
         all("evidence" not in row for row in rows),
     ))
-    return passed, (f"claude={claude_in[0]}/{claude_out[0]}/{claude_other[0]} "
-                    f"codex={codex_in[0]}/{codex_out[0]} ingest={ingest[0]} "
-                    f"changed={result.get('changed')}\n" + claude_out[1][-200:])
+    return passed, (f"denied claude={claude_evidence[0]}/{claude_project[0]}/{claude_other[0]} "
+                    f"codex={codex_evidence[0]}/{codex_project[0]} ingest={ingest[0]} "
+                    f"persisted={persisted.is_file()} path={result.get('findings_path')} "
+                    f"candidate_unchanged={tree_digest(target) == before_candidate}\n"
+                    + claude_evidence[1][-200:])
+
+
+def findings_rules_backstop() -> tuple[bool, str]:
+    """`findings` is required of a judge, forbidden of a producer, and bounded."""
+    judge = started_project("findings-missing", phase="smoke")
+    missing = stop(judge, SMOKE, receipt("smoke", "smoke_qa", checkpoint="base", findings=OMIT))
+    missing_file = (judge / FINDINGS_REL).exists()
+
+    producer = started_project("findings-producer")
+    bind(producer, RED)
+    author(producer, "STORY-001", {"tests/test_text.py": RED_TEXT})
+    extra = stop(producer, RED, receipt("red", "red_dev", claimed=["tests/test_text.py"],
+                                        findings="a producer's evidence is its change set"))
+
+    empty_root = started_project("findings-empty", phase="smoke")
+    empty = stop(empty_root, SMOKE, receipt("smoke", "smoke_qa", checkpoint="base",
+                                            findings="   \n"))
+
+    big_root = started_project("findings-big", phase="smoke")
+    body = "e" * 16_380 + "\u00e9\u00e9\u00e9"          # 16386 UTF-8 bytes, 16383 characters
+    big = stop(big_root, SMOKE, receipt("smoke", "smoke_qa", checkpoint="base", findings=body))
+    big_file = (big_root / FINDINGS_REL).exists()
+
+    # A judge that reached no verdict owes no evidence: `needs_user` and
+    # `could_not_run` may omit `findings` entirely.
+    nu_root = started_project("findings-needs-user", phase="smoke")
+    needs_user = stop(nu_root, SMOKE, receipt(
+        "smoke", "smoke_qa", checkpoint="base", status="needs_user", findings=OMIT,
+        note="criterion 3 names no oracle output to read"))
+    cnr_root = started_project("findings-could-not-run", phase="smoke")
+    could_not_run = stop(cnr_root, SMOKE, receipt(
+        "smoke", "smoke_qa", checkpoint="base", status="could_not_run",
+        reason_code="checkpoint_fault", findings=OMIT,
+        note="the refactor checkpoint report is absent"))
+    # ... but a `fail` verdict owes it exactly as a `pass` does, and an optional
+    # body that is sent is held to the same rules.
+    fail_root = started_project("findings-fail", phase="smoke")
+    fail_missing = stop(fail_root, SMOKE, receipt(
+        "smoke", "smoke_qa", checkpoint="base", status="fail", findings=OMIT))
+    nu_big_root = started_project("findings-needs-user-big", phase="smoke")
+    nu_big = stop(nu_big_root, SMOKE, receipt(
+        "smoke", "smoke_qa", checkpoint="base", status="needs_user",
+        findings="e" * 16_385))
+
+    edge_root = started_project("findings-edge", phase="smoke")
+    edge_body = "e" * 16_382 + "\u00e9"                   # exactly 16384 UTF-8 bytes
+    edge = stop(edge_root, SMOKE, receipt("smoke", "smoke_qa", checkpoint="base",
+                                          findings=edge_body))
+
+    passed = all((
+        missing[0] == 2 and "MISSING_FINDINGS" in missing[1] and not missing_file,
+        extra[0] == 2 and "UNEXPECTED_FINDINGS" in extra[1],
+        empty[0] == 2 and "EMPTY_FINDINGS" in empty[1],
+        big[0] == 2 and "OVERSIZE_FINDINGS" in big[1] and "16386" in big[1] and not big_file,
+        edge[0] == 0 and (edge_root / FINDINGS_REL).read_text() == edge_body,
+        needs_user[0] == 0 and not (nu_root / FINDINGS_REL).exists(),
+        could_not_run[0] == 0 and not (cnr_root / FINDINGS_REL).exists(),
+        fail_missing[0] == 2 and "MISSING_FINDINGS" in fail_missing[1],
+        nu_big[0] == 2 and "OVERSIZE_FINDINGS" in nu_big[1],
+    ))
+    return passed, (f"missing={missing[0]} producer={extra[0]} empty={empty[0]} "
+                    f"oversize={big[0]} at_limit={edge[0]} needs_user={needs_user[0]} "
+                    f"could_not_run={could_not_run[0]} fail_missing={fail_missing[0]} "
+                    f"optional_oversize={nu_big[0]}\n"
+                    + (missing[1] or extra[1])[-200:])
+
+
+def checkpoint_fault_backstop() -> tuple[bool, str]:
+    """A missing input checkpoint is `checkpoint_fault`, never `hook_fault`.
+
+    `hook_fault` is reserved for a stop event with no worker identity and for a
+    receipt that cannot be parsed. Losing the checkpoint the phase started from
+    is neither: the receipt was valid and the worker did its job.
+    """
+    root = started_project("checkpoint-fault", phase="green")
+    bind(root, GREEN)
+    author(root, "STORY-001", {"tinyapp/text.py": GREEN_TEXT})
+    # copy mode records each checkpoint as a manifest under cp/; remove the one
+    # this phase reads and the diff can no longer be taken.
+    manifest = root / ".devforgeai/work/STORY-001/cp/base.manifest.json"
+    existed = manifest.exists()
+    manifest.unlink()
+    ingested = stop(root, GREEN, receipt("green", "green_dev", checkpoint="base",
+                                         claimed=["tinyapp/text.py"]))
+    result = json.loads((root / ".devforgeai/work/STORY-001/green-result.json").read_text())
+    envelope = json.loads((root / ".devforgeai/work/STORY-001/handoff.json").read_text())
+    survivor = croot(root) / "tinyapp" / "text.py"
+
+    passed = all((
+        existed,
+        ingested[0] == 0,
+        result["status"] == "could_not_run",
+        result["reason_code"] == "checkpoint_fault",
+        result["changed"] == [],
+        envelope["outcome"] == "REQUIRE_HUMAN",
+        "checkpoint" in envelope["next"] and "install the missing runner" not in envelope["next"],
+        "checkpoint_fault" in " ".join(envelope["reasons"]),
+        "hook_fault" not in " ".join(envelope["reasons"]),
+        survivor.read_text() == GREEN_TEXT,      # the candidate root is left alone
+        record(root)["blocked_at"] == "green",
+    ))
+    return passed, (f"ingest={ingested[0]} reason={result.get('reason_code')}\n"
+                    f"next: {envelope.get('next')}")
+
+
+def provider_tool_refused_backstop() -> tuple[bool, str]:
+    """`provider_tool_refused` is an infra code that names the tool in the handoff."""
+    root = started_project("tool-refused")
+    bind(root, RED)
+    note = ("the provider refused Write before any DevForgeAI hook ran: subagents should "
+            "return findings as text")
+    ingested = stop(root, RED, receipt("red", "red_dev", status="could_not_run",
+                                       reason_code="provider_tool_refused", note=note))
+    envelope = json.loads((root / ".devforgeai/work/STORY-001/handoff.json").read_text())
+    result = json.loads((root / ".devforgeai/work/STORY-001/red-result.json").read_text())
+
+    unknown = started_project("tool-refused-bad")
+    bind(unknown, RED)
+    rejected = stop(unknown, RED, receipt("red", "red_dev", status="could_not_run",
+                                          reason_code="tool_refused", note=note))
+
+    passed = all((
+        ingested[0] == 0,
+        result["reason_code"] == "provider_tool_refused",
+        envelope["outcome"] == "REQUIRE_HUMAN",
+        "Write" in envelope["next"],
+        "install the missing runner" not in envelope["next"],
+        "provider_tool_refused" in " ".join(envelope["reasons"]),
+        rejected[0] == 2 and "reason_code" in rejected[1],
+    ))
+    return passed, (f"ingest={ingested[0]} unknown_code={rejected[0]}\n"
+                    f"next: {envelope.get('next')}")
+
+
+EVAL3_RED = '''import tinyapp.text as text
+
+def _slug(value):
+    fn = getattr(text, "slugify", None)
+    assert fn is not None, "slugify is not defined"
+    return fn(value)
+
+def test_slugify_basic():
+    assert _slug("Hello, World!") == "hello-world"
+
+def test_slugify_unicode():
+    assert _slug("  \u00dcn\u00efc\u00f6d\u00e9  T\u00eftle ") == "unicode-title"
+
+def test_slugify_empty():
+    try:
+        got = _slug("")
+    except Exception as exc:                     # the overlay raises here
+        got = repr(exc)
+    assert got == ""
+'''
+
+
+def eval3_routing_backstop() -> tuple[bool, str]:
+    """A planned test that already passes routes to `/clarify`, not to a resume.
+
+    The eval-3 overlay ships a real implementation of criterion 1, so red's
+    oracle reports that test as `passed`. That is the story's problem, not the
+    code's, and D13 item 7 says the refusal names the skill's own row.
+    """
+    root = make_project("eval3")
+    overlay = FIXTURE / "overlays" / "eval-3"
+    for source in sorted(p for p in overlay.rglob("*") if p.is_file()):
+        target = root / source.relative_to(overlay)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+    code, output = sequence(root, "phase", "start", "dev", "STORY-001", "--lenient")
+    if code:
+        return False, f"phase start exited {code}: {output[-200:]}"
+
+    handoff_file = root / ".devforgeai/work/STORY-001/handoff.json"
+    attempts, handoffs = [], []
+    for _ in range(2):
+        bind(root, RED)
+        author(root, "STORY-001", {"tests/test_text.py": EVAL3_RED})
+        attempts.append(stop(root, RED, receipt("red", "red_dev",
+                                                claimed=["tests/test_text.py"])))
+        handoffs.append(handoff_file.exists())
+    envelope = json.loads(handoff_file.read_text())
+    reasons = " ".join(envelope.get("reasons") or [])
+
+    passed = all((
+        attempts[0][0] == 2 and not handoffs[0],   # first attempt: retry, no handoff
+        attempts[1][0] == 2 and handoffs[1],       # second: the budget is spent, hand off
+        envelope["outcome"] == "REQUIRE_HUMAN",
+        envelope["next"] == "/clarify STORY-001",
+        "is passed, expected failed" in reasons,
+        record(root)["blocked_at"] == "red",
+    ))
+    return passed, (f"attempts={attempts[0][0]}/{attempts[1][0]} "
+                    f"handoff_after={handoffs[0]}/{handoffs[1]} "
+                    f"next={envelope.get('next')!r}\n{reasons[:220]}")
+
+
+def gate_row_backstop() -> tuple[bool, str]:
+    """A gate refusal names the skill's row when it has one, and none when it does not.
+
+    The unresolved-ASSUMPTION row of SKILL-SPEC-001 section 7f routes to
+    `/clarify`. A defect the skill declares no row for gets no forward command
+    at all: the adapter renders those, and a plausible invented route would be
+    worse than silence (D13 item 7).
+    """
+    assumption = make_project("gate-assumption")
+    shutil.copy2(FIXTURE / "overlays" / "eval-2" / "STORY-001.md",
+                 assumption / "STORY-001.md")
+    a_code, a_out = sequence(assumption, "phase", "start", "dev", "STORY-001", "--lenient")
+
+    # No --lenient: the stand-alone fixture story's placeholder hashes refuse the
+    # run, and `dev` declares no row for an unresolvable source.
+    strict = make_project("gate-strict")
+    s_code, s_out = sequence(strict, "phase", "start", "dev", "STORY-001")
+
+    passed = all((
+        a_code == 1,
+        "unresolved ASSUMPTION" in a_out,
+        "Next: /clarify STORY-001" in a_out,
+        s_code == 1,
+        "unresolvable-source" in s_out,
+        "Next:" not in s_out,
+    ))
+    return passed, (f"assumption={a_code} strict={s_code}\n"
+                    + a_out.splitlines()[-1][:160] + " | " + s_out.splitlines()[-1][:160])
 
 
 def handoff_reasons(root: Path, run_id: str = "STORY-001") -> str:
@@ -2356,7 +2767,8 @@ DISPATCHER_CASES = [
     ("sequencer-owned path inside the root denied", 2, "WRITE_SEQUENCER_OWNED", "red", "claude"),
     ("primary window write denied while a run is active", 2, event("PreToolUse", "Write", write_input("tests/test_text.py")), "red", "claude"),
     ("a worker that holds no lease is denied", 2, event("PreToolUse", "Write", write_input("tests/test_text.py"), {"agent_id": "a-x", "agent_type": "red_dev"}), "red", "claude"),
-    ("judge writes inside its evidence directory", 0, "WRITE_EVIDENCE", "smoke", "claude"),
+    ("judge write in the run evidence directory denied", 2, "WRITE_EVIDENCE", "smoke", "claude"),
+    ("judge write in the run evidence directory denied on Codex", 2, "WRITE_EVIDENCE", "smoke", "codex"),
     ("judge writing another agent's evidence denied", 2, "WRITE_EVIDENCE_FOREIGN", "smoke", "claude"),
     ("judge writing a project path denied", 2, "WRITE_CODE_IN_RED", "smoke", "claude"),
     ("Claude MultiEdit follows the same rule", 2, event("PreToolUse", "MultiEdit", {"file_path": "tests/test_text.py", "edits": []}, GREEN), "green", "claude"),
@@ -2475,7 +2887,13 @@ DISPATCHER_CASES = [
     ("no run: read-only shell allowed", 0, event("PreToolUse", "Bash", {"command": "ls -la"}), "NONE", "codex"),
     ("no run: phase start allowed", 0, event("PreToolUse", "Bash", {"command": "devforgeai phase start dev STORY-001"}), "NONE", "codex"),
     ("no run: phase start --lenient allowed", 0, event("PreToolUse", "Bash", {"command": "devforgeai phase start dev STORY-001 --lenient"}), "NONE", "claude"),
+    ("no run: phase start --fix allowed", 0, event("PreToolUse", "Bash", {"command": "devforgeai phase start dev STORY-001 --fix"}), "NONE", "claude"),
+    ("no run: phase start --fix --lenient allowed", 0, event("PreToolUse", "Bash", {"command": "devforgeai phase start dev STORY-001 --fix --lenient"}), "NONE", "claude"),
+    ("no run: phase start --lenient --fix allowed in either order", 0, event("PreToolUse", "Bash", {"command": "devforgeai phase start dev STORY-001 --lenient --fix"}), "NONE", "codex"),
+    ("no run: phase start with a repeated option denied", 2, event("PreToolUse", "Bash", {"command": "devforgeai phase start dev STORY-001 --fix --fix"}), "NONE", "claude"),
     ("no run: phase start with any other flag denied", 2, event("PreToolUse", "Bash", {"command": "devforgeai phase start dev STORY-001 --force"}), "NONE", "claude"),
+    ("no run: phase start with an accepted option plus another denied", 2, event("PreToolUse", "Bash", {"command": "devforgeai phase start dev STORY-001 --lenient --force"}), "NONE", "claude"),
+    ("no run: phase start with an option in the skill slot denied", 2, event("PreToolUse", "Bash", {"command": "devforgeai phase start --fix STORY-001 dev"}), "NONE", "claude"),
     ("no run: document phase start allowed", 0, event("PreToolUse", "Bash", {"command": "devforgeai phase start pm tinyapp"}), "NONE", "claude"),
     ("no run: promote allowed", 0, event("PreToolUse", "Bash", {"command": "devforgeai promote STORY-001"}), "NONE", "claude"),
     ("no run: phase next denied", 2, event("PreToolUse", "Bash", {"command": "devforgeai phase next"}), "NONE", "codex"),
@@ -2605,12 +3023,24 @@ BACKSTOPS = [
     ("FENCE_OVERLAP refuses a second run over the same paths", fence_overlap_backstop),
     ("STORY_IN_FLIGHT refuses review and qa until the story's run is promoted",
      story_in_flight_backstop),
+    ("STORY_IN_FLIGHT exempts clarify on a blocked dev run", clarify_in_flight_backstop),
+    ("--fix records the report that sent the story back, or refuses", fix_report_backstop),
+    ("a resume after clarify re-gates and re-slices", resume_reslice_backstop),
     ("one producer holds the write lease at a time, on both providers", lease_backstop),
     ("UNCLAIMED_CHANGE holds the receipt to the checkpoint diff",
      unclaimed_change_backstop),
     ("NO_CANDIDATE names a missing root instead of failing obscurely",
      no_candidate_backstop),
-    ("a judge writes in its evidence directory and nowhere else", judge_evidence_backstop),
+    ("a judge writes nothing and its findings are persisted at the fixed path",
+     judge_findings_backstop),
+    ("findings is required of a judge, forbidden of a producer, and bounded",
+     findings_rules_backstop),
+    ("provider_tool_refused hands off with the refused tool named",
+     provider_tool_refused_backstop),
+    ("a missing input checkpoint is checkpoint_fault, not hook_fault",
+     checkpoint_fault_backstop),
+    ("a planned test that already passes routes to /clarify", eval3_routing_backstop),
+    ("a gate refusal names the skill's row, or none at all", gate_row_backstop),
     ("a REQUIRE_HUMAN block keeps the run and `phase start` resumes it", resume_backstop),
 ]
 
@@ -2638,6 +3068,9 @@ def main() -> int:
             passed = passed and "REQUIRE_HUMAN" in message and "/dev STORY-001" in message
         if label == "a worker that holds no lease is denied":
             passed = passed and "LEASE_HELD" in message
+        if label.startswith("judge writ"):
+            passed = passed and "holds no write tool at all" in message \
+                and "`findings`" in message
         failures += 0 if passed else 1
         print(f"{'ok ' if passed else 'FAIL'} exit={actual} want={expected}  {label}\n"
               f"      {message[:140]}")

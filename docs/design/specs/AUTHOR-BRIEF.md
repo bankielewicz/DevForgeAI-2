@@ -73,15 +73,15 @@ prose; it is the reason the spec's section 7 looks the way it does.
    design, brainstorm, sourcetree, techstack, code_map, skill files, retro, drift,
    clarification, impact, validate reports. Judge roles are the gate resolver, critic,
    reviewer, smoke and QA verifier, analyze and status. Every worker header declares
-   `writes: candidate`, `writes: evidence` or `writes: none`, and its `tools` follow from
-   that: producers hold `Read`, `Grep`, `Glob`, `Edit`, `Write` (Codex: `apply_patch`) and
-   `Bash(devforgeai run *)` for the keys the phase granted; judges hold `Read`, `Grep`,
-   `Glob`, `Bash(devforgeai status)` and `Write` confined to
-   `.devforgeai/work/<run>/evidence/<agent>/`, where their findings file lives and which
-   the receipt names in `evidence_refs` — that directory is run-scoped, gitignored and
-   never promoted, and `issues[]` stays the bounded summary. `writes: none` is left for a
-   worker that produces nothing but the receipt. No class holds a git write, a package
-   manager, a network tool, or a raw stack command.
+   `writes: candidate` or `writes: none` — there is no third value — and its `tools` follow
+   from that: producers hold `Read`, `Grep`, `Glob`, `Edit`, `Write` (Codex: `apply_patch`)
+   and `Bash(devforgeai run *)` for the keys the phase granted; judges hold `Read`, `Grep`,
+   `Glob` and `Bash(devforgeai status)`, and no write tool of any kind. A judge creates no
+   file anywhere: it returns its detailed evidence as the receipt's `findings`, and the
+   sequencer persists that string to `.devforgeai/work/<run>/evidence/<agent>/findings.md`,
+   a run-scoped, gitignored path that is never promoted and that the judge neither names
+   nor reaches. `issues[]` stays the bounded routing summary. No class holds a git write, a
+   package manager, a network tool, or a raw stack command.
 2. **One candidate root per run.** The sequencer creates it at `phase start` and owns it
    until promotion or abandonment: a git worktree on branch `devforgeai/<run>` where the
    project is a git repository, a copy of the tree where it is not, at
@@ -95,8 +95,19 @@ prose; it is the reason the spec's section 7 looks the way it does.
    `devforgeai.worker-result/v1` object, schema at
    `schemas/devforgeai/v1/worker-result.schema.json`, fields and bounds in
    `10-sequencer-and-contracts.md` section 5.1. It names `claimed_paths` (at most 64) and
-   `evidence_refs` (at most 16), never file bytes. No Markdown fence, no surrounding prose.
-   A non-pass status carries an empty `claimed_paths`.
+   `evidence_refs` (at most 16), never file bytes. A judge's receipt also carries
+   `findings`: its detailed evidence as prose, at most 16384 UTF-8 bytes, required from a
+   judge and forbidden from a producer, refused rather than truncated when larger. The
+   sequencer writes it verbatim to `.devforgeai/work/<run>/evidence/<agent>/findings.md` at
+   ingest, records the path in `<phase>-result.json` and the handoff, and the next phase's
+   worker reads it there. No Markdown fence, no surrounding prose. A non-pass status carries
+   an empty `claimed_paths`.
+
+   That `findings` body is returned into the primary context, because a subagent returns its
+   result to its parent and a hook may validate the final message but cannot suppress it. Do
+   not write that no worker output enters the primary context. What stays isolated is the
+   worker's transcript, its file reads, its tool traffic and its reasoning; producers still
+   never return file bodies, and no byte a run wrote crosses the boundary.
 4. **The sequencer decides from the diff, not the claim.** At `ingest-result` it derives
    `changed[{path, blob_sha256, kind}]` from the checkpoint diff, refuses the result when
    `changed` is not a subset of `claimed_paths` or a path is outside the fence, runs the
@@ -262,9 +273,9 @@ block, unchanged from the template except for the skill and phase names.
 onto your skill's registry phases. Gate, Slice, Record and Handoff are sequencer operations
 and name no worker. `examples/hooks/policy.py` is the authority for which registry phase is
 which sub-phase kind and for each phase's `writes` mode; a worker's own
-`writes: candidate | evidence | none` follows from that mode — a phase that writes
-files into the tree has a producer, a report-only phase has a judge, which writes
-its findings under `.devforgeai/work/<run>/evidence/<agent>/` and nowhere else.
+`writes: candidate | none` follows from that mode — a phase that writes files into the
+tree has a producer, a report-only phase has a judge, which writes nothing anywhere and
+returns its findings in the receipt for the sequencer to persist.
 
 *7c. The evidence and gate table.* One row per registry phase, in phase order, exactly
 this shape from `10-sequencer-and-contracts.md` section 11:
@@ -300,24 +311,28 @@ Column rules, and how to fill them without writing fiction:
   fixed map `{unresolvable_source: BLOCK}` and has no story to declare a wider one.
 - **evidence file** — the exact path with `<run>` and `<phase>` substituted:
   `.devforgeai/work/<run>/<phase>-result.json` and `.devforgeai/work/<run>/<phase>-report.md`.
-  For a document run `<run>` is `<skill>-<arg>`; for a story run it is the story id.
+  For a document run `<run>` is `<skill>-<arg>`; for a story run it is the story id. A judge
+  phase's row also names `.devforgeai/work/<run>/evidence/<agent>/findings.md`, which the
+  sequencer writes from the receipt's `findings`; never attribute that file to the worker.
 - **transition oracle** — the oracle name from section 5.4 and the one condition that makes
   it pass. For `writes: docs` phases that is `document`: the phase produced at least one
   file and every declared output with non-null content exists on disk. For `writes: none`
   phases that is `report_only`: no file outside the fence changed since the phase's input
-  checkpoint and the whole-tree package and import policy holds. A judge's own findings
-  file lives outside the tree the oracle compares, so writing it never trips
-  `report_only`.
+  checkpoint and the whole-tree package and import policy holds. A judge changes nothing at
+  all, and the `findings.md` the sequencer writes on its behalf lives outside the tree the
+  oracle compares, so `report_only` is never tripped by a judge's evidence.
 
 *7d. Worker contracts.* One YAML block per worker, in the template's shape: `name`,
 `writes`, `responsibility` (one sentence, one job), `inputs`, `outputs`, `must_not`,
-`tools`, `isolation`, `returns`. `writes` is `candidate` for a producer, `evidence` for a
-judge and `none` for a worker that produces nothing but the receipt, and `tools` follows it
-exactly (section 3 of this brief). `must_not` is compiled into the agent prompt verbatim: a
-producer's ends with "write outside the candidate root or outside this phase's write fence"
-and "run a raw stack command, a git write, a package manager, or a network tool"; a judge's
-ends with "write anywhere but this run's evidence directory"; a `writes: none` worker's ends
-with "write any file". A producer is never told
+`tools`, `isolation`, `returns`. `writes` is `candidate` for a producer and `none` for a
+judge, there is no third value, and `tools` follows it exactly (section 3 of this brief). A
+judge's contract also says what belongs in `findings`: its detailed evidence, at most 16384
+UTF-8 bytes, required on its receipt, with `issues[]` left as the bounded routing summary.
+`must_not` is compiled into the agent prompt verbatim: a producer's ends with "write outside
+the candidate root or outside this phase's write fence" and "run a raw stack command, a git
+write, a package manager, or a network tool"; a judge's ends with "write any file, anywhere"
+— it holds no write tool, and there is no directory it may write instead. A producer is
+never told
 that it does not write — its contract opens with what it writes and where
 (`templates/agent-md.md`). These blocks become the `agents/<role>.md` bodies, whose four
 sections are job, inputs, rules, receipt. Persona and critic are always different files
@@ -441,7 +456,7 @@ resolution is already stated below, use it.
 |---|---|---|
 | OI-1 | Earlier drafts of `01-skill-anatomy.md` and `05-subagent-sets.md` gave Slice to a shared framework worker, but no phase in `10-sequencer-and-contracts.md` section 4 dispatches one, and section 11 states every registry row has a worker | **DECIDED:** Slice is a sequencer operation, not a worker. At `phase start` the sequencer resolves the incoming artifact's already-hashed `context[]` bundle and writes it to `.devforgeai/work/<run>/context.json`; every worker of the run is handed that path. The shared framework worker is deleted from 01, 05, 10 and 11 and no agent entry for it exists. A run whose gate identifies no incoming artifact (every unanchored document run) records the no-op in the same file; `init`, `status` and `research` open no run and write nothing. |
 | OI-2 | What the story gate re-resolves | DECIDED (section 12): every `provenance[]`, `context[]` and `commands.hash`; placeholders are `unresolvable-source` under `gate_policy`. An **unanchored** document gate checks the fence only. `review` and `qa` are the exception: `examples/hooks/policy.py` marks both `anchor: story`, so `phase start` runs the full story gate over `<arg>` and copies the story's `commands`, `test_plan`, `test_paths` and `gate_policy` into `.devforgeai/work/<run>/run.yaml`, while the write fence stays the report path. `10-sequencer-and-contracts.md:79` and :227 are behind the code on both points. |
-| OI-3 | Worker tools: earlier drafts gave every worker the same read-only list, while `10-sequencer-and-contracts.md` described `Bash(devforgeai run *)` as declared surface only | **DECIDED:** tools follow the role. A producer (`writes: candidate`) holds `Read`, `Grep`, `Glob`, `Edit`, `Write` and `Bash(devforgeai run *)` for the keys its phase granted, and every write is under `candidate.root`. A judge (`writes: evidence`) holds `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` and `Write` only under `.devforgeai/work/<run>/evidence/<agent>/`, where its findings file lives and is named in `evidence_refs`; `writes: none` is for workers that produce nothing but the receipt. Neither holds a git write, a package manager, a network tool, or a raw stack command, and `must_not` says so. |
+| OI-3 | Worker tools: earlier drafts gave every worker the same read-only list, while `10-sequencer-and-contracts.md` described `Bash(devforgeai run *)` as declared surface only | **DECIDED:** tools follow the role, and there are two roles. A producer (`writes: candidate`) holds `Read`, `Grep`, `Glob`, `Edit`, `Write` and `Bash(devforgeai run *)` for the keys its phase granted, and every write is under `candidate.root`. A judge (`writes: none`) holds `Read`, `Grep`, `Glob` and `Bash(devforgeai status)` and no write tool at all; it creates no file anywhere and returns its evidence as the receipt's `findings`, which the sequencer persists to `.devforgeai/work/<run>/evidence/<agent>/findings.md`. Neither holds a git write, a package manager, a network tool, or a raw stack command, and `must_not` says so. (`WRITE-MODEL-REVISION.md` D13 removed the third enum value and every judge Write allowance.) |
 | OI-4 | `10-sequencer-and-contracts.md` section 5.4 lists no outcome row for `status: fail` with no `next` | `examples/hooks/devforgeai.py:1017-1018` inserts `"<agent> reported fail"` as a transition problem row, so the phase retries to its `max_attempts` and then blocks `REQUIRE_HUMAN`. A critic that fails is a retry, then a human, never a silent pass. |
 | OI-5 | `02-skill-roster.md` gives resume flags (`--continue`, `--retry`, `--fix`, `--reslice`) but `10-sequencer-and-contracts.md:61` closes the run on `needs_user` and :324 closes it when attempts are exhausted | **DECIDED (revised):** a `REQUIRE_HUMAN` block leaves the run `active` with `run.yaml#blocked_at` set; `devforgeai phase start` with the same skill and argument resumes at that phase with attempts reset (10 section 3), so `--continue` and `--retry` are that resume. `--fix` and `--reslice` open a fresh run from phase 1 and change only what the workers read. |
 | OI-6 | `11-artifact-registry.md` puts `adr` at `.devforgeai/provenance/adr/NNNN-<slug>.md`, which `policy.ALWAYS_DENY` marks sequencer-owned and which is outside every document fence | **DECIDED:** `.devforgeai/provenance/adr/**` is a `PRODUCER_EXCEPTIONS` entry for `architect`/`adr` and `amend`/`adr`, and is in both skills' document fences, exactly as `.devforgeai/stack.yaml` is for `architect`/`techstack` and `onboard`/`code_map`. The sequencer validates the file against the `adr` template header — required frontmatter, `id_pattern`, required sections, forbidden text — and against the filename shape before the run is promoted; an existing ADR is never overwritten and there is no rewind for this path. The id shape is the template's own `^ADR-[0-9]{4}$` with the filename `NNNN-<slug>.md`, not a three-digit form: the template is the owner of that pattern and 01, 10, 11 and the code already agree on it. Installing an ADR by hand is no longer a step in any spec.

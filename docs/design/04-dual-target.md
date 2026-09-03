@@ -48,7 +48,7 @@ subagents:                                # owned by this skill; compiled as pla
     writes: candidate
   - name: critic
     file: subagents/critic.md
-    writes: evidence                      # judge: findings file under work/<run>/evidence/<agent>/ only
+    writes: none                          # judge: no write tool; returns `findings` in the receipt
 subphases:                                # `sequencer` sub-phases dispatch no LLM
   - id: gate
     sequencer: phase start
@@ -108,12 +108,21 @@ handoff:
 
 Claude adapters request provider-native worker isolation through `agents/*.md`
 tool and model declarations. A worker's `tools` list follows its role: a producer
-declares `Read, Grep, Glob, Edit, Write` plus `Bash(devforgeai run *)`, a judge
-declares `Read, Grep, Glob, Write` plus `Bash(devforgeai status)`, its Write
-confined by the dispatcher to `.devforgeai/work/<run>/evidence/<agent>/`. Every worker returns
-one `devforgeai.worker-result/v1` receipt naming the paths it claims inside the
-candidate root. Isolation is a declaration compiled into the target profile;
-verifying it at runtime is `12-post-mvp.md#pm-01`.
+declares `Read, Grep, Glob, Edit, Write` plus `Bash(devforgeai run *)`; a judge
+declares `Read, Grep, Glob` plus `Bash(devforgeai status)` and no write tool of
+any kind. Every worker returns one `devforgeai.worker-result/v1` receipt naming
+the paths it claims inside the candidate root; a judge claims none and carries
+its evidence in the receipt's `findings`, which the sequencer persists to
+`.devforgeai/work/<run>/evidence/<agent>/findings.md`. Isolation is a declaration
+compiled into the target profile; verifying it at runtime is
+`12-post-mvp.md#pm-01`.
+
+The dispatched worker's transcript, reads, tool traffic and reasoning stay in the
+subagent and never reach the primary window. Its returned result does: a
+producer's is a receipt of paths and short rows, and a judge's additionally
+carries the bounded `findings` body, because a subagent returns its result to its
+parent on both providers and a hook can validate that final message but cannot
+suppress it.
 
 ### Claude Code subagent facts the compile step relies on (docs read 2026-09-02)
 
@@ -125,6 +134,7 @@ verifying it at runtime is `12-post-mvp.md#pm-01`.
 | The main agent cannot be forced to delegate through the Agent tool; it chooses by `description`. An `@agent-<name>` mention guarantees invocation. `Agent(<name>)` permission rules control which subagents may be spawned. | The dispatch loop names the worker explicitly, the settings fragment denies every `Agent(...)` except the current phase's worker, and the Stop hook blocks the turn until the handoff exists. Descriptions carry when-to-use language so delegation matches. |
 | Per-subagent `hooks:` (PreToolUse, PostToolUse, Stop) in `.claude/agents/` frontmatter require workspace trust since v2.1.218. Project-level `SubagentStart`/`SubagentStop` hooks in settings match on agent name. | Hooks stay in the project settings fragment (one dispatcher); no per-agent frontmatter hooks in the MVP. |
 | `skills:` preloads whole skills into the subagent, not files. | Not used: workers get their guidance in the body, and the primary window's SKILL.md is not loaded into workers. |
+| **Observed live 2026-09-03 on Claude Code 2.1.259, undocumented:** a subagent's `Write` of a report-like Markdown file — `findings.md` among them — is refused by the provider with `Subagents should return findings as text, not write report files. Include this content in your final response instead.` The refusal happens before any DevForgeAI hook runs, so no hook sees the call. `findings.json` and `notes.txt` in the same directory are not refused. | Recorded as a fact, **not relied on in either direction**: it is undocumented, it may change, and its scope is a heuristic on file name and content. What the design relies on is that a judge is compiled with no write tool at all, so there is no call for the provider or a hook to refuse. No workaround through a `.json`, a `.txt` or a Bash redirect is permitted: a judge that is refused a write has no write to make (`WRITE-MODEL-REVISION.md` D13). |
 | `isolation: worktree` needs git; `memory:` persists per agent; `background: true` drops tools such as AskUserQuestion. | `memory:` and `background:` are post-MVP (`12-post-mvp.md`); workers run foreground and without memory. The framework does not use `isolation: worktree`, and does not use `EnterWorktree`: both fork from HEAD, which would split the linear phase history the run's candidate root depends on. The sequencer creates and owns that root itself (`10-sequencer-and-contracts.md`), and a worker writes inside the root it is given. |
 
 ### Codex
@@ -133,7 +143,7 @@ verifying it at runtime is `12-post-mvp.md#pm-01`.
 AGENTS.md                       # project-level guidance; one section per skill
 .agents/skills/<name>/SKILL.md  # repo skills; Codex scans every .agents/skills/ up to repo root
 .agents/skills/<name>/templates/
-.codex/agents/<skill>-<role>.toml # provider-native worker profiles; `writes: candidate | evidence | none` per role
+.codex/agents/<skill>-<role>.toml # provider-native worker profiles; `writes: candidate | none` per role
 .codex/hooks.json                 # hook fragment from 09; installed by init
 .codex/config.toml                # workspace sandbox fragment from 09; installed by init
 ```
@@ -208,7 +218,7 @@ The state schema, the handoff envelope and its renderer, `stack.yaml`, and each 
 skill-validator runs after every compile and checks:
 
 1. For non-Research anatomy skills, anatomy compliance: all seven sub-phase kinds present; Gate, Slice, Record and Handoff bound to the sequencer operations that perform them; Work, Write and Review each bound to a named worker; persona and critic separated; Work may repeat. Research is checked against `framework/skills/research/` instead.
-2. For non-Research anatomy skills, the primary window contract: compiled SKILL.md reads nothing but `state.yaml`, contains no inline content prompts, dispatches every LLM sub-phase, and exposes a Bash grammar no wider than `devforgeai status | phase start <skill> <arg> | phase fail --reason | validate | promote <run>`. Every worker profile declares `writes: candidate`, `writes: evidence` or `writes: none` and a tool list matching that role. Research uses its uninstalled provider-adapter source contract and deterministic Core contract instead; live provider execution remains unavailable.
+2. For non-Research anatomy skills, the primary window contract: compiled SKILL.md reads nothing but `state.yaml`, contains no inline content prompts, dispatches every LLM sub-phase, and exposes a Bash grammar no wider than `devforgeai status | phase start <skill> <arg> | phase fail --reason | validate | promote <run>`. Every worker profile declares `writes: candidate` or `writes: none` and a tool list matching that role. Research uses its uninstalled provider-adapter source contract and deterministic Core contract instead; live provider execution remains unavailable.
 3. Provider best practices for the target, including the six-field portable frontmatter rule and target-side placement of provider-specific keys.
 4. Conformance to the originating spec document (for project-specific skills).
 5. Handoff block present, `handoff.outcomes` covers every status the skill can return including `could_not_run`, no outcome has an empty next-steps list, and every command referenced exists in the target.

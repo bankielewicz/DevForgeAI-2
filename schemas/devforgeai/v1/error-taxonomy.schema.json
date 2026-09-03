@@ -57,7 +57,7 @@
     },
     "worker_reason_codes": {
       "type": "object",
-      "required": ["runner_missing", "timeout", "network", "hook_fault"],
+      "required": ["runner_missing", "timeout", "network", "hook_fault", "provider_tool_refused"],
       "additionalProperties": {"$ref": "#/$defs/code"}
     },
     "oracle_classifications": {

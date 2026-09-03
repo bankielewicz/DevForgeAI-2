@@ -158,8 +158,13 @@ def glob_any(rel: str, patterns: Iterable[str]) -> str | None:
 
 
 # Redirect targets in a Bash command are file writes. Cheap, conservative parse.
+# Heredoc bodies are removed first: prose inside a heredoc that contains angle
+# brackets must not read as a redirect (observed false positive, 2026-09-03,
+# on a body mentioning an evidence path in angle-bracket placeholders).
 _REDIRECT = re.compile(r"(?<![<>])(?:>>|>|\d>>|\d>)\s*([^\s;&|]+)")
+_HEREDOC_BODY = re.compile(r"<<-?\s*(['\"]?)(\w+)\1[^\n]*\n(?:.*?\n)*?\s*\2\s*(?=\n|$)", re.S)
 
 
 def redirect_targets(command: str) -> list[str]:
-    return [t for t in _REDIRECT.findall(command) if t not in ("/dev/null", "&1", "&2")]
+    body = _HEREDOC_BODY.sub("", command)
+    return [t for t in _REDIRECT.findall(body) if t not in ("/dev/null", "&1", "&2")]

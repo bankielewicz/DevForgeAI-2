@@ -166,10 +166,16 @@ skill: "{{skill-name}}"
 phase: "{{phase}}"
 agent: "{{worker profile name}}"
 status: pass | fail | needs_user | could_not_run
-reason_code: runner_missing | timeout | network | hook_fault   # required only when status is could_not_run
+reason_code: runner_missing | timeout | network | hook_fault | provider_tool_refused   # only with could_not_run
 candidate: {id: "{{RUN-NNNNNN}}", input_checkpoint: "{{phase-or-base}}"}
 claimed_paths: ["{{root-relative path}}"]   # <= 64; empty for any non-pass status
-evidence_refs: ["{{root-relative or work/<run>/ path}}"]   # <= 16
+evidence_refs: ["{{root-relative or work/<run>/ path}}"]   # <= 16; never a findings path
+findings: "{{judge only: the detailed evidence, as prose}}"   # <= 16384 UTF-8 bytes; required from a
+                                        #   judge (writes: none), forbidden from a producer, never
+                                        #   truncated. The sequencer writes it verbatim to
+                                        #   .devforgeai/work/<run>/evidence/<agent>/findings.md at
+                                        #   ingest, names that path in <phase>-result.json and the
+                                        #   handoff, and the next phase's worker reads it there
 note: "{{<= 3 lines}}"
 issues: [{id, kind, text}]              # <= 10
 next: "{{rewind_to}}"                   # optional; legal only with status: fail
@@ -205,7 +211,7 @@ Each skill-owned worker becomes `agents/<role>.md` inside the skill. Contract pe
 
 ```yaml
 name: {{role}}
-writes: candidate | evidence | none   # producer | judge | receipt-only; it fixes the tools row below
+writes: candidate | none   # producer | judge; there is no third value, and it fixes the tools row below
 responsibility: {{one sentence, one job}}
 inputs: [{{paths or named artifacts}}]
 outputs: [{{paths written under the candidate root and claimed in the receipt}}]
@@ -214,18 +220,20 @@ must_not:
   - write outside the candidate root or outside this phase's write fence   # producer
   - run a raw stack command, a git write, a package manager, or a network tool
 tools: [Read, Grep, Glob, Edit, Write, Bash(devforgeai run *)]   # producer set
-                               # judge set: [Read, Grep, Glob, Write, Bash(devforgeai status)], Write confined to
-                               #   .devforgeai/work/<run>/evidence/<agent>/; a writes: none worker drops Write too
+                               # judge set: [Read, Grep, Glob, Bash(devforgeai status)] and no write
+                               #   tool of any kind: no Write, no Edit, no apply_patch
 isolation: required | preferred
 returns: devforgeai.worker-result/v1
 ```
 
-A `writes: evidence` worker carries Write but never Edit or `devforgeai run`, and
-its `must_not` says "write anywhere but this run's evidence directory"; its
-findings file is what `evidence_refs` names, while `issues[]` stays the bounded
-summary. A `writes: none` worker carries no write tool and its `must_not` says
-"write any file". A `writes: candidate` worker is never told that it does not
-write: its contract opens with what it writes and where.
+A `writes: none` worker is a judge. It carries no write tool at all, its
+`must_not` says "write any file, anywhere", and its evidence travels as the
+receipt's `findings` — never as a file it wrote, and never through
+`evidence_refs`, which names no findings path. The sequencer persists `findings`
+and gives the next worker the path. `issues[]` stays the bounded routing summary
+even when `findings` is long. A `writes: candidate` worker is a producer and is
+never told that it does not write: its contract opens with what it writes and
+where.
 
 For an anatomy-governed non-Research skill, SKILL.md dispatches each worker through the selected target's provider-native worker mechanism, using the generated target profile and file paths only. It never pastes or paraphrases artifact content, objectives, or acceptance criteria into the prompt. Its Bash grammar is exactly `devforgeai status | phase start <skill> <arg> | phase fail --reason | validate | promote <run>`; every other sequencer operation is hook-only, and `devforgeai run <key>` belongs to the lease-holding producer, not to the primary window. Isolation is a declaration compiled into the target profile; runtime verification of it is `12-post-mvp.md#pm-01`. Current Research adapters do not dispatch provider workers; they stop with `E_PROVIDER_WORKER_EXECUTION_UNAVAILABLE` before the first worker call.
 
@@ -278,7 +286,7 @@ One file per worker in section 7. No file for Gate, Slice, Record or Handoff.
 
 | File | Worker (from section 7) | `writes` |
 |------|-------------------------|----------|
-| `{{role}}.md` | {{role}} | candidate \| evidence \| none |
+| `{{role}}.md` | {{role}} | candidate \| none |
 
 ## 9. Gotchas and edge cases
 
@@ -341,8 +349,8 @@ The generator produces one provider-neutral semantic package and a separate adap
 
 | Target | Install path | Invocation | Subagents | Notes |
 |--------|--------------|------------|-----------|-------|
-| claude | `.claude/skills/{{name}}/` | `/{{name}}`; for Research exactly `/research <slug> --request <request-file> --confirm-request <sha256>` with no implicit persistence | provider-native workers, `writes: candidate \| evidence \| none` per role | Provider-specific frontmatter keys (`argument-hint`, `disable-model-invocation`) are compiled into this target's SKILL.md only. |
-| codex | `.agents/skills/{{name}}/` plus `.codex/agents/` profiles | `${{name}}`; for Research exactly `$research <slug> --request <request-file> --confirm-request <sha256>` with no implicit persistence | provider-native workers, `writes: candidate \| evidence \| none` per role | Portable six-field frontmatter only; policy goes in target-side configuration. |
+| claude | `.claude/skills/{{name}}/` | `/{{name}}`; for Research exactly `/research <slug> --request <request-file> --confirm-request <sha256>` with no implicit persistence | provider-native workers, `writes: candidate \| none` per role | Provider-specific frontmatter keys (`argument-hint`, `disable-model-invocation`) are compiled into this target's SKILL.md only. |
+| codex | `.agents/skills/{{name}}/` plus `.codex/agents/` profiles | `${{name}}`; for Research exactly `$research <slug> --request <request-file> --confirm-request <sha256>` with no implicit persistence | provider-native workers, `writes: candidate \| none` per role | Portable six-field frontmatter only; policy goes in target-side configuration. |
 | both | separate `.claude/skills/{{name}}/` and `.agents/skills/{{name}}/` adapters | as above | as above | Share only provider-neutral resources; validate each adapter independently. |
 
 ```yaml

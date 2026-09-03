@@ -10,43 +10,43 @@ author: "DevForgeAI plan skill"
 date: 2026-09-02
 depends_on:
   - source: docs/design/04-dual-target.md#validation
-    hash: sha256:cc996fc4c545d08ef116b3a7657b36064247e278ca8301be0f0d9715a0d996f3
+    hash: sha256:154da47d56b6186c38274dacc2cdd6ccffdab348221a4f3519b4ef835a99d8ba
     excerpt: "1. For non-Research anatomy skills, anatomy compliance: all seven sub-phase kinds present; Gate, Slice, Record and Handoff bound to the sequencer operations that perform them; Work, Write and Review each bound to a named worker; persona and critic separated; Work may repeat."
   - source: docs/design/04-dual-target.md#compiled-layouts
-    hash: sha256:faa1184ccf0d4d78a4c46900323d7f9570133b0c53cb886520cd1197e338e844
+    hash: sha256:2b036108637ac54c4cc7a7a16915bb3a61a1945633156d17fe627fb98d22f648
     excerpt: "A shared capability or skill specification owns provider-neutral semantics, but its Claude Code and Codex adapters are separate generated artifacts whenever frontmatter, invocation policy, or agent configuration differs."
   - source: docs/design/06-skill-specification.md#cold-session-protocol
     hash: sha256:ab73600267ef7b6721cf5c7599e7432f096b116b2b5aac12405ac933f9c17576
     excerpt: "Treat the generated output as a candidate. A non-Research adapter may install at `.claude/skills/<name>` and/or `.agents/skills/<name>` only after its section 12 release gates pass and a human accepts it."
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:511733ee35ca74fd5a5c0b59f225d7d975788e7d43d939f44c23b7aa8460cff0
+    hash: sha256:7c1d67f1154e49247e5dc178fcc1512bdbd53af378c360aeafe69bffed1136ab
     excerpt: "| skill-validator | document | `docs/reports/validate-<arg>.md` | 4 |"
   - source: docs/design/10-sequencer-and-contracts.md#5-2-validation-order
-    hash: sha256:9f1bf77b7e84302ff6f3f20260228d57390cc97ab8e8d3f68f52c3ff2658aab8
+    hash: sha256:9cf7115cdfa637023edc22cbdf5f64c106b1eba340598c8dc97b68361cb76b0f
     excerpt: "`claimed_paths` is a list of at most 64 with no duplicate; a non-`pass` status carries none; `evidence_refs` at most 16; `note` and `issues` within bounds"
   - source: docs/design/10-sequencer-and-contracts.md#11-per-skill-evidence-and-gate-table
-    hash: sha256:f5dc9ad016c382d9d033b25878267bd8e1ef240cb0ecaafeff33af16637e906e
+    hash: sha256:21b4e5d8b01ebbca643e6e4725154ebadb0dd02ad84001495ae703f6ccee4a56
     excerpt: "- **deterministic gate check** — what a script verifies before or after this phase, with no model judgement, against the candidate root rather than against the worker's account of it. \"The worker confirms\" is not a gate check."
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:bca72c10668178e0f4da43e03aaafbf24d2a57ec12f71a16b078880dd496677a
+    hash: sha256:3c4c95bbd73b5499e5569e650f84eea84cb68404c0909f5f1819c0f3a5c7b3d4
     excerpt: "| 5 | A gate or critic failure names the owning skill and the command that re-runs it, from `repair_route`. |"
   - source: docs/design/11-artifact-registry.md#1-template-registry
     hash: sha256:fabb8d2f142dcde1a31bc53768f8a46d01cac3ea4a7f6b73db22479cc89b5553
     excerpt: "| `validate-report` | `.devforgeai/skills/skill-validator/templates/validate-report.md` | 1 | `^VAL-[0-9]{3}$` | skill, template, template_version, status, verdict, depends_on | Anatomy, Provider, Spec Conformance, Fixes |"
   - source: docs/design/11-artifact-registry.md#2-artifact-path-patterns
-    hash: sha256:2d2e97afff50edf6b35bf674b1de217c684d5091361e5f1deae12de52b95fb51
+    hash: sha256:858455b885ac6c1ddbe427a433ba715f7266d08b90e105135172877e29ea0ecc
     excerpt: "| `docs/reports/validate-<skill>.md` | `validate-report` | skill-validator | sequencer |"
   - source: docs/design/02-skill-roster.md#handoff-decision-tables
     hash: sha256:1dac784b4670cc7559f323011dfe304dfe8c0baf349063162f90d76d902c5d3c
     excerpt: "| skill-validator | pass (`verdict: pass`) | `/status`; then the command that requested the validation |"
   - source: docs/design/05-subagent-sets.md#sets-per-skill
-    hash: sha256:9e12f3beb236a025c18d40e741c09ba675bd71d2d87f56e2b205c7556b944bf9
+    hash: sha256:f2957217c9af147e4a7ea03749cbe6efda266bd56d403f39aa25c9a655872609
     excerpt: "| skill-validator | anatomy-checker, provider-checker, spec-conformance-checker, report-writer |"
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:a6bbaf9af2d69f7ede18d7c40f242c42edb26d79be964ffec3f386d6347014c2
+    hash: sha256:5afb88c46aa635c961564af8e58c799a44f387c6bd877eeac2ec7568f73aba7e
     excerpt: "For anatomy-governed skills, skill-validator rejects a compiled SKILL.md that contains a direct file read of anything except `state.yaml`, an inline prompt longer than a dispatch instruction, an LLM sub-phase without a named worker, or a Bash grammar wider than the model-callable operations above."
   - source: docs/design/01-skill-anatomy.md#the-seven-sub-phases
-    hash: sha256:b3c1a62145dc7fd7ef4fb351242f6b67bb0838da1c70cc359b679bfa4986e7d1
+    hash: sha256:6e32d5286a08040572df7c34dffed5c39e894c093c1a0490a4cfb858a87a1e6d
     excerpt: "Gate, Slice, Record, and Handoff are deterministic sequencer operations, not workers. Only Work, Write, and Review dispatch an LLM."
 ---
 
@@ -188,7 +188,7 @@ The specification is resolved by the same order `skill-generator` uses: the `--s
 |--------|--------|----------|----------|
 | validation report | markdown with frontmatter | `docs/reports/validate-<skill>.md` | `assets/validate-report.md` |
 
-Nothing else is written. The fence is exactly `docs/reports/validate-<arg>.md`, so the `anatomy`, `provider` and `spec_conformance` phases are judges that write no file at all; their output is the `issues`, `note` and `evidence_refs` in their receipts, which the sequencer records under `.devforgeai/work/skill-validator-<arg>/`.
+Nothing else is written. The fence is exactly `docs/reports/validate-<arg>.md`, so the `anatomy`, `provider` and `spec_conformance` phases are judges that hold no write tool and write no file at all; their output is the `findings`, `issues`, `note` and `evidence_refs` in their receipts, which the sequencer records under `.devforgeai/work/skill-validator-<arg>/`, persisting each `findings` string to `evidence/<agent>/findings.md`.
 
 ### Output template
 
@@ -235,7 +235,7 @@ Every row in `## Fixes` names the skill that owns the defect and the exact comma
 
 ### Return envelope
 
-One schema, both providers: `devforgeai.worker-result/v1`, normative in `schemas/devforgeai/v1/worker-result.schema.json`. The three checkers are judges: they write only their findings file under `.devforgeai/work/<run>/evidence/<agent>/` — run-scoped scratch, gitignored, outside the candidate root and never promoted — name it in `evidence_refs`, and claim nothing. `validate_report_writer` is a producer: it writes the report inside the candidate root with Edit and Write (Codex: `apply_patch`) and names it. At `devforgeai ingest-result` the sequencer derives `changed[{path, blob_sha256, kind}]` from the candidate root's checkpoint diff, refuses the result when `changed` is not a subset of `claimed_paths` (`UNCLAIMED_CHANGE`) or when any changed path is outside the fence, runs the transition oracle inside the root, writes `<phase>-result.json` with `changed` and the checkpoint ref, creates the next checkpoint and releases the lease.
+One schema, both providers: `devforgeai.worker-result/v1`, normative in `schemas/devforgeai/v1/worker-result.schema.json`. The three checkers are judges: they hold no write tool at all, claim nothing, and return their full finding sets in the receipt's `findings`, a string required on a judge pass or fail receipt, optional on its needs_user or could_not_run, and forbidden on a producer's, and bounded at 16,384 UTF-8 bytes. At the identity-bound `SubagentStop`, after the receipt validates, the sequencer writes that string verbatim to the fixed path `.devforgeai/work/<run>/evidence/<agent>/findings.md` — run-scoped scratch, gitignored, outside the candidate root and never promoted — and records the path in `<phase>-result.json` for `validate_report_writer` to read; the worker chooses neither the directory nor the name. The bounded `findings` body does enter the primary context as part of the subagent's result, exactly as the provider model states — a subagent returns its result to the parent, and a hook may validate the final message but cannot suppress it. What stays isolated is the worker's transcript, its file reads and its tool traffic. `validate_report_writer` is a producer: it writes the report inside the candidate root with Edit and Write (Codex: `apply_patch`) and names it. At `devforgeai ingest-result` the sequencer derives `changed[{path, blob_sha256, kind}]` from the candidate root's checkpoint diff, refuses the result when `changed` is not a subset of `claimed_paths` (`UNCLAIMED_CHANGE`) or when any changed path is outside the fence, runs the transition oracle inside the root, writes `<phase>-result.json` with `changed` and the checkpoint ref, creates the next checkpoint and releases the lease.
 
 ```yaml
 schema: devforgeai.worker-result/v1
@@ -244,7 +244,7 @@ skill: "skill-validator"
 phase: "anatomy"
 agent: "anatomy_checker"
 status: pass | fail | needs_user | could_not_run
-reason_code: runner_missing | timeout | network | hook_fault   # required only when status is could_not_run
+reason_code: runner_missing | timeout | network | hook_fault | provider_tool_refused | prerequisite_missing | checkpoint_fault   # required only when status is could_not_run
 candidate:
   id: "skill-validator-report-writer"
   input_checkpoint: "base"
@@ -255,11 +255,11 @@ issues: [{id, kind, text}] # 10 rows at most
 next: ""                   # never used: this skill declares no rewind target
 ```
 
-Unknown keys are refused. `issues[]` is the bounded summary a reader sees; a checker's full finding set lives in its findings file. The `report` phase's receipt names the written report in `evidence_refs`, and that report's frontmatter carries the closed `verdict` field (`pass | findings | fail`) the sequencer reads to select the handoff row. The run's `status` and the handoff's `outcome` stay `pass`, because reporting a defect is a passing run (decision R-6, Q-7, SV-1).
+Unknown keys are refused. `issues[]` is the bounded routing summary a reader sees; a checker's full finding set travels in `findings`, which the sequencer persists as `findings.md`. The `report` phase's receipt names the written report in `evidence_refs`, and that report's frontmatter carries the closed `verdict` field (`pass | findings | fail`) the sequencer reads to select the handoff row. The run's `status` and the handoff's `outcome` stay `pass`, because reporting a defect is a passing run (decision R-6, Q-7, SV-1).
 
 `gate_policy` (`BLOCK | REQUIRE_HUMAN | WARN | OFF`) is a defect-to-action map declared in the consumed artifact, never a status returned here. A document run carries the fixed map `{unresolvable_source: BLOCK}`.
 
-A finding is not a phase failure. A checker that ran its full rule list returns `status: pass`, writes its full finding set to its evidence file, and carries the bounded summary in `issues` and the counts in `note`; the verdict is decided by `validate_report_writer` from the accumulated findings. A checker returns `status: fail` only when it could not complete its rule list, and `needs_user` when the package or the specification is absent or ambiguous.
+A finding is not a phase failure. A checker that ran its full rule list returns `status: pass`, puts its full finding set in the receipt's `findings`, and carries the bounded routing summary in `issues` and the counts in `note`; the verdict is decided by `validate_report_writer` from the accumulated findings. A checker returns `status: fail` only when it could not complete its rule list, and `needs_user` when the package or the specification is absent or ambiguous.
 
 ## 7. Procedure
 
@@ -295,29 +295,29 @@ Gate, Record, Slice and Handoff dispatch no LLM: they are `devforgeai` sequencer
 
 Isolation is the framework's own `required | preferred` declaration compiled into the target profile, not Claude's subagent `isolation` key; runtime verification of it is `12-post-mvp.md#pm-01`.
 
-Every phase of one run works inside the same candidate root — `.devforgeai/work/<run>/wt`, created by `devforgeai phase start` and named to each worker as `candidate.root` in the status block the primary window pastes into the dispatch prompt alongside `run`, `phase`, `fence` and `granted_keys`. The three checkers are judges and write nothing in the root; their findings files go to `.devforgeai/work/<run>/evidence/<agent>/`, which is outside it. `report` writes one file in the root. The sequencer checkpoints the root at each transition, so the phases build linearly with no merge between them, and the one producer holds the run's lease from dispatch to `devforgeai ingest-result`. Promotion is never automatic and is no part of Handoff: the last passing `devforgeai phase next` marks the run `ready_to_promote` and writes a `REQUIRE_HUMAN` handoff whose only forward step is `devforgeai promote <run>`, and `SKILL.md` runs that command only after the user confirms in the session. That command, not the transition, is what merges the candidate root into the canonical checkout under `.devforgeai/lock`, and it is what refuses with `STALE_BASE` when canonical HEAD has moved past the run's recorded `base_ref`, with `DIRTY_TARGET` when the canonical report path is dirty, and with `MERGE_CONFLICT` when a rebase inside the root conflicted; a refused promotion leaves the run `ready_to_promote` with its candidate root intact for a retry.
+Every phase of one run works inside the same candidate root — `.devforgeai/work/<run>/wt`, created by `devforgeai phase start` and named to each worker as `candidate.root` in the status block the primary window pastes into the dispatch prompt alongside `run`, `phase`, `fence` and `granted_keys`. The three checkers are judges: they hold no write tool and write nothing anywhere, and the sequencer persists each one's returned `findings` to `.devforgeai/work/<run>/evidence/<agent>/findings.md`, which is outside the root. `report` writes one file in the root. The sequencer checkpoints the root at each transition, so the phases build linearly with no merge between them, and the one producer holds the run's lease from dispatch to `devforgeai ingest-result`. Promotion is never automatic and is no part of Handoff: the last passing `devforgeai phase next` marks the run `ready_to_promote` and writes a `REQUIRE_HUMAN` handoff whose only forward step is `devforgeai promote <run>`, and `SKILL.md` runs that command only after the user confirms in the session. That command, not the transition, is what merges the candidate root into the canonical checkout under `.devforgeai/lock`, and it is what refuses with `STALE_BASE` when canonical HEAD has moved past the run's recorded `base_ref`, with `DIRTY_TARGET` when the canonical report path is dirty, and with `MERGE_CONFLICT` when a rebase inside the root conflicted; a refused promotion leaves the run `ready_to_promote` with its candidate root intact for a retry.
 
 ### Worker contracts
 
-Each block is a compilable subagent definition. `name` is the canonical registry worker name, because the stop event's `agent_type` is compared against it. `description` is the sentence the primary window matches when it decides to dispatch. `writes` is `evidence` for a judge — its one write goes to `.devforgeai/work/<run>/evidence/<agent>/` and never into the candidate root — and `candidate` for a producer, following the registry's `writes` column: three phases declare `none` there and one declares `docs`, so three judges and one producer. `compiled_to` names the two provider-native files `skill-generator` emits from the block; each body follows `templates/agent-md.md` in four parts — job, inputs, rules, receipt — and the producer's job sentence leads with what it writes.
+Each block is a compilable subagent definition. `name` is the canonical registry worker name, because the stop event's `agent_type` is compared against it. `description` is the sentence the primary window matches when it decides to dispatch. `writes` is `none` for a judge — it carries no `Write`, no `Edit` and no `apply_patch`, and the sequencer persists its returned `findings` to `.devforgeai/work/<run>/evidence/<agent>/findings.md`, never into the candidate root — and `candidate` for a producer, following the registry's `writes` column: three phases declare `none` there and one declares `docs`, so three judges and one producer. `compiled_to` names the two provider-native files `skill-generator` emits from the block; each body follows `templates/agent-md.md` in four parts — job, inputs, rules, receipt — and the producer's job sentence leads with what it writes.
 
 ```yaml
 name: anatomy_checker
 skill: skill-validator
 description: Dispatch this worker first in a skill-validate run to judge the compiled package against the DevForgeAI anatomy rule list, before any other checker runs.
-writes: evidence
-tools: [Read, Grep, Glob, Write, Bash(devforgeai status)]
+writes: none
+tools: [Read, Grep, Glob, Bash(devforgeai status)]
 model: inherit
 skills: []
 responsibility: Apply the anatomy rule list in references/anatomy.md to the compiled skill package and return one finding per violated rule; repair nothing.
 inputs: [.devforgeai/work/<run>/context.json, .devforgeai/skills/<name>/ (package), resolved specification path, references/anatomy.md]
 outputs:
-  - .devforgeai/work/<run>/evidence/anatomy_checker/findings.json, one row per rule evaluated with its result, kind and the package path it was read from
+  - findings: one row per rule evaluated with its result, kind and the package path it was read from; required on a pass or fail receipt and optional on needs_user or could_not_run, at most 16384 UTF-8 bytes, persisted by the sequencer to .devforgeai/work/<run>/evidence/anatomy_checker/findings.md
   - issues[]: one row per violated rule, each with its rule number and finding kind, at most ten
   - note: the counts of defect, divergence and not_run findings and the rules evaluated
-  - evidence_refs[]: the findings file above, then the package paths the rows were read from
+  - evidence_refs[]: the package paths the rows were read from; never its own findings path, which does not exist until the sequencer has persisted it
 must_not:
-  - write or claim any path inside the candidate root; this phase's one write is its findings file under .devforgeai/work/<run>/evidence/anatomy_checker/
+  - write any file anywhere; this worker holds no write tool and its rows travel in findings
   - report a rule that references/anatomy.md does not enumerate
   - record a pass for a rule it did not evaluate
   - repair, regenerate or reorder any file
@@ -335,7 +335,7 @@ body: job, inputs, rules, receipt
 2. Every `subphases` entry that is not a sequencer operation names a worker that exists as a `subagents/<role>.md` file.
 3. There is no `subagents/` file for Gate, Slice, Record or Handoff.
 4. Persona and critic, where the specification declares both, are two different files with two different prompts.
-5. Every `subagents/<role>.md` carries a `must_not` block with at least one line, declares `writes: candidate`, `writes: evidence` or `writes: none` consistent with its phase's registry `writes` mode, and lists no tool wider than that declaration allows: a `writes: none` file names `Read`, `Grep`, `Glob` and `Bash(devforgeai status)` and nothing else; a `writes: evidence` file adds `Write`, whose only admitted destination is `.devforgeai/work/<run>/evidence/<agent>/`; a `writes: candidate` file adds `Edit` and `Write` inside the candidate root, plus `Bash(devforgeai run *)` for the stack keys its phase grants. A git write, a package manager, a network tool, an unrestricted Bash tool, `Edit` on a `writes: evidence` file, or any write tool on a `writes: none` file is a defect. A file written in the older `[read]` shorthand of `05-subagent-sets.md:28` satisfies this rule only where its phase declares `writes: none`.
+5. Every `subagents/<role>.md` carries a `must_not` block with at least one line, declares `writes: candidate` or `writes: none` consistent with its phase's registry `writes` mode, and lists no tool wider than that declaration allows: a `writes: none` file names `Read`, `Grep`, `Glob` and `Bash(devforgeai status)` and nothing else, because a judge has no write tool and its findings are in the receipt; a `writes: candidate` file adds `Edit` and `Write` inside the candidate root, plus `Bash(devforgeai run *)` for the stack keys its phase grants. A git write, a package manager, a network tool, an unrestricted Bash tool, a `writes` value outside the two-value enum, or any write tool at all on a `writes: none` file is a defect. A file written in the older `[read]` shorthand of `05-subagent-sets.md:28` satisfies this rule only where its phase declares `writes: none`.
 6. Every `subagents/<role>.md` declares `returns: devforgeai.worker-result/v1`.
 7. The compiled `SKILL.md` reads no file other than `.devforgeai/state.yaml`.
 8. The compiled `SKILL.md` contains no inline prompt longer than a dispatch instruction: no pasted artifact content, no restated objective or acceptance criterion.
@@ -349,19 +349,19 @@ body: job, inputs, rules, receipt
 name: provider_checker
 skill: skill-validator
 description: Dispatch this worker after anatomy to judge each staged adapter against the provider and open-standard rule list, including the six-field frontmatter rule and each profile's tool list against its declared write mode.
-writes: evidence
-tools: [Read, Grep, Glob, Write, Bash(devforgeai status)]
+writes: none
+tools: [Read, Grep, Glob, Bash(devforgeai status)]
 model: inherit
 skills: []
 responsibility: Apply the provider and open-standard rule list in references/provider.md to the portable package and to each staged adapter, and return one finding per violated rule; repair nothing.
 inputs: [.devforgeai/work/<run>/context.json, .devforgeai/skills/<name>/ (package and its compiled/ subtree), references/provider.md]
 outputs:
-  - .devforgeai/work/<run>/evidence/provider_checker/findings.json, one row per rule evaluated per target, with its result, kind and the adapter path it was read from
+  - findings: one row per rule evaluated per target, with its result, kind and the adapter path it was read from; required on a pass or fail receipt and optional on needs_user or could_not_run, at most 16384 UTF-8 bytes, persisted by the sequencer to .devforgeai/work/<run>/evidence/provider_checker/findings.md
   - issues[]: one row per violated rule, each with its rule number and finding kind, at most ten
   - note: the targets checked, the SKILL.md line count, the maximum reference depth, and whether the open-standard validator was available
-  - evidence_refs[]: the findings file above, then the adapter paths the rows were read from
+  - evidence_refs[]: the adapter paths the rows were read from; never its own findings path, which does not exist until the sequencer has persisted it
 must_not:
-  - write or claim any path inside the candidate root; this phase's one write is its findings file under .devforgeai/work/<run>/evidence/provider_checker/
+  - write any file anywhere; this worker holds no write tool and its rows travel in findings
   - report a rule that references/provider.md does not enumerate
   - treat an absent open-standard validator as a pass
   - repair, regenerate or reorder any file
@@ -384,7 +384,7 @@ body: job, inputs, rules, receipt
 7. There is no `README.md` in the skill directory.
 8. The Codex adapter's `SKILL.md` carries only the six permitted fields; no provider-specific key from the Claude target appears in it.
 9. The Claude adapter's `SKILL.md` carries the six permitted fields plus only the provider-specific keys the specification's section 12 authorises.
-10. Every staged worker profile's tool list matches the `writes` declaration of the contract it was compiled from. A profile compiled from `writes: none` carries `Read`, `Grep`, `Glob` and `Bash(devforgeai status)` and nothing wider — a read-only sandbox and an approval policy that requests no approval, on the Codex target. A profile compiled from `writes: evidence` adds `Write` and nothing else, and its Codex sandbox admits only the run's evidence directory. A profile compiled from `writes: candidate` adds `Edit` and `Write` — `apply_patch` and a workspace-write sandbox on the Codex target — and `Bash(devforgeai run *)` only where its phase grants a stack key. No profile carries a git write, a package manager, a network tool or a raw stack command, and no Claude profile carries `isolation`, `hooks`, `memory`, `background` or `permissionMode`.
+10. Every staged worker profile's tool list matches the `writes` declaration of the contract it was compiled from. A profile compiled from `writes: none` carries `Read`, `Grep`, `Glob` and `Bash(devforgeai status)` and nothing wider — a judge has no write tool, so no `Write`, `Edit` or `apply_patch`, and on the Codex target a read-only sandbox with an approval policy that requests no approval. A profile compiled from `writes: candidate` adds `Edit` and `Write` — `apply_patch` and a workspace-write sandbox on the Codex target — and `Bash(devforgeai run *)` only where its phase grants a stack key. No profile carries a git write, a package manager, a network tool or a raw stack command, and no Claude profile carries `isolation`, `hooks`, `memory`, `background` or `permissionMode`.
 11. Every bundled script takes arguments, prompts for nothing, prints data to stdout and diagnostics to stderr, and documents a help flag.
 12. Each staged adapter's install map lists every file that adapter stages, and every destination lies under a provider directory.
 13. When the open-standard validator is unavailable on this machine, that fact is recorded as a finding of kind `not_run` with the rule list above as the substitute, and never as a pass.
@@ -393,19 +393,19 @@ body: job, inputs, rules, receipt
 name: spec_conformance_checker
 skill: skill-validator
 description: Dispatch this worker after provider to compare the compiled package against its originating specification section by section, when a reader needs to know whether the package still matches the spec it came from.
-writes: evidence
-tools: [Read, Grep, Glob, Write, Bash(devforgeai status)]
+writes: none
+tools: [Read, Grep, Glob, Bash(devforgeai status)]
 model: inherit
 skills: []
 responsibility: Compare the compiled skill package against its originating specification section by section and return one finding per divergence; repair nothing.
 inputs: [.devforgeai/work/<run>/context.json, .devforgeai/skills/<name>/ (package), resolved specification path, references/spec_conformance.md]
 outputs:
-  - .devforgeai/work/<run>/evidence/spec_conformance_checker/findings.json, the full worker, reference, script, asset and template deltas with one row per divergence
+  - findings: the full worker, reference, script, asset and template deltas with one row per divergence; required on a pass or fail receipt and optional on needs_user or could_not_run, at most 16384 UTF-8 bytes, persisted by the sequencer to .devforgeai/work/<run>/evidence/spec_conformance_checker/findings.md
   - issues[]: one row per divergence, each naming the rule number and the two sides, at most ten
   - note: the specification id and path, whether the description matched, and the worker, reference and template delta counts
-  - evidence_refs[]: the findings file above, then the specification path and the package paths compared
+  - evidence_refs[]: the specification path and the package paths compared; never its own findings path, which does not exist until the sequencer has persisted it
 must_not:
-  - write or claim any path inside the candidate root; this phase's one write is its findings file under .devforgeai/work/<run>/evidence/spec_conformance_checker/
+  - write any file anywhere; this worker holds no write tool and its rows travel in findings
   - accept a package whose metadata names a different specification id without recording a finding
   - judge whether the specification itself is a good design
   - repair, regenerate or reorder any file
@@ -421,7 +421,7 @@ body: job, inputs, rules, receipt
 
 1. The package's `metadata.devforgeai-spec` equals the resolved specification's `id`.
 2. The portable `description` is byte-identical to the specification's section 3 description.
-3. There is one `subagents/<role>.md` per worker contract in section 7, with matching names and matching `writes` declarations from the set `candidate`, `evidence`, `none`, and no extra file.
+3. There is one `subagents/<role>.md` per worker contract in section 7, with matching names and matching `writes` declarations from the set `candidate`, `none`, and no extra file.
 4. Each worker prompt carries its contract's `responsibility` and every `must_not` line, unparaphrased.
 5. There is one `references/<phase>.md` per phase in section 7 plus `references/envelope.md`, and no extra file.
 6. Every script in section 8 exists under `scripts/`, and no extra script exists.
@@ -430,7 +430,7 @@ body: job, inputs, rules, receipt
 9. The `handoff.outcomes` rows match the specification's section 7 handoff table.
 10. `metadata.devforgeai-target` matches the specification's frontmatter `target`, and a staged adapter exists for every selected target.
 
-`spec_conformance_checker` evidence: `{spec_id, spec_path, description_match: true|false, worker_delta: [rows], reference_delta: [rows], template_delta: [rows], findings: [rows]}`.
+`spec_conformance_checker` returns that shape inside its `findings` string: `{spec_id, spec_path, description_match: true|false, worker_delta: [rows], reference_delta: [rows], template_delta: [rows], rows: [rows]}`.
 
 ```yaml
 name: validate_report_writer
@@ -441,12 +441,13 @@ tools: [Read, Grep, Glob, Edit, Write, Bash(devforgeai status)]
 model: inherit
 skills: []
 responsibility: Write docs/reports/validate-<name>.md inside the candidate root from the three preceding phases' recorded results, set the verdict, and key every fix row to the skill that owns the defect.
-inputs: [.devforgeai/work/skill-validator-<name>/anatomy-result.json, provider-result.json and spec_conformance-result.json, and the three findings files their evidence_refs name under .devforgeai/work/<run>/evidence/, assets/validate-report.md, references/report.md]
+inputs: [.devforgeai/work/skill-validator-<name>/anatomy-result.json, provider-result.json and spec_conformance-result.json, and the three persisted judge findings those result files name — evidence/anatomy_checker/findings.md, evidence/provider_checker/findings.md and evidence/spec_conformance_checker/findings.md, assets/validate-report.md, references/report.md]
 outputs:
   - docs/reports/validate-<name>.md, written under the candidate root with Edit or Write and named in claimed_paths
-  - evidence_refs[]: the written report, whose frontmatter verdict selects the handoff row, then the three preceding result paths and the three findings files
+  - evidence_refs[]: the written report, whose frontmatter verdict selects the handoff row, then the three preceding result paths and the three persisted judge findings
 must_not:
-  - record a finding no preceding phase's findings file carries
+  - record a finding no preceding phase's persisted findings carries
+  - return a findings key; findings is a judge field and a producer receipt carrying it is refused
   - set verdict pass while any finding of kind defect or divergence is present
   - name a repair command that is not a registry command
   - repair or regenerate any part of the validated skill
@@ -459,7 +460,7 @@ compiled_to:
 body: job, inputs, rules, receipt
 ```
 
-A judge's tools are `Read`, `Grep`, `Glob`, `Write` and `Bash(devforgeai status)`, with `Write` admitted only under `.devforgeai/work/<run>/evidence/<agent>/`, so a checker can record a finding set larger than the receipt without being able to touch the package it judges. The one producer holds `Edit` and `Write` inside the candidate root — `apply_patch` on the Codex target. No phase of this skill grants a stack key, so no worker carries `Bash(devforgeai run *)`, and no worker holds a git write, a package manager, a network tool or a raw stack command. `isolation` above is the framework's `required | preferred` declaration, not Claude's subagent `isolation` key, which the framework never sets; `hooks`, `memory`, `background` and `permissionMode` are Claude-only keys this skill leaves unset.
+A judge's tools are `Read`, `Grep`, `Glob` and `Bash(devforgeai status)` and nothing else: no `Write`, no `Edit`, no `apply_patch`, so a checker cannot touch the package it judges, and its finding set comes back in the receipt's `findings` for the sequencer to persist. The one producer holds `Edit` and `Write` inside the candidate root — `apply_patch` on the Codex target. No phase of this skill grants a stack key, so no worker carries `Bash(devforgeai run *)`, and no worker holds a git write, a package manager, a network tool or a raw stack command. `isolation` above is the framework's `required | preferred` declaration, not Claude's subagent `isolation` key, which the framework never sets; `hooks`, `memory`, `background` and `permissionMode` are Claude-only keys this skill leaves unset.
 
 Verdict rule, the closed set the handoff reads: `pass` when no finding of any kind was recorded; `findings` when every finding is of kind `divergence` or `not_run` and none is of kind `defect`; `fail` when any finding is of kind `defect`. A `not_run` finding is listed in its section and repeated in `## Fixes` with the owner `operator` and the command that installs the missing checker, so a reader never mistakes an unrun rule for a satisfied one.
 
@@ -469,9 +470,9 @@ Run id for a document run is `<skill>-<arg>`, so every evidence path below begin
 
 | phase | worker | deterministic gate check | gate_policy | evidence file | transition oracle |
 |---|---|---|---|---|---|
-| `anatomy` | `anatomy_checker` | run-level gate at `devforgeai phase start`: the fence `docs/reports/validate-<name>.md` is declared, is relative, contains no parent traversal, and matches no sequencer-owned path; no active or `ready_to_promote` run's fence overlaps it (`FENCE_OVERLAP`); `candidate open` creates the root and pins `base_ref`. At `ingest-result`: the checkpoint diff of the root is empty, because the phase's `writes` mode is `evidence` and the `PreToolUse` check admits this judge's `Write` only under `.devforgeai/work/<run>/evidence/<agent>/`, which lies outside the root; a non-empty root diff is `UNCLAIMED_CHANGE`. The phase grants no command key | `unresolvable_source: BLOCK` (document run fixed map) | `.devforgeai/work/skill-validator-<name>/anatomy-result.json`, `anatomy-report.md` | `report_only`: no file outside the fence changed since the gate snapshot and the whole-tree package and import policy holds |
-| `provider` | `provider_checker` | at `ingest-result`: an empty root checkpoint diff, as `anatomy`; `issues[]` is at most ten rows and `evidence_refs` at most sixteen paths, which bounds the summary the receipt carries, not the findings file it points at | `unresolvable_source: BLOCK` | `.devforgeai/work/skill-validator-<name>/provider-result.json`, `provider-report.md` | `report_only`: as above |
-| `spec_conformance` | `spec_conformance_checker` | at `ingest-result`: an empty root checkpoint diff, as `anatomy` | `unresolvable_source: BLOCK` | `.devforgeai/work/skill-validator-<name>/spec_conformance-result.json`, `spec_conformance-report.md` | `report_only`: as above |
+| `anatomy` | `anatomy_checker` | run-level gate at `devforgeai phase start`: the fence `docs/reports/validate-<name>.md` is declared, is relative, contains no parent traversal, and matches no sequencer-owned path; no active or `ready_to_promote` run's fence overlaps it (`FENCE_OVERLAP`); `candidate open` creates the root and pins `base_ref`. At `ingest-result`: the checkpoint diff of the root is empty, because the phase's `writes` mode is `none` and this judge holds no write tool at all, so `PreToolUse` denies every write path without exception; a non-empty root diff is `UNCLAIMED_CHANGE`. Its `findings` string — required on a pass or fail receipt, optional on needs_user or could_not_run — at most 16,384 UTF-8 bytes, is what the sequencer persists at `SubagentStop` to `.devforgeai/work/skill-validator-<name>/evidence/anatomy_checker/findings.md`. The phase grants no command key | `unresolvable_source: BLOCK` (document run fixed map) | `.devforgeai/work/skill-validator-<name>/anatomy-result.json`, `anatomy-report.md`, `.devforgeai/work/skill-validator-<name>/evidence/anatomy_checker/findings.md` | `report_only`: no file outside the fence changed since the gate snapshot and the whole-tree package and import policy holds |
+| `provider` | `provider_checker` | at `ingest-result`: an empty root checkpoint diff, as `anatomy`; `issues[]` is at most ten rows, `evidence_refs` at most sixteen paths and `findings` at most 16,384 UTF-8 bytes, an oversize `findings` being refused like any other receipt defect | `unresolvable_source: BLOCK` | `.devforgeai/work/skill-validator-<name>/provider-result.json`, `provider-report.md`, `.devforgeai/work/skill-validator-<name>/evidence/provider_checker/findings.md` | `report_only`: as above |
+| `spec_conformance` | `spec_conformance_checker` | at `ingest-result`: an empty root checkpoint diff, as `anatomy`, and the same `findings` bound | `unresolvable_source: BLOCK` | `.devforgeai/work/skill-validator-<name>/spec_conformance-result.json`, `spec_conformance-report.md`, `.devforgeai/work/skill-validator-<name>/evidence/spec_conformance_checker/findings.md` | `report_only`: as above |
 | `report` | `validate_report_writer` | at `ingest-result`: `changed` derived from the checkpoint diff is exactly one path, `docs/reports/validate-<name>.md`, it is a subset of `claimed_paths`, it canonicalises inside the candidate root, it equals the fence entry, it is not sequencer-owned, and it is allowed by `writes: docs`; the whole-tree package and import rescan holds. The written report's frontmatter `verdict` is one of the closed set `pass`, `findings`, `fail`, and it is what the handoff row is selected by | `unresolvable_source: BLOCK`; `write_fence_violation: BLOCK` | `.devforgeai/work/skill-validator-<name>/report-result.json`, `report-report.md`, then `handoff.json` | `document`: the phase declared `writes: docs`, produced at least one file, and the declared output exists on disk in the root. On pass this is the last phase, and promotion is not part of it: `devforgeai phase next` marks the run `ready_to_promote` and writes a `REQUIRE_HUMAN` handoff whose only forward step is `devforgeai promote <run>`. `SKILL.md` runs that command only after the user confirms in the session; the promotion moves the report into the canonical checkout under `.devforgeai/lock`, marks the run `promoted`, clears enforcement, and writes the second handoff block. `STALE_BASE`, `DIRTY_TARGET` and `MERGE_CONFLICT` refuse that command, never `devforgeai phase next`, and leave the run `ready_to_promote` with its candidate root intact for a retry |
 
 ### Handoff outcomes
@@ -532,7 +533,7 @@ Both scripts are non-interactive, take arguments and never prompt, print data to
 | `provider.md` | The thirteen enumerated provider and open-standard rules of section 7, including the six permitted frontmatter fields and the per-target placement rule. | dispatching `provider_checker` |
 | `spec_conformance.md` | The ten enumerated conformance rules of section 7 and the delta row format. | dispatching `spec_conformance_checker` |
 | `report.md` | The verdict rule, the finding kinds (`defect`, `divergence`, `not_run`), and the owner-and-command convention for the fix table. | dispatching `validate_report_writer` |
-| `envelope.md` | The `devforgeai.worker-result/v1` schema with a pass, a fail, a needs_user and a could_not_run example, and the rule that a finding is not a phase failure. | every dispatch |
+| `envelope.md` | The `devforgeai.worker-result/v1` schema with a pass, a fail, a needs_user and a could_not_run example, the `findings` rule — required on a judge pass or fail receipt, optional on its needs_user or could_not_run, forbidden on a producer's, at most 16,384 UTF-8 bytes, persisted by the sequencer to `.devforgeai/work/<run>/evidence/<agent>/findings.md` — and the rule that a finding is not a phase failure. | every dispatch |
 
 ### assets/
 | File | Used for |
@@ -546,16 +547,16 @@ One file per worker in section 7. No file for Gate, Record or Handoff.
 
 | File | Worker (from section 7) | writes | tools | compiled to |
 |------|-------------------------|--------|-------|-------------|
-| `anatomy_checker.md` | `anatomy_checker` | evidence | Read, Grep, Glob, Write, Bash(devforgeai status) | `.claude/agents/skill-validator-anatomy_checker.md`, `.codex/agents/skill-validator-anatomy_checker.toml` |
-| `provider_checker.md` | `provider_checker` | evidence | Read, Grep, Glob, Write, Bash(devforgeai status) | `.claude/agents/skill-validator-provider_checker.md`, `.codex/agents/skill-validator-provider_checker.toml` |
-| `spec_conformance_checker.md` | `spec_conformance_checker` | evidence | Read, Grep, Glob, Write, Bash(devforgeai status) | `.claude/agents/skill-validator-spec_conformance_checker.md`, `.codex/agents/skill-validator-spec_conformance_checker.toml` |
+| `anatomy_checker.md` | `anatomy_checker` | none | Read, Grep, Glob, Bash(devforgeai status) | `.claude/agents/skill-validator-anatomy_checker.md`, `.codex/agents/skill-validator-anatomy_checker.toml` |
+| `provider_checker.md` | `provider_checker` | none | Read, Grep, Glob, Bash(devforgeai status) | `.claude/agents/skill-validator-provider_checker.md`, `.codex/agents/skill-validator-provider_checker.toml` |
+| `spec_conformance_checker.md` | `spec_conformance_checker` | none | Read, Grep, Glob, Bash(devforgeai status) | `.claude/agents/skill-validator-spec_conformance_checker.md`, `.codex/agents/skill-validator-spec_conformance_checker.toml` |
 | `validate_report_writer.md` | `validate_report_writer` | candidate | Read, Grep, Glob, Edit, Write, Bash(devforgeai status) | `.claude/agents/skill-validator-validate_report_writer.md`, `.codex/agents/skill-validator-validate_report_writer.toml` |
 
 ## 9. Gotchas and edge cases
 
 | Situation | What goes wrong | What to do instead |
 |-----------|-----------------|--------------------|
-| A checker returns `status: fail` because it found defects | The transition oracle counts an attempt and, at the limit, blocks the run, so a skill with defects never reaches the report phase and no report is written. | A finding is not a phase failure. A checker that completed its rule list returns `pass`, writes its full finding set to its evidence file, and carries the bounded summary in `issues` with the counts in `note`. `status: fail` means the rule list could not be completed. |
+| A checker returns `status: fail` because it found defects | The transition oracle counts an attempt and, at the limit, blocks the run, so a skill with defects never reaches the report phase and no report is written. | A finding is not a phase failure. A checker that completed its rule list returns `pass`, puts its full finding set in the receipt's `findings`, and carries the bounded routing summary in `issues` with the counts in `note`. `status: fail` means the rule list could not be completed. |
 | The open-standard validator is absent | A run silently reports a provider pass that nothing checked. `skills-ref` is not on this repository's PATH. | Rule 13 of the provider list records a `not_run` finding; the report repeats it in `## Fixes` with the owner `operator`. The verdict may still be `pass`, but the unrun rule is visible. |
 | Expecting a worker to execute `validate_skill.py` | No phase of this skill grants a stack command key, so no worker holds `Bash(devforgeai run *)` and the call is denied at `PreToolUse`. | The checker applies the enumerated rules by reading and returns findings in `issues` and counts in `note`. The script is the reference implementation, run by a human in section 14. |
 | Expecting the `phase start` gate to check the compiled skill | The document gate validates the fence only; it opens no file in the package. | `anatomy_checker` performs the check and returns `needs_user` when there is no package. Template conformance at the gate is a requirement on the gate library, recorded in `10-sequencer-and-contracts.md#3-2-defect-to-action-map-as-implemented` note 3 as designed and unimplemented, not as behaviour this run relies on. |
@@ -574,7 +575,8 @@ One file per worker in section 7. No file for Gate, Record or Handoff.
 | Using the hyphenated worker names from `05-subagent-sets.md` | The stop event's `agent_type` is compared against the registry name, so `report-writer` does not resolve and the receipt is refused at `ingest-result`. | The registry name in `10-sequencer-and-contracts.md#4-per-skill-phase-registry` is canonical: `anatomy_checker`, `provider_checker`, `spec_conformance_checker`, `validate_report_writer`. The hyphenated form is a display alias. Canonical names are used in section 7, in the `subagents/<role>.md` filenames, and in the evidence table, and rule 3 of the conformance list compares against them. |
 | Reading the section 7 handoff table as what a run prints | The declared rows and the rendered block differ, and a reader follows a next step the sequencer never wrote. | The declared table is the contract the skill carries in `skill.yaml`; the current sequencer writes `/status` for a document run that passes and for a `REQUIRE_HUMAN` block, the runner repair then the skill command for a `COULD_NOT_RUN` block, and the skill command with `--fix` for a `WARN` or `OFF` block. Both are recorded in section 7, and rule 10 of the anatomy list checks the declared block rather than the rendered one. |
 | No compiled package produces a `fail` verdict in this repository | The `fail` path is described but never exercised, so a regression in the verdict rule goes unnoticed. | Recorded as a known limit: no committed candidate in this repository is non-conforming, and per the template's overlay rule such an input must ship as a fixture overlay directory rather than as prose. Section 10 exercises `pass` and `needs_user` only, and the `fail` path is covered by the enumerated verdict rule in `references/report.md`. |
-| Which worker may write, and where | A checker given a write tool over the package could repair what it was asked to judge, and the report would then describe a package nobody validated | Roles follow the registry's `writes` column: the three checker phases compile to judges declaring `writes: evidence`, whose one write reaches `.devforgeai/work/<run>/evidence/<agent>/` and nothing else; `report` declares `docs` and compiles to a producer that writes inside the candidate root and names the one path in `claimed_paths`. The sequencer derives what actually changed from the checkpoint diff, so a checker that wrote anything is refused with `UNCLAIMED_CHANGE` rather than believed. |
+| Which worker may write, and where | A checker given a write tool over the package could repair what it was asked to judge, and the report would then describe a package nobody validated | Roles follow the registry's `writes` column: the three checker phases compile to judges declaring `writes: none`, which hold no write tool at all and return their findings in the receipt; `report` declares `docs` and compiles to a producer that writes inside the candidate root and names the one path in `claimed_paths`. The sequencer derives what actually changed from the checkpoint diff, so a checker that somehow wrote anything is refused with `UNCLAIMED_CHANGE` rather than believed. |
+| D13 (2026-09-03): the three checkers had an evidence-directory `Write`, and the anatomy rules enumerated three `writes` values | Claude Code 2.1.259 refuses a subagent's `Write` of a report-like Markdown file before any hook runs, so a checker could not be relied on to write `findings.json`, and `validate_report_writer` would read a file that may not exist. Worse, this is the skill that checks every other package's `writes` enum and tool lists, so a stale rule here would fail every D13-correct package it validates | `WRITE-MODEL-REVISION.md` D13 applied here: anatomy rule 5, provider rule 10 and conformance rule 3 now enumerate `candidate | none` only, and rule 5 states that a judge has no write tool and its findings are in the receipt. `anatomy_checker`, `provider_checker` and `spec_conformance_checker` declare `writes: none` and carry `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` with no `Write`, `Edit` or `apply_patch` (section 7d headers, the section 8 `agents/` table, the section 12 Tools row, section 14's constitution check). Each returns its rows in the receipt's `findings` string, required on a pass or fail and optional otherwise, at most 16,384 UTF-8 bytes, which the sequencer persists verbatim at `SubagentStop` to `.devforgeai/work/<run>/evidence/<agent>/findings.md`; the three `findings.json` files are gone. `validate_report_writer` reads the three persisted paths, section 7c names them in the evidence-file column, and no judge names its own findings path in `evidence_refs`, because that file does not exist when the receipt is validated. The bounded `findings` body does enter the primary context as part of the subagent's result (D13 item 4); what stays isolated is the worker's transcript, reads and tool traffic. Earlier revisions of `10-sequencer-and-contracts.md` and `09-hook-dispatcher.md` carried the superseded evidence-writing branch; D13 is now applied in those documents and here. |
 | Where the report ends up | A reader expects `docs/reports/validate-<skill>.md` in the working tree the moment the `report` phase passes | Every write lands in the candidate root `.devforgeai/work/<run>/wt`, which is gitignored. The report reaches the canonical checkout only at `devforgeai promote <run>`, never at Handoff: the last passing `devforgeai phase next` marks the run `ready_to_promote` and writes a `REQUIRE_HUMAN` handoff whose only forward step is that command, and `SKILL.md` runs it only after the user confirms in the session. A promotion refused with `STALE_BASE`, `DIRTY_TARGET` or `MERGE_CONFLICT` — all three refuse the promote command, not the transition — leaves the run `ready_to_promote` with its candidate root intact, and `devforgeai promote <run>` retries it once the user has resolved the reason. |
 | A `REQUIRE_HUMAN` run treated as closed, with `/status` as its next step | `needs_user` and an exhausted attempt budget were described as closing the run, so the section 7e rows sent the user to `/status` and the OI-5 row said no flag could resume anything. A closed run has no candidate root, so the work the phases had already done appeared to be lost | Settled in `10-sequencer-and-contracts.md` (section 2's `phase start` row, section 3.1, section 5.4's `needs_user` row, section 6's `REQUIRE_HUMAN`, blocked-run row): such a run stays `active` with its lease released, keeps its candidate root and every checkpoint, and records `run.yaml#blocked_at`. `devforgeai phase start skill-validator <arg>` — the same skill and argument — resumes it at `blocked_at` with `attempts` reset. The section 7e `needs_user` and attempt-limit rows and the "Treating a repair flag as a resume" row now name `/skill-validate {skill}` as the forward step, with `devforgeai phase fail --reason <text>` then `/status` as the abandon route; any other skill on the same story needs that `phase fail` first. |
 | Promotion read as part of Handoff | "The report reaches the canonical checkout at Handoff, when the sequencer promotes the run" made `devforgeai phase next` move canonical bytes on its own, with no point at which the user consents | Section 7b's candidate-root paragraph ("At Handoff the sequencer promotes the run"), the `report` evidence row ("On pass this is the last phase: the sequencer promotes the run"), section 7b row 7 and the row above now carry the two-block model of `WRITE-MODEL-REVISION.md` D7 and `10-sequencer-and-contracts.md` sections 5.4, 6 and 12.4: `phase next` marks the run `ready_to_promote` and writes a `REQUIRE_HUMAN` block whose only forward step is `devforgeai promote <run>`; `SKILL.md` runs that command only after the user confirms; the promotion writes the second block. |
@@ -589,7 +591,7 @@ One file per worker in section 7. No file for Gate, Record or Handoff.
 ### Success criteria
 - Triggers on the section 4 positives and on none of the near-misses.
 - All four phases pass and the run's evidence directory holds four `<phase>-result.json` files and four `<phase>-report.md` files.
-- The run's checkpoint diff holds exactly one path across the whole run, `docs/reports/validate-<skill>.md`, and it is the `report` receipt's only `claimed_paths` entry; the three checker phases leave an empty diff and write only under `.devforgeai/work/<run>/evidence/<agent>/`, which no checkpoint records and no promotion carries.
+- The run's checkpoint diff holds exactly one path across the whole run, `docs/reports/validate-<skill>.md`, and it is the `report` receipt's only `claimed_paths` entry; the three checker phases write nothing at all, and the sequencer's persisted `findings.md` files sit under `.devforgeai/work/<run>/evidence/<agent>/`, which no checkpoint records and no promotion carries.
 - The report carries the four required sections and a `verdict` from the closed set `pass`, `findings`, `fail`, and every `## Fixes` row names an owner and a registry command.
 - Every finding cites the rule number it came from, so two runs over the same bytes produce the same finding list.
 - A run against a skill name with no compiled package writes no report and returns `needs_user`.
@@ -647,7 +649,7 @@ Eval workspace, identical for all three evals and required before any of them ca
 
 | Kind | Value |
 |------|-------|
-| Tools | SKILL.md: `Read` (limited to `.devforgeai/state.yaml`), `Agent`, and a Bash grammar no wider than `devforgeai status`, `devforgeai phase start <skill> <arg>`, `devforgeai phase fail --reason <text>`, `devforgeai validate`, plus `devforgeai promote <run>`, which the last passing transition's `REQUIRE_HUMAN` block names as its only forward step and which `SKILL.md` calls only after the user asks for it. Judges: `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` and `Write` scoped to `.devforgeai/work/<run>/evidence/<agent>/`. The one producer: the same read set plus `Edit` and `Write` (Codex `apply_patch`) inside the candidate root. No phase of this skill grants a stack command key, so no worker carries the `Bash(devforgeai run *)` surface. |
+| Tools | SKILL.md: `Read` (limited to `.devforgeai/state.yaml`), `Agent`, and a Bash grammar no wider than `devforgeai status`, `devforgeai phase start <skill> <arg>`, `devforgeai phase fail --reason <text>`, `devforgeai validate`, plus `devforgeai promote <run>`, which the last passing transition's `REQUIRE_HUMAN` block names as its only forward step and which `SKILL.md` calls only after the user asks for it. Judges: `Read`, `Grep`, `Glob` and `Bash(devforgeai status)`, with no `Write`, no `Edit` and no `apply_patch`; their findings are returned in the receipt and persisted by the sequencer. The one producer: the same read set plus `Edit` and `Write` (Codex `apply_patch`) inside the candidate root. No phase of this skill grants a stack command key, so no worker carries the `Bash(devforgeai run *)` surface. |
 | MCP servers | none |
 | Runtime | Python 3.11+ and PyYAML 6+ for the two bundled scripts. The open-standard validator is used when it is on PATH and is not required; its absence is a recorded `not_run` finding. |
 | Project commands | none. This is a document run: the enforcement block carries `commands: {}`, no phase declares a run key, and no oracle brokers a command. `.devforgeai/stack.yaml` is not consulted. Contract: `10-sequencer-and-contracts.md`. |
@@ -715,7 +717,7 @@ grep -rnE 'T[O]DO|T[B]D|\{\{' out/skill-validator || echo clean
 
 `skills-ref` is not on this repository's PATH. When it is absent, `validate_skill.py` plus the enumerated rule lists in `references/provider.md` are the enforced contract; record the absence as a `not_run` finding rather than reporting a pass the validator did not run.
 
-For non-Research anatomy skills, this skill additionally checks, on every package it validates: Gate, Slice, Record and Handoff bound to sequencer operations; persona and critic in different files; `must_not` and a `writes` declaration of `candidate`, `evidence` or `none` present in every agent file, with no tool wider than that declaration allows; the SKILL.md Bash grammar no wider than the model-callable operations; handoff outcomes covering every status the validated skill can return, including `could_not_run`. Applied to its own package, the absent Review phase in its registry entry is reported as a recorded divergence, not a defect.
+For non-Research anatomy skills, this skill additionally checks, on every package it validates: Gate, Slice, Record and Handoff bound to sequencer operations; persona and critic in different files; `must_not` and a `writes` declaration of `candidate` or `none` present in every agent file, with no tool wider than that declaration allows and no write tool at all on a `writes: none` file; the SKILL.md Bash grammar no wider than the model-callable operations; handoff outcomes covering every status the validated skill can return, including `could_not_run`. Applied to its own package, the absent Review phase in its registry entry is reported as a recorded divergence, not a defect.
 
 ## 15. Provenance
 

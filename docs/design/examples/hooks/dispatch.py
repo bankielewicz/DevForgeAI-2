@@ -38,6 +38,7 @@ from pathlib import Path
 from policy import (
     GIT_READ_ONLY,
     HOOK_ONLY,
+    PHASE_START_OPTIONS,
     PRIMARY_CALLABLE,
     RESULT_SCHEMA,
     RUN_MARKER,
@@ -45,8 +46,10 @@ from policy import (
     PolicyError,
     allowed_agents,
     canonical_agent,
-    evidence_prefix,
+    findings_path,
+    judge_write_denial,
     parse_apply_patch,
+    phase_names,
     phase_run_keys,
     phase_spec,
     project_relative,
@@ -256,22 +259,14 @@ def check_write(enf: dict, tool: str, tool_input: dict, ev: dict, provider: str)
     except PolicyError as exc:
         raise Block(str(exc)) from exc
     mode = (phase_spec(enf.get("skill", ""), phase or "") or {}).get("writes", "none")
-    if mode == "evidence":
-        # A judge holds no lease: it reads a checkpoint and reports. Its one
-        # write path is its own evidence directory, which is run-scoped,
-        # gitignored, never diffed and never promoted.
-        if provider == "claude" and not (ev.get("agent_id") or ""):
-            raise Block(
-                "writes in the primary window are denied while a run is active; the phase "
-                f"worker writes inside {root}"
-            )
-        if ev.get("agent_type") and canonical_agent(ev["agent_type"]) not in allowed_agents(enf):
-            raise Block(
-                f"phase {phase} belongs to {sorted(allowed_agents(enf))}, not {ev['agent_type']}"
-            )
-    elif mode == "none":
-        raise Block(f"phase {phase} writes nothing at all")
-    elif not lease:
+    if mode == "none":
+        # D13 item 1: a judge phase has no write at all — not the candidate
+        # root, not an evidence directory, not anywhere. Its write is denied on
+        # exactly the terms a primary-window write is, and its evidence comes
+        # back in the receipt's `findings` field instead.
+        first = targets[0].path if targets else "that path"
+        raise Block(judge_write_denial(enf, str(first)))
+    if not lease:
         raise Block(
             f"NO_CANDIDATE: no lease is held for phase {phase}; a producer is bound at "
             "SubagentStart and writes only while it holds the lease"
@@ -364,10 +359,14 @@ def check_sequencer(argv: list[str], enf: dict, in_subagent: bool, agent_type: s
             "phase workers call only `devforgeai status` and `devforgeai run <key>`; they "
             f"never sequence. Return one {RESULT_SCHEMA} receipt instead."
         )
-    if argv[1:3] == ["phase", "start"] and not active_run:
-        # `phase start <skill> <arg>`, optionally with the single trailing
-        # `--lenient` flag. No other option is in the model-callable grammar.
-        if len(argv) == 5 or (len(argv) == 6 and argv[5] == "--lenient"):
+    if argv[1:3] == ["phase", "start"] and not active_run and len(argv) >= 5:
+        # `phase start <skill> <arg>`, optionally with any subset of
+        # `PHASE_START_OPTIONS` in any order, each at most once. No other option
+        # is in the model-callable grammar.
+        options = argv[5:]
+        if not any(word.startswith("-") for word in argv[3:5]) \
+                and all(word in PHASE_START_OPTIONS for word in options) \
+                and len(set(options)) == len(options):
             return
     if argv == [SEQUENCER, "validate"] and active_run:
         return
@@ -377,7 +376,7 @@ def check_sequencer(argv: list[str], enf: dict, in_subagent: bool, agent_type: s
         return
     raise Block(
         f"primary may call only the {len(PRIMARY_CALLABLE)} model-callable operations "
-        "(`devforgeai phase start <skill> <arg> [--lenient]`, "
+        "(`devforgeai phase start <skill> <arg> [--fix] [--lenient]`, "
         "`devforgeai phase fail --reason <text>`, `devforgeai validate`, "
         "`devforgeai promote <run>`, `devforgeai status`), as allowed by current state"
     )
@@ -524,10 +523,15 @@ def worker_context(enf: dict) -> str:
     agent = expected_agent(enf) or "<expected-agent>"
     root = (enf.get("candidate") or {}).get("root")
     writes = (phase_spec(enf.get("skill", ""), phase or "") or {}).get("writes", "none")
+    prior = prior_findings(enf)
     job = (
-        f"Read the checkpoint in {root} and judge it. Your notes go under "
-        f"{evidence_prefix(enf)}; name them in evidence_refs. Nothing else is writable."
-        if writes in ("none", "evidence") else
+        f"Read the checkpoint in {root} and judge it. You write nothing: no file, no "
+        f"directory, no scratch note. Put your evidence in the receipt's `findings` field "
+        f"(at most 16384 UTF-8 bytes, never truncated); the sequencer persists it verbatim "
+        f"at {findings_path(enf)}."
+        + (" Read the findings of the phases before you at: " + ", ".join(prior) + "."
+           if prior else "")
+        if writes == "none" else
         f"Write inside the candidate root {root}; every path you touch is relative to it and "
         f"must match {enf.get('write_fence')}. Run the tests with "
         f"`devforgeai run <key>` for {sorted(phase_run_keys(enf))}."
@@ -542,9 +546,37 @@ def worker_context(enf: dict) -> str:
         + '","agent":"' + agent + '","status":"pass|fail|needs_user|could_not_run",'
         '"candidate":{"id":"' + str(enf.get("run")) + '","input_checkpoint":"'
         + str((enf.get("candidate") or {}).get("checkpoint")) + '"},'
-        '"claimed_paths":[],"evidence_refs":[],"note":"","issues":[]}. '
+        '"claimed_paths":[],"evidence_refs":[],'
+        + ('"findings":"<your evidence, at most 16384 UTF-8 bytes>",' if writes == "none" else "")
+        + '"note":"","issues":[]}. '
         "No Markdown fence and no surrounding prose."
     )
+
+
+def prior_findings(enf: dict) -> list[str]:
+    """The findings files earlier phases of this run have already persisted.
+
+    Named in the dispatch context so the next phase's worker can consume them
+    by path (D13 item 3) without the sequencer copying any body forward. Read
+    from the phase results the sequencer wrote, in phase order, so nothing here
+    can disagree with what is on disk.
+    """
+    canonical = Path(str(enf.get("canonical") or "."))
+    work = canonical / ".devforgeai" / "work" / str(enf.get("run") or "")
+    rows: list[str] = []
+    for phase in phase_names(str(enf.get("skill") or "")):
+        if phase == enf.get("phase"):
+            break
+        result = work / f"{phase}-result.json"
+        if not result.exists():
+            continue
+        try:
+            reference = (json.loads(result.read_text()) or {}).get("findings_path")
+        except (OSError, ValueError):
+            continue
+        if reference and reference not in rows:
+            rows.append(str(reference))
+    return rows
 
 
 INSTALL_PREFIX = ".devforgeai/"

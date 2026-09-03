@@ -9,7 +9,7 @@ author: "DevForgeAI wave-2 specification author"
 date: 2026-09-02
 depends_on:
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:a6bbaf9af2d69f7ede18d7c40f242c42edb26d79be964ffec3f386d6347014c2
+    hash: sha256:5afb88c46aa635c961564af8e58c799a44f387c6bd877eeac2ec7568f73aba7e
     excerpt: "**The model dispatches, the sequencer decides.** For an anatomy-governed skill, the primary window (provider entry adapter + skill orchestration) does light, trivial work only."
   - source: docs/design/01-skill-anatomy.md#dedicated-templates
     hash: sha256:55bd4a18d63e645adffa187d34256dc7db7370095dcbf9e96a190028f7e65a5e
@@ -21,25 +21,25 @@ depends_on:
     hash: sha256:a972a34352485d39e86add257fad2a007e6241521b18234d152cd35888dbad25
     excerpt: "`adr/NNNN-*.md` — architecture decisions, appended by architect and amend."
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:511733ee35ca74fd5a5c0b59f225d7d975788e7d43d939f44c23b7aa8460cff0
+    hash: sha256:7c1d67f1154e49247e5dc178fcc1512bdbd53af378c360aeafe69bffed1136ab
     excerpt: "| architect | 1 | `option_compare` | `option_comparer` | none | 2 | — | report_only | — |"
   - source: docs/design/10-sequencer-and-contracts.md#5-2-validation-order
-    hash: sha256:9f1bf77b7e84302ff6f3f20260228d57390cc97ab8e8d3f68f52c3ff2658aab8
+    hash: sha256:9cf7115cdfa637023edc22cbdf5f64c106b1eba340598c8dc97b68361cb76b0f
     excerpt: "| 10 | `changed[]` is a subset of `claimed_paths` | refuse, reason `UNCLAIMED_CHANGE`; this **is** a phase attempt, because real bytes were written outside the claim |"
   - source: docs/design/10-sequencer-and-contracts.md#5-4-transition-oracles
-    hash: sha256:ffa41b5d270dc260e28fa9f6bdbc855069a6e922d1148c74b25860dba63484dc
+    hash: sha256:076840ec9db03155bc9edcceb587e2aa1ca8bf3849e7a8b742f788d1a3b2315f
     excerpt: "the phase declared `writes: docs` and `changed[]` is non-empty, unless it is marked conditional, in which case an empty change set needs a non-empty `note`; every changed path exists in the root with the bytes the checkpoint will hold"
   - source: docs/design/10-sequencer-and-contracts.md#7-stack-yaml
     hash: sha256:f51716b6cfb1f4a48f4efbcff03947b3adab879dac1b6de7720564c85c87c43c
     excerpt: "Producers: `architect`'s `techstack` phase emits the INTENDED sections beside `techstack.md`; `onboard`'s `code_map` phase emits the OBSERVED sections."
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:bca72c10668178e0f4da43e03aaafbf24d2a57ec12f71a16b078880dd496677a
+    hash: sha256:3c4c95bbd73b5499e5569e650f84eea84cb68404c0909f5f1819c0f3a5c7b3d4
     excerpt: "`next` is never empty and is never a description. One exact command."
   - source: docs/design/11-artifact-registry.md#1-template-registry
     hash: sha256:fabb8d2f142dcde1a31bc53768f8a46d01cac3ea4a7f6b73db22479cc89b5553
     excerpt: "| `techstack` | `.devforgeai/skills/architect/templates/techstack.md` | 1 | `^TS-[0-9]{3}$` | slug, template, template_version, status, mode, depends_on, stack_section | Languages, Data Access, Testing, Build And Lint |"
   - source: docs/design/11-artifact-registry.md#2-artifact-path-patterns
-    hash: sha256:2d2e97afff50edf6b35bf674b1de217c684d5091361e5f1deae12de52b95fb51
+    hash: sha256:858455b885ac6c1ddbe427a433ba715f7266d08b90e105135172877e29ea0ecc
     excerpt: "| `docs/architecture/design-<topic>.md` | `design` | architect | sequencer |"
   - source: docs/design/11-artifact-registry.md#3-depends-on-edges
     hash: sha256:f3c304ff840d2027432f743288bccec0ea5bc5d7b99b7f41c8d524b1c3591da2
@@ -54,7 +54,7 @@ depends_on:
     hash: sha256:1dac784b4670cc7559f323011dfe304dfe8c0baf349063162f90d76d902c5d3c
     excerpt: "| architect | pass | `/plan {slug}` |"
   - source: docs/design/05-subagent-sets.md#sets-per-skill
-    hash: sha256:9e12f3beb236a025c18d40e741c09ba675bd71d2d87f56e2b205c7556b944bf9
+    hash: sha256:f2957217c9af147e4a7ea03749cbe6efda266bd56d403f39aa25c9a655872609
     excerpt: "| architect | option-comparer (yolo) or decision-interviewer, constitution-writer (including `#mandates`), sourcetree-writer, techstack-writer (emits the INTENDED `stack.yaml`), architecture-writer, design-writer, adr-writer, gap-analyzer (brownfield), prototyper (optional), critic |"
   - source: docs/design/03-brownfield.md#observed-vs-intended
     hash: sha256:76cdea3c2760b31cc074204be8c244bffb3d582a0ceba60482aa525ce03194a8
@@ -175,13 +175,13 @@ Character count: 893 / 1024.
 
 ### UC-1: Greenfield, decisions chosen without a round trip
 - **User says:** "/architect shop --yolo"
-- **Steps:** 1. `devforgeai phase start architect shop` runs the document fence gate and opens the run. 2. `option_comparer` reads `docs/PM/shop/prd.md`, lists one decision area per requirement cluster, compares at least two admissible options each, selects one, and writes the selections into its run-scoped evidence directory. 3. `constitution_writer` writes `docs/architecture/constitution.md` with Principles, Mandates, Constraints and Style inside the candidate root. 4. `sourcetree_writer`, `techstack_writer`, `architecture_writer` and `design_writer` write their documents in turn; `techstack_writer` writes `.devforgeai/stack.yaml` alongside `techstack.md`. 5. `adr_writer` writes one ADR per decision under `.devforgeai/provenance/adr/`. 6. `gap_analyzer` returns zero rows on greenfield. 7. `architect_critic` checks every section against the PRD anchors it claims.
+- **Steps:** 1. `devforgeai phase start architect shop` runs the document fence gate and opens the run. 2. `option_comparer` reads `docs/PM/shop/prd.md`, lists one decision area per requirement cluster, compares at least two admissible options each, selects one, and returns the selections in the receipt's bounded `findings`; the sequencer persists them at the fixed judge-evidence path. 3. `constitution_writer` writes `docs/architecture/constitution.md` with Principles, Mandates, Constraints and Style inside the candidate root. 4. `sourcetree_writer`, `techstack_writer`, `architecture_writer` and `design_writer` write their documents in turn; `techstack_writer` writes `.devforgeai/stack.yaml` alongside `techstack.md`. 5. `adr_writer` writes one ADR per decision under `.devforgeai/provenance/adr/`. 6. `gap_analyzer` returns zero rows on greenfield. 7. `architect_critic` checks every section against the PRD anchors it claims.
 - **Result:** after promotion, five architecture documents on disk, a `stack.yaml` section named by `techstack.md`'s `stack_section` key, one ADR per decision, and a handoff whose first next step is `/plan shop`.
 
 ### UC-2: Brownfield, an evidenced migration gap
 - **User says:** "onboard wrote the OBSERVED sections for the legacy api, now define what it should become"
-- **Steps:** 1. The gate opens the run over slug `api`. 2. `option_comparer` reads the PRD and the OBSERVED sections `onboard` admitted into `sourcetree.md`, `techstack.md` and `architecture.md`. 3. The writer phases write the INTENDED sections beside the OBSERVED ones inside the candidate root, each carrying `mode: INTENDED` and `depends_on` entries for the PRD anchors it used. 4. `gap_analyzer` compares the INTENDED sections against the OBSERVED constraints that actually exist and writes one section per evidenced difference into its run-scoped evidence directory, each citing the OBSERVED anchor and the INTENDED anchor. 5. `architect_critic` rejects any gap row with no OBSERVED citation.
-- **Result:** both records coexist in the same three files, the gap rows are in `.devforgeai/work/architect-api/gap_analysis-result.json` and its evidence directory for `plan` to turn into a migration epic, and the handoff's first next step is `/plan api`.
+- **Steps:** 1. The gate opens the run over slug `api`. 2. `option_comparer` reads the PRD and the OBSERVED sections `onboard` admitted into `sourcetree.md`, `techstack.md` and `architecture.md`. 3. The writer phases write the INTENDED sections beside the OBSERVED ones inside the candidate root, each carrying `mode: INTENDED` and `depends_on` entries for the PRD anchors it used. 4. `gap_analyzer` compares the INTENDED sections against the OBSERVED constraints that actually exist and returns one section per evidenced difference in `findings`, each citing the OBSERVED anchor and the INTENDED anchor; the sequencer persists that string. 5. `architect_critic` rejects any gap row with no OBSERVED citation.
+- **Result:** both records coexist in the same three files, the gap rows are in `.devforgeai/work/architect-api/gap_analysis-result.json` and `.devforgeai/work/architect-api/evidence/gap_analyzer/findings.md` for `plan` to turn into a migration epic, and the handoff's first next step is `/plan api`.
 
 ### UC-3: Interactive, a decision the skill will not make
 - **User says:** "/architect shop"
@@ -306,7 +306,7 @@ python:
 
 ### Return envelope (DevForgeAI-anatomy skills only)
 
-One schema, both providers: `devforgeai.worker-result/v1`, normative in `schemas/devforgeai/v1/worker-result.schema.json`. A worker's final message is exactly this object, with no Markdown fence and no surrounding prose. A document writer has already written its files inside the candidate root when it returns; the receipt claims what it wrote. `option_comparer`, `gap_analyzer` and `architect_critic` write nothing and claim nothing.
+One schema, both providers: `devforgeai.worker-result/v1`, normative in `schemas/devforgeai/v1/worker-result.schema.json`. A worker's final message is exactly this object, with no Markdown fence and no surrounding prose. A document writer has already written its files inside the candidate root when it returns; the receipt claims what it wrote. `option_comparer`, `gap_analyzer` and `architect_critic` write nothing and claim nothing; each returns its bounded report in `findings`, which the sequencer persists to its fixed `.devforgeai/work/<run>/evidence/<agent>/findings.md` path after receipt validation. `findings` is **required** on a judge receipt whose status is `pass` or `fail`, **optional** on a judge's `needs_user` or `could_not_run` — where the judge may have nothing to report — and **forbidden** on a producer receipt, on every status; the 16384-UTF-8-byte bound is the same wherever it is present, and an oversize string refuses the receipt.
 
 ```yaml
 schema: devforgeai.worker-result/v1
@@ -315,7 +315,7 @@ skill: "architect"
 phase: "techstack"
 agent: "techstack_writer"
 status: pass | fail | needs_user | could_not_run
-reason_code: runner_missing | timeout | network | hook_fault   # required only when status is could_not_run
+reason_code: runner_missing | timeout | network | hook_fault | provider_tool_refused | prerequisite_missing | checkpoint_fault   # required only when status is could_not_run
 candidate: {id: "architect-shop", input_checkpoint: "sourcetree"}
 claimed_paths: ["docs/architecture/techstack.md", ".devforgeai/stack.yaml"]   # at most 64; empty on any non-pass status
 evidence_refs: ["docs/architecture/techstack.md", ".devforgeai/stack.yaml"]   # at most 16
@@ -357,19 +357,19 @@ Gate, Record and Handoff dispatch no LLM: they are `devforgeai` sequencer operat
 |---|-----------|--------------|--------|-----------|
 | 0 | Gate | sequencer: `devforgeai phase start architect <slug>`, which also opens the candidate root | sequencer | n/a |
 | 1 | Slice | sequencer: a step inside `phase start` that resolves the incoming artifact's hashed bundle into `.devforgeai/work/<run>/context.json`. No worker | sequencer | n/a |
-| 2 | Work: `option_compare` | worker: `option_comparer` | evidence | required |
+| 2 | Work: `option_compare` | worker: `option_comparer` | none | required |
 | 3 | Write: `constitution` | worker: `constitution_writer` | candidate | required |
 | 4 | Write: `sourcetree` | worker: `sourcetree_writer` | candidate | required |
 | 5 | Write: `techstack` | worker: `techstack_writer` | candidate | required |
 | 6 | Write: `architecture` | worker: `architecture_writer` | candidate | required |
 | 7 | Write: `design` | worker: `design_writer` | candidate | required |
 | 8 | Write: `adr` | worker: `adr_writer` | candidate | required |
-| 9 | Work: `gap_analysis` | worker: `gap_analyzer` | evidence | preferred |
-| 10 | Review: `critic` | worker: `architect_critic` | evidence | required |
+| 9 | Work: `gap_analysis` | worker: `gap_analyzer` | none | preferred |
+| 10 | Review: `critic` | worker: `architect_critic` | none | required |
 | 11 | Record | sequencer: `devforgeai phase next` | sequencer | n/a |
 | 12 | Handoff | sequencer: `devforgeai phase next`, which on the last passing transition marks the run `ready_to_promote` and renders the first block, a `REQUIRE_HUMAN` handoff naming `devforgeai promote <run>`; that command, run only after the user confirms in the session, renders the second | sequencer | n/a |
 
-`option_comparer` is the persona and `architect_critic` is the critic. They are different workers with different prompts and different agent files, because a persona reviewing its own output is the hallucination vector the anatomy exists to remove. Six workers are producers that write inside the candidate root; three are judges. A judge's `Write` is confined to its own run-scoped evidence directory, `.devforgeai/work/<run>/evidence/<agent>/`, which is gitignored, lies outside the candidate root, and is never promoted. Its findings file lives there and is named in `evidence_refs`; `issues[]` stays the bounded summary the handoff carries. Nothing a judge writes can reach the checkpoint diff, so its `claimed_paths` is empty on every status.
+`option_comparer` is the persona and `architect_critic` is the critic. They are different workers with different prompts and different agent files, because a persona reviewing its own output is the hallucination vector the anatomy exists to remove. Six workers are producers that write inside the candidate root; three are judges. A judge has no write tool and returns its complete bounded report in the receipt's required `findings` string. At `SubagentStop`, the sequencer persists that string verbatim to `.devforgeai/work/<run>/evidence/<agent>/findings.md`; the judge does not name that not-yet-created path in its own `evidence_refs`. `issues[]` stays the bounded summary the handoff carries, and `claimed_paths` is empty on every judge status.
 
 For an anatomy-governed skill, `SKILL.md` dispatches each worker through the selected target's provider-native worker mechanism, using the generated target profile, file paths and the `devforgeai status` block. It never pastes or paraphrases artifact content, objectives, or acceptance criteria into the prompt. Its Bash grammar is exactly `devforgeai status | phase start <skill> <arg> | phase fail --reason | validate | promote <run>`; every other sequencer operation is hook-only. The `Isolation` column is the DevForgeAI contract value compiled into the target profile, not Claude's `isolation` frontmatter field; the framework does not use Claude's worktree isolation or `EnterWorktree`, because both fork from HEAD and the run's phases build linearly on one candidate root. Runtime verification of isolation is `12-post-mvp.md#pm-01`.
 
@@ -379,15 +379,15 @@ One row per registry phase, in registry order. `<run>` is `architect-<slug>`; `<
 
 | phase | worker | deterministic gate check | gate_policy | evidence file | transition oracle |
 |---|---|---|---|---|---|
-| `option_compare` | `option_comparer` | run-level gate at `devforgeai phase start`: `architect` is a known skill of kind `document`; no run is already active; each fence entry (`docs/architecture/**`, `.devforgeai/stack.yaml`, `.devforgeai/provenance/adr/**`) is repository-relative, contains no `..`, and is either not sequencer-owned or is a declared producer exception; and no active or `ready_to_promote` run's fence overlaps this one, which `FENCE_OVERLAP` enforces over the two exception paths as well. At ingest: `claimed_paths` is empty, because the registry declares the phase `writes: none` and the worker header `writes: evidence`, and any change inside the candidate root refuses the receipt as `UNCLAIMED_CHANGE`; the dispatcher allows this worker's writes only under `.devforgeai/work/<run>/evidence/option_comparer/` and denies every other path at `PreToolUse` | document run's fixed map `{unresolvable_source: BLOCK}`; every `devforgeai phase start` defect is a refusal whatever a declared value says, and only `test_runner_missing` changes behaviour at transition time, which this phase never reaches because it brokers no command | `.devforgeai/work/<run>/option_compare-result.json`, `option_compare-report.md` | `report_only`: no file outside the fence changed since the gate snapshot and the whole-tree package and import policy holds |
+| `option_compare` | `option_comparer` | run-level gate at `devforgeai phase start`: `architect` is a known skill of kind `document`; no run is already active; each fence entry (`docs/architecture/**`, `.devforgeai/stack.yaml`, `.devforgeai/provenance/adr/**`) is repository-relative, contains no `..`, and is either not sequencer-owned or is a declared producer exception; and no active or `ready_to_promote` run's fence overlaps this one, which `FENCE_OVERLAP` enforces over the two exception paths as well. At ingest: the worker declares `writes: none`, `claimed_paths` is empty, and any change inside the candidate root refuses the receipt as `UNCLAIMED_CHANGE`. The worker has no write tool; its required bounded `findings` string is validated before the sequencer persists it at the fixed judge-evidence path | document run's fixed map `{unresolvable_source: BLOCK}`; every `devforgeai phase start` defect is a refusal whatever a declared value says, and only `test_runner_missing` changes behaviour at transition time, which this phase never reaches because it brokers no command | `.devforgeai/work/<run>/option_compare-result.json`, `.devforgeai/work/<run>/evidence/option_comparer/findings.md`, `option_compare-report.md` | `report_only`: no file outside the fence changed since the gate snapshot and the whole-tree package and import policy holds |
 | `constitution` | `constitution_writer` | ingest validation: `changed` derived from the checkpoint diff is a subset of `claimed_paths`, every changed path canonicalises inside `candidate.root`, matches `docs/architecture/**`, is not sequencer-owned, and is allowed by the phase's `writes: docs` mode; then the whole-root package and import rescan before the checkpoint. `scripts/check_intended_set.py --template constitution` parses the written file against the `constitution` header keys | `{unresolvable_source: BLOCK}`; an `UNCLAIMED_CHANGE` refuses the receipt as a protocol error and does not consume an attempt | `.devforgeai/work/<run>/constitution-result.json`, `constitution-report.md` | `document`: the phase produced at least one file and every declared output with non-null content exists on disk |
 | `sourcetree` | `sourcetree_writer` | as `constitution`, with `scripts/check_intended_set.py --template sourcetree` | `{unresolvable_source: BLOCK}` | `.devforgeai/work/<run>/sourcetree-result.json`, `sourcetree-report.md` | `document`: as `constitution` |
 | `techstack` | `techstack_writer` | as `constitution`, plus the stack producer exception: `.devforgeai/stack.yaml` is admitted only from this `(skill, phase)` pair, and the written file is parsed, every anchor name is checked against `^[a-z][a-z0-9-]*$`, every section is validated against `schemas/devforgeai/v1/stack.schema.json`, and the section contract is re-run before the checkpoint — `build` present when `compiled: true`, `test` present with a `junit_path`, every extractor carrying a capture group. A file failing any of those refuses the receipt, and a deletion of the path is never accepted. `scripts/check_stack_section.py` is the same check as a standalone command | `{unresolvable_source: BLOCK}` | `.devforgeai/work/<run>/techstack-result.json`, `techstack-report.md` | `document`: as `constitution`, over both `docs/architecture/techstack.md` and `.devforgeai/stack.yaml` |
 | `architecture` | `architecture_writer` | as `constitution`, with `scripts/check_intended_set.py --template architecture` | `{unresolvable_source: BLOCK}` | `.devforgeai/work/<run>/architecture-result.json`, `architecture-report.md` | `document`: as `constitution` |
 | `design` | `design_writer` | as `constitution`, with `scripts/check_intended_set.py --template design`, which additionally checks that each written filename is `design-<topic>.md` where `<topic>` equals the file's own `topic` frontmatter value | `{unresolvable_source: BLOCK}` | `.devforgeai/work/<run>/design-result.json`, `design-report.md` | `document`: as `constitution` |
 | `adr` | `adr_writer` | ingest validation as `constitution`, over paths matching `.devforgeai/provenance/adr/NNNN-<slug>.md`, which the producer exception admits from exactly this `(skill, phase)` pair. Each written file is checked against the `adr` template header — required frontmatter, `^ADR-[0-9]{4}$`, the four required sections, forbidden text — and against the filename shape, before the checkpoint. An ADR number already present in the directory refuses the receipt, because an ADR is never overwritten, and the path has no rewind | `{unresolvable_source: BLOCK}` | `.devforgeai/work/<run>/adr-result.json`, `adr-report.md` | `document`: the phase changed at least one file and every ADR it claimed exists in the candidate root |
-| `gap_analysis` | `gap_analyzer` | at ingest: `claimed_paths` is empty, because the registry declares the phase `writes: none` and the worker header `writes: evidence`, and any change inside the candidate root refuses the receipt; the dispatcher confines this worker's writes to `.devforgeai/work/<run>/evidence/gap_analyzer/` | `{unresolvable_source: BLOCK}` | `.devforgeai/work/<run>/gap_analysis-result.json`, `gap_analysis-report.md` | `report_only`: as `option_compare` |
-| `critic` | `architect_critic` | at ingest: `claimed_paths` is empty and any change inside the candidate root refuses the receipt; the dispatcher confines this worker's writes to `.devforgeai/work/<run>/evidence/architect_critic/`; the phase grants no command key, so `devforgeai run` refuses every key it might name | `{unresolvable_source: BLOCK}` | `.devforgeai/work/<run>/critic-result.json`, `critic-report.md`, then `handoff.json` | `report_only`: as `option_compare`. On pass this is the last phase: the run is marked `ready_to_promote`, enforcement is cleared, and the first handoff's `next` is `devforgeai promote <run>`; the second handoff, written by that command once the user asks for it, takes its `next` from the section 7e table |
+| `gap_analysis` | `gap_analyzer` | at ingest: the worker declares `writes: none`, `claimed_paths` is empty, and any change inside the candidate root refuses the receipt; its required bounded `findings` string is validated before sequencer persistence | `{unresolvable_source: BLOCK}` | `.devforgeai/work/<run>/gap_analysis-result.json`, `.devforgeai/work/<run>/evidence/gap_analyzer/findings.md`, `gap_analysis-report.md` | `report_only`: as `option_compare` |
+| `critic` | `architect_critic` | at ingest: the worker declares `writes: none`, `claimed_paths` is empty, and any change inside the candidate root refuses the receipt; its required bounded `findings` string is validated before sequencer persistence. The phase grants no command key, so `devforgeai run` refuses every key it might name | `{unresolvable_source: BLOCK}` | `.devforgeai/work/<run>/critic-result.json`, `.devforgeai/work/<run>/evidence/architect_critic/findings.md`, `critic-report.md`, then `handoff.json` | `report_only`: as `option_compare`. On pass this is the last phase: the run is marked `ready_to_promote`, enforcement is cleared, and the first handoff's `next` is `devforgeai promote <run>`; the second handoff, written by that command once the user asks for it, takes its `next` from the section 7e table |
 
 Attempt budgets, materialised into the run file from the registry, are 2 for every phase. No `architect` phase declares `rewind_to`, so a `fail` receipt carrying `next` is refused; a `fail` without `next` becomes a transition problem row, the phase retries to its limit, and the run then blocks `REQUIRE_HUMAN` (open item OI-4).
 
@@ -403,10 +403,10 @@ Each block becomes `agents/<role>.md` verbatim, wrapped in skill-creator's Role 
 name: option_comparer
 description: Dispatch this worker at the option_compare phase to judge each architecture decision area the PRD raises and select an option, or say which the PRD cannot settle.
 skill: architect
-writes: evidence
+writes: none
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Write]
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+tools: [Read, Grep, Glob, Bash(devforgeai status)]
+tools_codex: [Read, Grep, Glob, Bash(devforgeai status)]
 skills: []
 compiled_to: [.claude/agents/architect-option_comparer.md, .codex/agents/architect-option_comparer.toml]
 responsibility: Produce one decision row per architecture decision area the PRD raises, each with at least two admissible options, the selected option, and the PRD anchor that justifies the selection.
@@ -416,20 +416,20 @@ inputs:
   - the --yolo flag token
   - references/option_compare.md, for the decision areas and the selection rule
 outputs:
-  - .devforgeai/work/<run>/evidence/option_comparer/decisions.md, one section per decision area naming the area, the options compared, the selection, the PRD anchor and any OBSERVED anchor, written in its own run-scoped evidence directory and named in evidence_refs
+  - findings: one section per decision area naming the area, the options compared, the selection, the PRD anchor and any OBSERVED anchor; required, at most 16,384 UTF-8 bytes, and persisted by the sequencer to .devforgeai/work/<run>/evidence/option_comparer/findings.md after receipt validation
   - note: the count of areas decided and the count left open
   - issues: one row per unsettled area when --yolo is absent, carried with status needs_user
 must_not:
   - select an option the PRD and the OBSERVED sections give no basis for when --yolo is absent
   - read a source file the PRD or an OBSERVED section does not name
-  - write anywhere but its own run-scoped evidence directory, or run any stack command key
+  - use Write, Edit or apply_patch, name its own findings path in evidence_refs, or run any stack command key
 isolation: required
 returns: devforgeai.worker-result/v1
 body:
   job: Judge each decision area the PRD raises, compare at least two admissible options, and select one or say the PRD cannot settle it.
   inputs: The list above, read under the candidate root; nothing outside it is opened.
   rules: references/option_compare.md, the selection rule under --yolo, and the must_not list.
-  receipt: One devforgeai.worker-result/v1 object; claimed_paths is empty on every status, evidence_refs names the decisions file it wrote under its run-scoped evidence directory, and an unsettled area is one issues row with status needs_user.
+  receipt: One devforgeai.worker-result/v1 object; findings contains the complete decision report, claimed_paths is empty on every status, evidence_refs does not name the sequencer-created findings path, and an unsettled area is one issues row with status needs_user.
 ```
 
 ```yaml
@@ -639,10 +639,10 @@ body:
 name: gap_analyzer
 description: Dispatch this worker at the gap_analysis phase to judge each INTENDED section against the OBSERVED constraints that exist.
 skill: architect
-writes: evidence
+writes: none
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Write]
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+tools: [Read, Grep, Glob, Bash(devforgeai status)]
+tools_codex: [Read, Grep, Glob, Bash(devforgeai status)]
 skills: []
 compiled_to: [.claude/agents/architect-gap_analyzer.md, .codex/agents/architect-gap_analyzer.toml]
 responsibility: Compare each INTENDED section against the OBSERVED constraint sections that actually exist and return one evidenced gap row per difference, citing both anchors.
@@ -651,30 +651,30 @@ inputs:
   - docs/reports/drift-<slug>.md, when it exists
   - references/gap_analysis.md, for what counts as an evidenced gap
 outputs:
-  - .devforgeai/work/<run>/evidence/gap_analyzer/gaps.md, one section per gap naming both anchors and the migration it implies, written in its own run-scoped evidence directory and named in evidence_refs
+  - findings: one section per gap naming both anchors and the migration it implies; required, at most 16,384 UTF-8 bytes, and persisted by the sequencer to .devforgeai/work/<run>/evidence/gap_analyzer/findings.md after receipt validation
   - issues: one row per gap, each naming the intended anchor and the observed anchor, bounded at ten
   - note: the count of INTENDED sections compared and OBSERVED sections found
 must_not:
   - report a gap against an OBSERVED section that does not exist in the file
   - write a migration epic or story; plan owns both templates
-  - write anywhere but its own run-scoped evidence directory, or run any stack command key
+  - use Write, Edit or apply_patch, name its own findings path in evidence_refs, or run any stack command key
 isolation: preferred
 returns: devforgeai.worker-result/v1
 body:
   job: Judge each INTENDED section against the OBSERVED constraint in the same file and report the evidenced differences.
   inputs: The list above, read under the candidate root; nothing outside it is opened.
   rules: references/gap_analysis.md, what counts as an evidenced gap, and the must_not list.
-  receipt: One devforgeai.worker-result/v1 object; claimed_paths is empty on every status, evidence_refs names the gaps file it wrote under its run-scoped evidence directory, and each gap is also one issues row citing both anchors.
+  receipt: One devforgeai.worker-result/v1 object; findings contains the complete gap report, claimed_paths is empty on every status, evidence_refs does not name the sequencer-created findings path, and each gap is also one issues row citing both anchors.
 ```
 
 ```yaml
 name: architect_critic
 description: Dispatch this worker at the critic phase to judge every section this run wrote against its template header and the anchor it cites.
 skill: architect
-writes: evidence
+writes: none
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Write]
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+tools: [Read, Grep, Glob, Bash(devforgeai status)]
+tools_codex: [Read, Grep, Glob, Bash(devforgeai status)]
 skills: []
 compiled_to: [.claude/agents/architect-architect_critic.md, .codex/agents/architect-architect_critic.toml]
 responsibility: Check every written section against the template header it claims and against the PRD anchor or decision row it cites, and report defects without repairing them.
@@ -684,24 +684,24 @@ inputs:
   - docs/PM/<slug>/prd.md
   - references/critic.md, for the defect classes and the evidence a finding must carry
 outputs:
-  - .devforgeai/work/<run>/evidence/architect_critic/findings.md, the full defect list and the per-requirement coverage table, written in its own run-scoped evidence directory and named in evidence_refs
+  - findings: the full defect list and the per-requirement coverage table; required, at most 16,384 UTF-8 bytes, and persisted by the sequencer to .devforgeai/work/<run>/evidence/architect_critic/findings.md after receipt validation
   - issues: at most ten rows, each naming the file, the section id and the defect class
   - note: the count of PRD requirement anchors covered and uncovered
 must_not:
   - repair a defect it found
   - pass a section without quoting the anchor or decision row it cites
   - report a defect against a section no phase of this run wrote
-  - write anywhere but its own run-scoped evidence directory, or run any stack command key
+  - use Write, Edit or apply_patch, name its own findings path in evidence_refs, or run any stack command key
 isolation: required
 returns: devforgeai.worker-result/v1
 body:
   job: Judge every section this run wrote against the template header it claims and the anchor it cites.
   inputs: The list above, read under the candidate root; nothing outside it is opened.
   rules: references/critic.md, the defect classes, and the must_not list.
-  receipt: One devforgeai.worker-result/v1 object; claimed_paths is empty on every status, evidence_refs names the findings file it wrote under its run-scoped evidence directory, and each defect is also one issues row.
+  receipt: One devforgeai.worker-result/v1 object; findings contains the complete defect report, claimed_paths is empty on every status, evidence_refs does not name the sequencer-created findings path, and each defect is also one issues row.
 ```
 
-A producer's tools are the read set plus `Edit` and `Write`, which Codex serves as `apply_patch`; a judge's are the read set plus a `Write` the dispatcher confines to `.devforgeai/work/<run>/evidence/<agent>/`, and no `Edit`. Both include `Bash(devforgeai status)` and nothing else on the Bash surface, because no `architect` phase grants a stack command key (open item OI-3).
+A producer's tools are the read set plus `Edit` and `Write`, which Codex serves as `apply_patch`; a judge has the read set and no write tool. Both include `Bash(devforgeai status)` and nothing else on the Bash surface, because no `architect` phase grants a stack command key (open item OI-3). A judge returns its bounded report in `findings`, which the sequencer persists only after validating the receipt.
 
 ### 7e. Handoff outcomes
 
@@ -822,7 +822,7 @@ Every script is deterministic, non-interactive, prints data to stdout and diagno
 |-----------|-----------------|--------------------|
 | OI-1: `01-skill-anatomy.md` and `05-subagent-sets.md` give Slice to a framework worker, but no `architect` phase dispatches one | The generated skill grows a tenth agent file with no registry phase to run it, and `agent_type` never matches at ingest | Slice is a sequencer step inside `devforgeai phase start`: it resolves the incoming artifact's already-hashed bundle and writes `.devforgeai/work/<run>/context.json`, which every worker of the run is handed by path. This spec promises no slice phase and ships no slice agent file. |
 | OI-2: provenance conformance at the gate | An `architect` spec that promised story-style re-resolution would over-promise | `10-sequencer-and-contracts.md` section 3.4 now carries full re-resolution, and section 4 makes `qa` and `review` the only story-anchored document skills. `architect`'s gate is the fence gate alone, so nothing re-resolves the PRD's `depends_on` entries when the run opens. `check_prd.py` is the designed replacement and is not wired in; the run relies on `architect_critic` reporting an uncited section instead, which is a model judgement and not a gate. |
-| OI-3: worker tools | A generator either gives every worker the same tools or widens a judge's to include a write | Tools follow the role. A producer carries `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` plus `Edit` and `Write`, which Codex serves as `apply_patch`; every write is denied outside `candidate.root` and outside the phase's fence, and the lease bound at `SubagentStart` is what the dispatcher checks. A judge carries the read set plus a `Write` the dispatcher confines to `.devforgeai/work/<run>/evidence/<agent>/`, which is gitignored, outside the candidate root, and never promoted. `Bash(devforgeai run *)` is granted only where a phase declares run keys, and no `architect` phase does. |
+| OI-3: worker tools | A generator either gives every worker the same tools or widens a judge's to include a write | Tools follow the role. A producer carries `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` plus `Edit` and `Write`, which Codex serves as `apply_patch`; every write is denied outside `candidate.root` and outside the phase's fence, and the lease bound at `SubagentStart` is what the dispatcher checks. A judge carries only the read set, returns its complete bounded report in `findings`, and cannot use `Write`, `Edit` or `apply_patch`; the sequencer persists the validated string to the fixed judge-evidence path. `Bash(devforgeai run *)` is granted only where a phase declares run keys, and no `architect` phase does. |
 | OI-4: no outcome row for `status: fail` with no `next` | A reader assumes a failing critic passes silently | `examples/hooks/devforgeai.py` inserts `"<agent> reported fail"` as a transition problem row, so the phase retries to `max_attempts: 2` and then blocks `REQUIRE_HUMAN`. The `fail at any other phase` row in section 7e is that path. |
 | OI-5: `--yolo` and `--retry` look like resume flags | A user expects the flag to be what picks up where the run stopped, and an author writes a repair route that depends on it | The run does pick up where it stopped, and no flag is what does it. A `needs_user` result blocks the run rather than closing it: it stays `active` with `run.yaml#blocked_at` naming `option_compare`, and plain `devforgeai phase start architect {slug}` resumes it there with `attempts` reset. `--yolo` changes only what the worker reads, and it is the only flag this skill defines; `02-skill-roster.md`'s `--retry` and `--update` are unnecessary under the resume rule, are not implemented, and this spec does not name them as commands. Where a run really is closed by `devforgeai phase fail --reason <text>`, the next invocation opens a fresh run from `option_compare`. |
 | OI-6: the ADR path is under `.devforgeai/` | An earlier draft of this spec had `adr_writer` carry each ADR's text in the receipt because no path admitted it, which left the phase unable to satisfy its `document` oracle | `examples/hooks/policy.py` now carries `.devforgeai/provenance/adr/**` in `PRODUCER_EXCEPTIONS` for `(architect, adr)` and `(amend, adr)`, and `architect`'s fence lists it. `adr_writer` writes `NNNN-<slug>.md` files inside the candidate root; the sequencer validates each against the `adr` template header — required frontmatter, `^ADR-[0-9]{4}$`, the four required sections, forbidden text — and against the filename shape before checkpointing, refuses a number already allocated, and provides no rewind for the path. The files reach the canonical tree only at promotion. Installing an ADR by hand is no longer a step in this spec. |
@@ -842,6 +842,7 @@ Every script is deterministic, non-interactive, prints data to stdout and diagno
 | An earlier draft said promotion is the last thing the run does and that `devforgeai phase next` merges the candidate root | An author compiles a `SKILL.md` that never asks the user, and the run's files land in the canonical checkout without a human decision | Promotion is never automatic. The last passing transition sets `runs.<run>.status: ready_to_promote` and writes a `REQUIRE_HUMAN` handoff whose only forward step is `devforgeai promote <run>`; the compiled `SKILL.md` runs that command only after the user confirms in the session, and that command writes the second handoff block, whose `next` is the section 7e row for the run's outcome. Every run ends in two blocks, not one, and `STALE_BASE`, `DIRTY_TARGET` and `MERGE_CONFLICT` are refusals of `devforgeai promote <run>` that leave the run `ready_to_promote` with its root intact, never refusals of `devforgeai phase next`. **Decision (D7, as amended; `10-sequencer-and-contracts.md` sections 5.4, 6 and 12.4):** the sequencer may not close a run onto the canonical tree on its own. |
 | An earlier draft said a `REQUIRE_HUMAN` block closes the run, so "no flag resumes a closed one" | An author writes a repair route that opens a fresh run, and `devforgeai phase start` refuses it — the blocked run is still `active` — or writes `devforgeai phase fail --reason <text>` into every recovery row and throws away work the run had already checkpointed | A block is not a close. A `needs_user` result and an exhausted attempt budget both leave the run `active` with its lease released, its candidate root and checkpoints on disk, and `run.yaml#blocked_at` naming the phase. `devforgeai phase start` with the same skill and the same argument **resumes** that run at `blocked_at` with `attempts` reset to zero instead of refusing it, so `/architect {slug}` is the whole recovery once the human has acted. Only another skill on the same story needs `devforgeai phase fail --reason <text>` first, and that call is what abandons the root. **Decision (`10-sequencer-and-contracts.md` sections 2, 3, 5.4 and 6):** blocked runs resume; they are not reopened. |
 | An earlier section 7e row said an exhausted attempt budget closes the run and abandons its candidate root | An author promises that nothing survives a block, so a recovery route re-runs every phase from the start and the checkpoints the run had already earned are discarded | An attempt-limit block leaves the run `active` with its lease released and its root and every checkpoint on disk; `run.yaml#blocked_at` names the phase. Only `devforgeai phase fail --reason <text>` abandons the root, and only `devforgeai promote <run>` moves a byte into the canonical tree, so a blocked run has changed nothing canonical either way. **Decision (`10-sequencer-and-contracts.md` section 5.4):** blocked is `active`, not closed. |
+| An earlier draft gave `option_comparer`, `gap_analyzer` and `architect_critic` a `Write` fenced to their own run-scoped evidence directories | Claude Code 2.1.259 was observed refusing a subagent's write of a report-shaped Markdown file before any hook ran, with an undocumented heuristic that may not be relied on in either direction, so a judge that must write a findings file cannot finish its phase | Each judge declares `writes: none` and carries no `Write`, `Edit` or `apply_patch`. It returns its complete bounded report in the receipt's `findings` string — required on `pass` or `fail`, optional on `needs_user` or `could_not_run`, at most 16,384 UTF-8 bytes, refused rather than truncated — and the sequencer writes that string verbatim to `.devforgeai/work/<run>/evidence/<agent>/findings.md` at the identity-bound `SubagentStop` once the receipt validates. The worker chooses neither the path nor the name, does not name it in its own `evidence_refs`, and has no workaround through `findings.json`, `notes.txt` or a shell redirect. A tool call the provider refuses before any hook runs is `could_not_run` with `reason_code: provider_tool_refused`; `hook_fault` stays reserved for a missing worker identity or a malformed receipt, and a failed worktree prerequisite is `prerequisite_missing`. The bounded `findings` body does enter the primary window as part of the subagent's result, exactly as any subagent result does; what stays isolated is the worker's transcript, its file reads, its tool traffic and its intermediate reasoning. **Decision (D13):** judges write nothing; the sequencer persists what they return. |
 
 ## 10. Success criteria and test cases
 
@@ -930,7 +931,7 @@ Quick-mode results are generation feedback only: one enabled run per eval and no
 
 | Kind | Value |
 |------|-------|
-| Tools | SKILL.md: `Read`, `Agent`, and a Bash grammar no wider than the five model-callable operations `devforgeai status \| phase start <skill> <arg> \| phase fail --reason \| validate \| promote <run>`. Document writers (`constitution_writer`, `sourcetree_writer`, `techstack_writer`, `architecture_writer`, `design_writer`, `adr_writer`): `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` plus `Edit` and `Write`, which Codex serves as `apply_patch`, denied outside `candidate.root` and outside the phase's fence. Judges (`option_comparer`, `gap_analyzer`, `architect_critic`): the same read set plus `Write` confined to `.devforgeai/work/<run>/evidence/<agent>/`. No `architect` phase grants a stack command key, so no worker carries `Bash(devforgeai run *)`. |
+| Tools | SKILL.md: `Read`, `Agent`, and a Bash grammar no wider than the five model-callable operations `devforgeai status \| phase start <skill> <arg> \| phase fail --reason \| validate \| promote <run>`. Document writers (`constitution_writer`, `sourcetree_writer`, `techstack_writer`, `architecture_writer`, `design_writer`, `adr_writer`): `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` plus `Edit` and `Write`, which Codex serves as `apply_patch`, denied outside `candidate.root` and outside the phase's fence. Judges (`option_comparer`, `gap_analyzer`, `architect_critic`): the same read set with no `Write`, `Edit` or `apply_patch`; their reports travel in the receipt's bounded `findings` string. No `architect` phase grants a stack command key, so no worker carries `Bash(devforgeai run *)`. |
 | MCP servers | none |
 | Runtime | Python 3.11+ for the three bundled scripts; PyYAML 6+ for frontmatter and `stack.yaml` parsing; `jsonschema` 4+ for `check_stack_section.py`, which validates against `schemas/devforgeai/v1/stack.schema.json` |
 | Project commands | none brokered. No `architect` phase declares a `run_keys` entry, so the run brokers no command and the run file carries `granted_keys: []`. The `techstack` phase writes the `build`, `test`, `lint` and `format` keys other skills later name; it names keys and `argv` inside the section it writes and writes no literal command into `techstack.md`. |
@@ -961,7 +962,7 @@ The generator produces one provider-neutral semantic package and a separate adap
 
 | Target | Install path | Invocation | Subagents | Notes |
 |--------|--------------|------------|-----------|-------|
-| claude | `.claude/skills/architect/` | `/architect` with a slug, and `--yolo` for the choose-and-record path | `.claude/agents/architect-<role>.md`: six document writers with `Edit` and `Write` confined to the candidate root, three judges whose `Write` reaches only their run-scoped evidence directories | Provider-specific frontmatter keys (`argument-hint`, `disable-model-invocation`) are compiled into this target's SKILL.md only. `hooks`, `memory`, `background`, `permissionMode` and Claude's own `isolation` are omitted from every profile. |
+| claude | `.claude/skills/architect/` | `/architect` with a slug, and `--yolo` for the choose-and-record path | `.claude/agents/architect-<role>.md`: six document writers with `Edit` and `Write` confined to the candidate root, and three judges with no write tool whose reports travel in the receipt's bounded `findings` string | Provider-specific frontmatter keys (`argument-hint`, `disable-model-invocation`) are compiled into this target's SKILL.md only. `hooks`, `memory`, `background`, `permissionMode` and Claude's own `isolation` are omitted from every profile. |
 | codex | `.agents/skills/architect/` plus `.codex/agents/` profiles | `$architect` with a slug, and `--yolo` for the choose-and-record path | `.codex/agents/architect-<role>.toml`: the same nine names, with `apply_patch` in place of `Edit` and `Write` | Portable six-field frontmatter only; policy goes in target-side configuration. |
 | both | separate `.claude/skills/architect/` and `.agents/skills/architect/` adapters | as above | as above | Share only provider-neutral resources; validate each adapter independently. |
 
@@ -1021,7 +1022,7 @@ Then the wave-4 battery over this specification:
 python3 docs/design/specs/verify.py --only v1,v2,v4
 ```
 
-For non-Research anatomy skills, DevForgeAI skill-validator additionally checks: all sub-phase kinds present with Gate, Record and Handoff bound to sequencer operations; persona and critic are different files, which for this skill are `option_comparer.md` and `architect_critic.md`; `must_not` present in every agent file; every agent declaring `writes: candidate` or `writes: evidence`, with a `writes: evidence` agent carrying no `Edit` and a `Write` fenced to its run-scoped evidence directory; the SKILL.md Bash grammar is no wider than the five model-callable operations; handoff outcomes cover every status the skill can return, including `could_not_run`.
+For non-Research anatomy skills, DevForgeAI skill-validator additionally checks: all sub-phase kinds present with Gate, Record and Handoff bound to sequencer operations; persona and critic are different files, which for this skill are `option_comparer.md` and `architect_critic.md`; `must_not` present in every agent file; every agent declaring `writes: candidate` or `writes: none`, with a `writes: none` agent carrying no `Write`, `Edit` or `apply_patch` and returning the required bounded `findings` string; the SKILL.md Bash grammar is no wider than the five model-callable operations; handoff outcomes cover every status the skill can return, including `could_not_run`.
 
 ## 15. Provenance
 

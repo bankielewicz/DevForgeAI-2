@@ -52,7 +52,7 @@
     "phase": {
       "type": "string",
       "pattern": "^[a-z][a-z0-9_]*$",
-      "description": "The active phase. Only its declared worker may return a result, and only its run_keys may be brokered. The phase's registry writes mode decides the worker's role and therefore its write surface. A worker header declares that role as the closed enum writes: candidate | evidence | none - candidate for a producer, which writes inside candidate.root under the lease; evidence for a judge, which holds no lease and writes only under .devforgeai/work/<run>/evidence/<agent>/; none for a worker that writes nowhere at all."
+      "description": "The active phase. Only its declared worker may return a result, and only its run_keys may be brokered. The phase's registry writes mode decides the worker's role and therefore its write surface. A worker header declares that role as the closed enum writes: candidate | none - candidate for a producer, which writes inside candidate.root under the lease; none for a judge, which holds no lease, carries no write tool and writes nowhere at all, and returns its evidence in the receipt's findings for the sequencer to persist."
     },
     "attempts": {
       "type": "object",
@@ -332,6 +332,13 @@
         "null"
       ],
       "description": "Root-relative path of the qa or review report that routed a `/dev <story> --fix` run here; null otherwise. Narrows the red oracle's required-fail set (10 section 11, Fix mode)."
+    },
+    "story_sha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "sha256 of the incoming story bytes at phase start (story and story-anchored runs); a resume compares the current story against it and re-gates and re-slices when it differs."
     }
   },
   "allOf": [

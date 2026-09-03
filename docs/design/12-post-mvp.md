@@ -17,6 +17,7 @@ Status: roadmap, 2026-09-02. Every item here was removed from `00`-`09` or the t
 | PM-11 | Clean detached verification worktree for `qa` and `review` | 3 |
 | PM-12 | Automated integration run for overlapping fences and copy-mode `STALE_BASE` | 3 |
 | PM-13 | Pull-request and merge-queue promotion | 4 |
+| PM-14 | Structured evidence broker for unbounded judge findings | 3 |
 
 ---
 
@@ -180,7 +181,7 @@ Rung 4 stays named in `07-purpose-and-enforcement.md` as external and unimplemen
 | Rung served | 3. |
 | Statements moved here | `10:12.2` (the "clean detached verification worktree" clause of the linear-history section). |
 
-Until PM-11 lands, a judge reads the run's own candidate root at the named checkpoint. A specification must not claim its verification ran against a clean tree.
+Until PM-11 lands, a judge reads the run's own candidate root at the named checkpoint and writes nothing into it or anywhere else — it holds no write tool, and its evidence reaches disk as the receipt's `findings`, which the sequencer persists. A specification must not claim its verification ran against a clean tree.
 
 ## PM-12
 
@@ -209,3 +210,17 @@ Until PM-12 lands: `devforgeai phase start` refuses a story whose fence overlaps
 | Statements moved here | none; recorded because the candidate root makes it newly cheap to build, and a specification must not assume it exists. |
 
 Until PM-13 lands, promotion is local: a fast-forward in worktree mode or an exact-byte copy in copy mode, into the user's own checkout, which the user then commits. Pushes, approvals and required checks stay rung 4 and separate from candidate isolation, which is rungs 2 and 3.
+
+## PM-14
+
+**Structured evidence broker for unbounded judge findings**
+
+| | |
+|---|---|
+| What | A framework-provided tool a judge calls to hand the sequencer its evidence in pieces — an append or a put per finding, brokered like `devforgeai run <key>` is — so the evidence lands on disk without passing through the worker's final message. The judge would then return a receipt carrying only the routing summary and a reference, and the size of what it found would stop being a context cost at all. |
+| Why deferred | The current contract is the honest one: a judge holds no write tool, and its `findings` string is returned as the subagent's result and persisted by the sequencer. That string necessarily enters the primary context, because a subagent returns its result to its parent and a hook may validate the final message but cannot suppress it, so today's answer is a 16384-byte cap and a refusal above it rather than a truncation. A broker removes that cost, but it is a new tool surface on both providers, with its own identity binding, its own refusal vocabulary and its own failure modes on a Codex `PreToolUse` that carries no actor. None of that may be written into a contract before it is implemented and proven live on both terminals. |
+| Unblock condition | The tool implemented on both providers, with the judge's call bound to the active run and phase the way `devforgeai run <key>` is bound to the lease, and a live run on each terminal showing evidence larger than the cap reaching disk with no growth in the primary context. Then `findings` becomes optional and the cap moves to the broker. |
+| Rung served | 3. |
+| Statements moved here | none; recorded by `WRITE-MODEL-REVISION.md` D13 item 9 as the successor contract to the `findings` receipt field. |
+
+Until PM-14 lands: a judge returns `findings` in its receipt, at most 16384 UTF-8 bytes, and an oversize `findings` refuses the receipt rather than being truncated. A specification must not describe a judge writing its own evidence file, and must not assume a broker exists.

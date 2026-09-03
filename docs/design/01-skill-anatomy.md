@@ -39,7 +39,7 @@ For a skill governed by this anatomy, run the seven sub-phases below in order. G
 | Parse arguments and flags | Read an artifact, constitution document, or source file |
 | Call the model-callable sequencer operations (below) | Read a template, sealed Research dossier record, or report |
 | Dispatch a worker with file paths, a one-line instruction, and the `devforgeai status` block | Paste file content into a worker prompt |
-| Receive a worker's receipt (bounded, see below) | Reason about the domain, fix a defect, or draft content |
+| Receive a worker's receipt, including a judge's bounded `findings` body (see below) | Reason about the domain, fix a defect, or draft content |
 | Branch on a returned status (`pass`, `fail`, `needs_user`, `could_not_run`) | Retry a worker by re-doing its work itself |
 | Ask the user a question a worker flagged as `needs_user` | Write any file, in the candidate root, under `.devforgeai/`, or anywhere else |
 | Print the handoff the sequencer rendered | Compose the handoff itself, or declare a phase complete |
@@ -56,30 +56,32 @@ Model-callable CLI, closed set. Anything else is hook-only and is denied in the 
 
 `session-start`, `ingest-result`, `phase next`, and the four `candidate` operations (`open`, `checkpoint`, `promote`, `abandon`) are hook-only: they require the `DEVFORGEAI_HOOK_EVENT` environment marker and never appear in a model-facing allowlist. `devforgeai run <key>` is not model-callable from the primary window: it is available to the producer worker that holds the run's lease, for the keys the phase granted, and it executes with cwd = `candidate.root`. The grammar is normative in `10-sequencer-and-contracts.md`.
 
-Write permission is per role, not blanket, and a worker header declares it as `writes: candidate | evidence | none` (`05-subagent-sets.md`). Producers (`candidate`) — red, green, refactor and fix workers, and every document writer — hold Edit and Write (Codex: `apply_patch`) and `Bash(devforgeai run *)` for the keys the phase granted, and every write they make is under `candidate.root`. Judges (`evidence`) — the gate resolver, critics, reviewers, smoke and QA verifiers, analyze and status — hold Read, Grep, Glob, `Bash(devforgeai status)`, and Write in exactly one place: `.devforgeai/work/<run>/evidence/<agent>/`, where the judge's findings file lives and which its receipt names in `evidence_refs`. That directory is run-scoped, gitignored, and never promoted, so a judge cannot change what the run ships. `writes: none` is left for a worker that produces nothing but the receipt. No worker of any class holds a git write, a package manager, a network tool, or a raw stack command.
+Write permission is per role, not blanket, and a worker header declares it as `writes: candidate | none` (`05-subagent-sets.md`). Producers (`candidate`) — red, green, refactor and fix workers, and every document writer — hold Edit and Write (Codex: `apply_patch`) and `Bash(devforgeai run *)` for the keys the phase granted, and every write they make is under `candidate.root`. Judges (`none`) — the gate resolver, critics, reviewers, smoke and QA verifiers, analyze and status — hold Read, Grep, Glob and `Bash(devforgeai status)`, and no write tool at all: no Write, no Edit, no `apply_patch`. A judge creates no file anywhere; it returns its detailed evidence as the receipt's `findings`, and the sequencer persists that string to `.devforgeai/work/<run>/evidence/<agent>/findings.md`, a run-scoped, gitignored path that is never promoted and that the judge neither names nor reaches. So a judge cannot change what the run ships. No worker of any class holds a git write, a package manager, a network tool, or a raw stack command.
 
-Return summary budget. Every worker's final message is exactly one `devforgeai.worker-result/v1` receipt — the paths it claims, never the bytes:
+Return summary budget. Every worker's final message is exactly one `devforgeai.worker-result/v1` receipt — the paths it claims, never the bytes of a file the run produced:
 
 ```json
 {"schema":"devforgeai.worker-result/v1","run":"<run>","skill":"<skill>","phase":"<phase>","agent":"<agent>",
- "status":"pass|fail|needs_user|could_not_run","reason_code":"runner_missing|timeout|network|hook_fault",
+ "status":"pass|fail|needs_user|could_not_run",
+ "reason_code":"runner_missing|timeout|network|hook_fault|provider_tool_refused",
  "candidate":{"id":"<run>","input_checkpoint":"<phase-or-base>"},
  "claimed_paths":["<root-relative path>"],
  "evidence_refs":["<root-relative or .devforgeai/work/<run>/... path>"],
+ "findings":"<judge only: the detailed evidence, as prose>",
  "note":"","issues":[],"next":"<rewind_to>"}
 ```
 
-The schema is normative in `schemas/devforgeai/v1/worker-result.schema.json`. Bounds: `claimed_paths` at most 64, `evidence_refs` at most 16, `issues` at most 10, `note` at most three lines. A non-pass status carries an empty `claimed_paths`; `next` is legal only with `status: fail` and names the registry's `rewind_to`. Rewinding to phase P resets the candidate root to the checkpoint P started from — its predecessor's, or `base` for the first phase — and re-enters P; it does not reset to P's own checkpoint, which is the state P is being rewound out of. An unknown key is refused.
+The schema is normative in `schemas/devforgeai/v1/worker-result.schema.json`. Bounds: `claimed_paths` at most 64, `evidence_refs` at most 16, `issues` at most 10, `note` at most three lines, `findings` at most 16384 UTF-8 bytes. `findings` is required when the phase's worker is a judge and forbidden when it is a producer; it is never truncated, and an oversize one refuses the receipt. The sequencer writes it verbatim to `.devforgeai/work/<run>/evidence/<agent>/findings.md` at ingest, records the path in `<phase>-result.json` and the handoff, and the next phase's worker reads it there. A non-pass status carries an empty `claimed_paths`; `next` is legal only with `status: fail` and names the registry's `rewind_to`. Rewinding to phase P resets the candidate root to the checkpoint P started from — its predecessor's, or `base` for the first phase — and re-enters P; it does not reset to P's own checkpoint, which is the state P is being rewound out of. An unknown key is refused.
 
 At `ingest-result` the sequencer derives `changed[{path, blob_sha256, kind}]` from the candidate's checkpoint diff, refuses the result when `changed` is not a subset of `claimed_paths` or a path falls outside the run's fence, runs the transition oracle inside the candidate root, records the result and the checkpoint, releases the lease, and advances. A worker's claim is never why a phase advances; the diff is.
 
-Status vocabulary, closed: `pass | fail | needs_user | could_not_run`, with `reason_code` in `runner_missing | timeout | network | hook_fault` whenever the status is `could_not_run`. `gate_policy` (`BLOCK | REQUIRE_HUMAN | WARN | OFF`) is a defect-to-action map declared per artifact, never a returned status. Research keeps its own typed set under `framework/skills/research/`.
+Status vocabulary, closed: `pass | fail | needs_user | could_not_run`, with `reason_code` in `runner_missing | timeout | network | hook_fault | provider_tool_refused` whenever the status is `could_not_run`. `gate_policy` (`BLOCK | REQUIRE_HUMAN | WARN | OFF`) is a defect-to-action map declared per artifact, never a returned status. Research keeps its own typed set under `framework/skills/research/`.
 
-The primary window forwards the changed paths and `issues` to the next worker by path and id. It does not open them.
+The primary window forwards the changed paths, the `issues` and the persisted `findings.md` path to the next worker by path and id. It does not open them, and it does not paste a judge's returned `findings` text into the next worker's prompt: that worker reads the file the sequencer wrote.
 
 Enforcement. For anatomy-governed skills, skill-validator rejects a compiled SKILL.md that contains a direct file read of anything except `state.yaml`, an inline prompt longer than a dispatch instruction, an LLM sub-phase without a named worker, or a Bash grammar wider than the model-callable operations above. Research is validated against `framework/skills/research/` instead.
 
-Why this matters. The primary window persists across the whole skill run and across user conversation. Anything read into it stays there. A worker keeps its intermediate work outside the parent context and returns only its receipt, but still consumes provider tokens and its returned receipt consumes parent context.
+Why this matters. The primary window persists across the whole skill run and across user conversation. Anything read into it stays there. A worker keeps its transcript, its file reads, its tool traffic and its reasoning outside the parent context and returns only its receipt — but the receipt itself is returned into that context, and on a judge it carries the bounded `findings` body, because a subagent returns its result to its parent and a hook may validate that final message but cannot suppress it. A producer never returns a file body. So the accurate claim is not that no worker output enters the primary context; it is that no byte a run wrote enters it, and that a judge's prose is capped at 16384 UTF-8 bytes and persisted to a path later readers open instead.
 
 ## The seven sub-phases
 
@@ -91,7 +93,7 @@ Gate, Slice, Record, and Handoff are deterministic sequencer operations, not wor
 | 1 | Slice | sequencer, at `phase start` | the incoming artifact's `context[]` bundle, already excerpted, anchored and hashed by the skill that wrote it | `.devforgeai/work/<run>/context.json`: every entry with its excerpt, anchor, digest and this run's re-resolution verdict. A run whose gate identifies no incoming artifact records the no-op |
 | 2 | Work | workers: skill-owned (one per step) | context bundle, user conversation, sealed Research RUN/Source/Evidence/Claim/manifest references | structured findings (not the final file). May repeat (e.g. plan runs epics, stories, sprints). |
 | 3 | Write | worker: skill-owned writer (`writes: candidate`) | findings + this skill's template | the artifact written into the candidate root; the receipt claims its path |
-| 4 | Review | worker: skill-owned critic (`writes: evidence`) | draft artifact, template, context bundle, sealed Research dossier references | pass, or a list of defects, written to `work/<run>/evidence/<agent>/` and named in `evidence_refs` |
+| 4 | Review | worker: skill-owned critic (`writes: none`) | draft artifact, template, context bundle, sealed Research dossier references | pass, or a list of defects, returned as the receipt's `findings` and persisted by the sequencer to `work/<run>/evidence/<agent>/findings.md` |
 | 5 | Record | sequencer, at `phase next` | receipts from sub-phases 0-4 and the checkpoint diff | updated `state.yaml`, `provenance/log.jsonl` entry, artifact hashes, `.devforgeai/work/<run>/<phase>-result.json` |
 | 6 | Handoff | sequencer, at `phase next` | state and the run's results | `.devforgeai/work/<run>/handoff.json` plus its rendered block |
 
@@ -161,7 +163,7 @@ Slice is sub-phase 1 and it dispatches nothing. The artifact a phase consumes al
 | story run (`dev`) | the story's `context[]`, entry by entry, with each entry's verdict: resolved, `stale-hash` or `unresolvable-source` |
 | story-anchored document run (`review`, `qa`) | the same, from the story the argument names |
 | every other document run | `slice: none` and an empty entry list: the document gate identifies no incoming artifact, so there is no bundle to resolve and each worker reads the paths its own phase names |
-| `init`, `status`, `research` | nothing: no run opens, so no evidence directory exists |
+| `init`, `status`, `research` | nothing: no run opens, so the sequencer creates no evidence directory |
 
 The excerpt is never rewritten and never summarised. An entry whose source moved is carried with its verdict, so the worker reads the row and the detail rather than a silently re-excerpted replacement.
 
@@ -262,13 +264,13 @@ next: "/dev STORY-001 --fix"
 
 ### Evidence home
 
-There is one home for a run's evidence. The sequencer writes every file below except the judge findings under `evidence/<agent>/`:
+There is one home for a run's evidence, and the sequencer writes every file in it:
 
 | Path | Contents |
 |---|---|
 | `.devforgeai/work/<run>/run.yaml` | the run's enforcement: `phase`, `fence`, `test_paths`, `granted_keys`, `lease`, `bounce_count`, and the canonical root path. Gitignored |
 | `.devforgeai/work/<run>/wt/` | the candidate root itself: a git worktree on branch `devforgeai/<run>`, or a copy of the project tree where the project is not a git repository. Producers write here; the sequencer creates, checkpoints, promotes and removes it. Gitignored |
-| `.devforgeai/work/<run>/evidence/<agent>/` | the one place a judge writes: its findings file, named in the receipt's `evidence_refs`. Run-scoped, gitignored, never promoted |
+| `.devforgeai/work/<run>/evidence/<agent>/findings.md` | the judge's detailed evidence, written by the sequencer at ingest from the receipt's `findings`. The judge holds no write tool and never touches this path. Run-scoped, gitignored, never promoted; read by the next phase's worker by path |
 | `.devforgeai/work/<run>/context.json` | the Slice output: the incoming artifact's context bundle as the gate resolved it, written once at `phase start` |
 | `.devforgeai/work/<run>/<phase>-report.md` | the phase's narrative report, rendered from the worker receipt and the checkpoint diff |
 | `.devforgeai/work/<run>/<phase>-result.json` | the accepted `devforgeai.worker-result/v1` plus `session_id`, the `changed[]` set the sequencer derived from the checkpoint diff, the checkpoint ref, and the transition verdict |
@@ -276,7 +278,7 @@ There is one home for a run's evidence. The sequencer writes every file below ex
 | `.devforgeai/provenance/log.jsonl` | one line per skill run |
 | `.devforgeai/sessions/<session_id>.json` | the session evidence file, written once by the hook-only `session-start` operation |
 
-`docs/reports/*` is a rendered view of the same evidence, written by the sequencer at `phase next`. No worker writes into either place: a producer writes only under the candidate root, and a judge only under `work/<run>/evidence/<agent>/`.
+`docs/reports/*` is a rendered view of the same evidence, written by the sequencer at `phase next`. No worker writes into either place: a producer writes only under the candidate root, and a judge writes nowhere at all.
 
 ## Handoff contract
 

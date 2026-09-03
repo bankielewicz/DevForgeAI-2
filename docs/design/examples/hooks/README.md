@@ -72,8 +72,11 @@ owned by it until promotion or abandonment: a git worktree on
 `devforgeai/<run>` when the project is a repository, a tree copy otherwise.
 Producers write there with Edit and Write while they hold the run's write lease,
 which is bound at SubagentStart — the only identity-bearing pre-write event on
-either provider — and released at `ingest-result`. Judges hold no lease and
-write only under `.devforgeai/work/<run>/evidence/<agent>/`. A worker's final
+either provider — and released at `ingest-result`. Judges hold no lease and no
+write tool at all: they return their evidence in the receipt's `findings`
+field (at most 16384 UTF-8 bytes, never truncated), and the sequencer writes
+it verbatim to `.devforgeai/work/<run>/evidence/<agent>/findings.md`, a path
+the worker cannot choose. A worker's final
 message is one `devforgeai.worker-result/v1` receipt naming what it claims to
 have changed; the sequencer derives the real change set from the checkpoint diff,
 refuses anything unclaimed or outside the fence, runs the transition oracle with
@@ -91,6 +94,13 @@ marker naming the run and the canonical path; that marker, not "the nearest
 copy of the project's `.devforgeai/` too.
 
 ## Deliberate limits
+
+The `--fix` option of `devforgeai phase start` records the qa or review report
+that sent the story back as `run.yaml#fix_report` and prints it in the status
+block, and that is all it does: the red oracle still requires every `test_plan`
+row to fail. Narrowing
+the required-fail set to the criteria the report named is designed and
+unimplemented.
 
 The dispatcher trusts the provider's event fields, the sequencer trusts its own
 filesystem, and neither sandboxes anything: the OS sandbox is post-MVP. Copy

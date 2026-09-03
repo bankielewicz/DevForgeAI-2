@@ -20,11 +20,12 @@ It does **not** prove:
 - **compiled-stack support.** `compiled: true` and `commands.build` are in the
   contract and the `csharp` section of `stack.yaml` declares them, but no run
   here executes a build. The compiled path is specified, not exercised.
-- **arbitrary Node-version compatibility.** The demo runs against whatever
-  `node` is on `PATH`. `package.json` declares `engines.node >= 18.19` because
-  that is where `node:test` and the `junit` test reporter became usable
-  together; nothing verifies any other version, and a `node` that is absent
-  reports `COULD_NOT_RUN` naming the missing runner rather than skipping.
+- **arbitrary Node-version compatibility.** The fixture requires Node 24 and
+  the demo runs against the `node` on `PATH`. Its command uses
+  `--test-isolation=none`, because Node 24's default process isolation reduces
+  a failing file to one file-level JUnit case while the in-process form emits
+  the three named cases the red oracle checks. No other major version is
+  claimed; an absent runner reports `COULD_NOT_RUN` rather than skipping.
 - **automatic stack detection.** No one sniffs the tree for a `package.json`.
   The story names its section by hand and the gate pins the whole file by hash.
 
@@ -56,8 +57,8 @@ checkout that carries no `tests/` needs no placeholder.
 ## Nothing is installed, and nothing reaches the network
 
 The `node` section of `.devforgeai/stack.yaml` names only what Node ships with:
-`node --test --test-reporter=junit ...` for the suite and `node --check` for the
-lint. `package_manager: npm` is declared so a reader knows which manifest syntax
+`node --test --test-isolation=none --test-reporter=junit ...` for the suite and
+`node --check` for the lint. `package_manager: npm` is declared so a reader knows which manifest syntax
 the section's `extractors` speak; **no command key names `npm`, `npx`, `yarn`,
 `pnpm`, `curl`, `wget` or `git`**, and the demo asserts that after every run,
 together with the absence of `node_modules/`, `package-lock.json`,

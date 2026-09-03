@@ -4,7 +4,9 @@
 # decisions, sequencer refusals, worker statuses and reason codes, oracle
 # classifications, gate policies, run states and the phase outcome a human sees.
 # Runtime code reads this file; docs cite it. A code not listed here is a bug
-# in the emitter, not a new category. Adding a code is a taxonomy_version bump.
+# in the emitter, not a new category. Adding a code is a taxonomy_version bump
+# once this file is released; while it is a draft the version stays 1 and codes
+# are added in place (provider_tool_refused was added this way, 2026-09-03).
 #
 # Installed to .devforgeai/contracts/error-taxonomy.yaml (see README.md).
 # Validated by schemas/devforgeai/v1/error-taxonomy.schema.json.
@@ -83,7 +85,10 @@ worker_reason_codes:
   runner_missing: {meaning: "a stack command's runner is absent", outcome: COULD_NOT_RUN, gate_policy_key: test_runner_missing}
   timeout:        {meaning: "a granted command exceeded its budget", outcome: INFRA_FAILURE}
   network:        {meaning: "a granted command needed the network and had none", outcome: INFRA_FAILURE}
-  hook_fault:     {meaning: "the sequencer synthesised the result because a hook event lacked identity or the receipt was malformed", outcome: INFRA_FAILURE}
+  hook_fault:     {meaning: "the sequencer synthesised the result because a hook event lacked identity or the receipt was malformed; reserved for those two causes", outcome: INFRA_FAILURE}
+  prerequisite_missing: {meaning: "a project prerequisite for the candidate mode is absent (git HEAD, ignored .devforgeai/work, tracked settings or stack.yaml); sequencer-synthesised at phase start", outcome: COULD_NOT_RUN}
+  checkpoint_fault:     {meaning: "the sequencer could not take or diff a checkpoint; sequencer-synthesised at ingest", outcome: INFRA_FAILURE}
+  provider_tool_refused: {meaning: "the provider refused a tool call before any DevForgeAI hook ran, so the worker could not attempt the work", outcome: INFRA_FAILURE}
 
 # Oracle classifications of a brokered stack command (10 section 3).
 oracle_classifications:
@@ -122,6 +127,6 @@ rollup:
 
 # Divergences from current documents, to close before taxonomy_version 2.
 open_items:
-  - "10 section 3 folds timeout/network/hook_fault into one worker status `could_not_run`; the roll-up above splits them into INFRA_FAILURE while keeping the wire format. Decide whether the receipt gains an explicit `infra_failure` status."
+  - "10 section 3 folds timeout/network/hook_fault/provider_tool_refused into one worker status `could_not_run`; the roll-up above splits them into INFRA_FAILURE while keeping the wire format. Decide whether the receipt gains an explicit `infra_failure` status."
   - "10 section 6 handoff `outcome` uses `pass|BLOCK|REQUIRE_HUMAN|WARN|OFF` (a gate-policy vocabulary); phase_outcomes above is the human-facing set. Decide whether handoff carries both or migrates."
   - "hook_failures.host_fail_open has no emitter; it is inferred at promotion. Decide whether SessionStart should record hook health so its absence is reportable."
