@@ -42,7 +42,7 @@ class ResearchPackagingTests(unittest.TestCase):
         project = temporary_root / "project"
         project.mkdir()
         shutil.copy2(ROOT / "pyproject.toml", project / "pyproject.toml")
-        shutil.copytree(ROOT / "src", project / "src")
+        shutil.copytree(ROOT / "python", project / "python")
         shutil.copytree(ROOT / "schemas", project / "schemas")
 
         distribution_directory = temporary_root / "dist"
@@ -79,8 +79,8 @@ class ResearchPackagingTests(unittest.TestCase):
 
     def test_wheel_contains_every_core_python_module(self) -> None:
         expected = {
-            path.relative_to(ROOT / "src").as_posix()
-            for path in (ROOT / "src" / "devforgeai").rglob("*.py")
+            path.relative_to(ROOT / "python").as_posix()
+            for path in (ROOT / "python" / "devforgeai").rglob("*.py")
             if "__pycache__" not in path.parts
         }
         actual = {

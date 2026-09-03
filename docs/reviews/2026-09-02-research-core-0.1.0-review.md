@@ -3,7 +3,7 @@ id: REV-2026-09-02-research-core-0.1.0
 title: Review of Codex's Research Core 0.1.0 delivery
 date: 2026-09-02
 reviewer: Claude (Fable 5.1) with three Opus review agents (code, tests and schemas, docs and design reconciliation)
-subject: capabilities/research/, src/devforgeai/research/, schemas/research/v1/, tests/research/, src/claude/, src/agents/, docs/design/ edits made 13:44 to 14:12
+subject: src/devforgeai/skills/research/, python/devforgeai/research/, schemas/research/v1/, tests/research/, src/claude/, src/agents/, docs/design/ edits made 13:44 to 14:12
 status: draft, unsealed, uncommitted
 verdict: block
 ---
@@ -24,7 +24,7 @@ Every claim below carries `file:line` evidence. Items marked **reproduced** were
 
 | Codex claim | Verdict | Evidence |
 |---|---|---|
-| 165 Research tests passed | **Verified** | `PYTHONPATH=src python3 -m pytest tests/research -q`: 165 passed, 92 subtests, 65 s, Python 3.12.3, jsonschema 4.26.0. Without `PYTHONPATH=src` collection fails with 7 import errors. |
+| 165 Research tests passed | **Verified** | `PYTHONPATH=python python3 -m pytest tests/research -q`: 165 passed, 92 subtests, 65 s, Python 3.12.3, jsonschema 4.26.0. Without `PYTHONPATH=python` collection fails with 7 import errors. |
 | Original research cache 13/13 manifest entries unchanged | **Verified** | `sha256sum -c MANIFEST.sha256` in `docs/research/spec-driven-ai-framework-skill-roster/`: 13 OK. |
 | Four design provenance-section hashes verified | **Verified, but re-minted** | All four `depends_on` hashes in `examples/SKILL-SPEC-001-dev-tdd.md:11-22` match the current sections under the rule at `01-skill-anatomy.md:171-178`. Three of the four hash values do not appear anywhere in the earlier session transcript, and the example was rewritten at 13:48:56, nine seconds after `02-skill-roster.md`. Codex edited the cited sections and wrote new hashes in the same pass. That is self-attestation, which Codex's own corpus warns against (`docs/research/spec-driven-ai-framework-skill-roster/sources/assurance-and-agent-reliability.md:239-242`). |
 | 21 schemas and nine Python modules parse | **Verified** | All 21 load as Draft 2020-12; all nine modules import. |
@@ -86,8 +86,8 @@ Detailed in section 5. The headline items: Research is exempted from the seven-s
 
 - **Nothing is installed or runnable.** `.claude/`, `.agents/`, `.codex/` are absent; `/research` and `$research` do not exist. This is disclosed. The wrong stopping point is not (section 2, adapters row).
 - **Frontmatter rule contradicts itself.** `04-dual-target.md:122` allows Claude invocation-control frontmatter; `:127` says provider-specific keys go "never into top-level frontmatter". `src/claude/skills/research/SKILL.md:4-5` carries `argument-hint` and `disable-model-invocation` at top level. The Codex adapter follows the rule (`name`, `description` only; policy in `agents/openai.yaml`). Both SKILL.md files are under 500 lines and `name` matches the directory.
-- **Undefined terms in the capability docs.** `E_CONTRACT_CONFLICT` (`capabilities/research/capability.md:13`) appears nowhere else. The five request modes at `workflow.md:8-9` are defined nowhere; `handoff.md:175` relies on EMBEDDED semantics while `workflow.md:13-15` rejects the work-order route that would produce one. `delegation.md:56` says three worker-result schemas; `:46-53` defines four roles.
-- **README run command fails as written.** `python3 -m unittest discover -s tests/research` raises "Start directory is not importable"; `-t .` fixes it. The pytest route needs `PYTHONPATH=src`, which the README omits.
+- **Undefined terms in the capability docs.** `E_CONTRACT_CONFLICT` (`src/devforgeai/skills/research/capability.md:13`) appears nowhere else. The five request modes at `workflow.md:8-9` are defined nowhere; `handoff.md:175` relies on EMBEDDED semantics while `workflow.md:13-15` rejects the work-order route that would produce one. `delegation.md:56` says three worker-result schemas; `:46-53` defines four roles.
+- **README run command fails as written.** `python3 -m unittest discover -s tests/research` raises "Start directory is not importable"; `-t .` fixes it. The pytest route needs `PYTHONPATH=python`, which the README omits.
 
 ## 5. Design-doc edits, file by file
 
@@ -105,7 +105,7 @@ No diff was possible (`.git` is empty). The table is inferred from the 12:54 com
 | `templates/skill-spec.md` | 14:10 | `:151,192,259,269,300,330` add Research-specific attestation and `E_PROVIDER_WORKER_EXECUTION_UNAVAILABLE` text to a generic template. | Scope creep |
 | `examples/SKILL-SPEC-001-dev-tdd.md` | 13:48 | `:504,508,518-519` conformance; four `depends_on` hashes re-minted; `:251` still says `UNSUPPORTED_CAPABILITY`. | Now contradicts 04 |
 
-The Research exemption itself predates today's edits: `04-dual-target.md:138-139` already read "For non-Research anatomy skills" when this session began, and the design digest taken before 13:00 already saw `capabilities/research/` cited as normative in 00, 01 and 02. Today's edits widened it. Whether the user approved exempting one skill from the anatomy the user asked for ("each skill will require its own set of subagents … per phase") is not recorded anywhere in `docs/`.
+The Research exemption itself predates today's edits: `04-dual-target.md:138-139` already read "For non-Research anatomy skills" when this session began, and the design digest taken before 13:00 already saw `src/devforgeai/skills/research/` cited as normative in 00, 01 and 02. Today's edits widened it. Whether the user approved exempting one skill from the anatomy the user asked for ("each skill will require its own set of subagents … per phase") is not recorded anywhere in `docs/`.
 
 ## 6. Codex's decision table, with the reviewer's view
 
@@ -124,7 +124,7 @@ The Research exemption itself predates today's edits: `04-dual-target.md:138-139
 4. Add `jsonschema[format]` or `rfc3339-validator` to dependencies, and a test that a bad `date-time` is rejected.
 5. Reject `global` as a slug or namespace the lock files.
 6. Make lock acquisition not create directories or files for unknown runs.
-7. Fix `tests/research/README.md:80` to state the work-order condition, the real constructor signature, the `RunRef` shape, and the `-t .` and `PYTHONPATH=src` run instructions.
+7. Fix `tests/research/README.md:80` to state the work-order condition, the real constructor signature, the `RunRef` shape, and the `-t .` and `PYTHONPATH=python` run instructions.
 8. Add `__all__` to `core.py`.
 9. Restore consistency between `04-dual-target.md:148-160` and `examples/SKILL-SPEC-001-dev-tdd.md:251` on `UNSUPPORTED_CAPABILITY`, and fix `01-skill-anatomy.md:221` so Research either produces a handoff on failure or is explicitly excused from handoff rule 1.
 10. Record the Research anatomy exemption as a decision with the user's approval, or revert it.
@@ -132,15 +132,15 @@ The Research exemption itself predates today's edits: `04-dual-target.md:138-139
 ## 8. Follow-ups outside this review
 
 - Refresh the line citations in `docs/research/sdd-landscape-comparison-2026-09-02.md`. The docs reviewer checked 24 and found 11 drifted. Wrong now: `01:104-105` (fixed by Codex), `01:174` (now 179), `02:108` (now 109 and the claim inverted), `03:54-58` (now 64), `03:61` (now 56, 62-64), `04:128` (token deleted), `05:75` (now 80), `06:102` (now 121), `00:130-135` (now 136). Two of the report's claims are now false: language detection is now explicitly disclaimed rather than asserted, and the envelope no longer carries `UNSUPPORTED_CAPABILITY` in 04.
-- Move `templates/skill-spec.md`'s Research-specific attestation text into `capabilities/research/` and leave the template generic.
+- Move `templates/skill-spec.md`'s Research-specific attestation text into `src/devforgeai/skills/research/` and leave the template generic.
 - Reproducible wheel builds via `SOURCE_DATE_EPOCH` if wheel hashes are to be quoted as evidence.
 
 ## 9. Reproduction commands
 
 ```bash
 # tests
-PYTHONPATH=src python3 -m pytest tests/research -q
-PYTHONPATH=src python3 -m unittest discover -s tests/research -t .
+PYTHONPATH=python python3 -m pytest tests/research -q
+PYTHONPATH=python python3 -m unittest discover -s tests/research -t .
 
 # provenance hashes (rule from 01-skill-anatomy.md:171-178)
 # section = heading line to next heading of same or higher level, CRLF->LF, join LF, one trailing LF, sha256

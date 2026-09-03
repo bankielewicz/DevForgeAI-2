@@ -169,7 +169,7 @@ Character count: 805 / 1024.
 | existing brainstorm document | markdown, `brainstorm` template | `docs/brainstorm/<slug>.md` | no |
 | archived ideas | markdown, `backlog-ideas` template | `docs/PM/<slug>/backlog-ideas.md` | no |
 | OBSERVED constraint sections | markdown, `observed-constraints` template | `docs/architecture/architecture.md` | no; brownfield only |
-| sealed Research dossier | directory of typed records governed by `capabilities/research/` | `docs/research/<slug>/runs/RUN-NNNNNN/` | no |
+| sealed Research dossier | directory of typed records governed by `src/devforgeai/skills/research/` | `docs/research/<slug>/runs/RUN-NNNNNN/` | no |
 
 ### Outputs
 | Output | Format | Location | Template |

@@ -157,7 +157,7 @@ its files inside the candidate root; the receipt names the paths it claims, neve
 the bytes. The sequencer derives what changed from the checkpoint diff, refuses a
 change that is unclaimed or outside the fence, runs the oracle and advances.
 Research specifications do not use this receipt; they reference the typed
-statuses and records under `capabilities/research/`.
+statuses and records under `src/devforgeai/skills/research/`.
 
 ```yaml
 schema: devforgeai.worker-result/v1
@@ -315,7 +315,7 @@ Highest-value content in most skills. Only real ones. `None known` is a valid en
 
 Two or three evals. Expectations must be specific and checkable from the transcript or output files, not stylistic. Any per-eval change to a shared fixture ships as an overlay directory (`fixtures/<skill>/overlays/eval-<id>/`) that the generator copies over the base fixture; never describe fixture edits in prose, because the generator will write them differently each time and may write something vacuous.
 
-Quick-mode results are generation feedback only: one enabled run per eval and no baseline. They are not runtime conformance evidence, and no section of this spec may gate on such evidence; the deferred contract is `12-post-mvp.md#pm-02`. Research's own release evidence contract lives under `capabilities/research/`, not in this template.
+Quick-mode results are generation feedback only: one enabled run per eval and no baseline. They are not runtime conformance evidence, and no section of this spec may gate on such evidence; the deferred contract is `12-post-mvp.md#pm-02`. Research's own release evidence contract lives under `src/devforgeai/skills/research/`, not in this template.
 
 ## 11. Dependencies and compatibility
 
@@ -389,7 +389,7 @@ ls {{output-dir}}/{{skill-name}}/references/
 grep -rnE 'T[O]DO|T[B]D|\{\{' {{output-dir}}/{{skill-name}} || echo clean
 ```
 
-For non-Research anatomy skills, DevForgeAI skill-validator additionally checks: all sub-phase kinds present with Gate, Slice, Record and Handoff bound to sequencer operations; persona and critic are different files; `must_not` and `writes` present in every agent file and every agent's `tools` matching the role its `writes` declares; the SKILL.md Bash grammar is no wider than the model-callable operations; handoff outcomes cover every status the skill can return, including `could_not_run`. Research is validated against `capabilities/research/` and its typed schemas instead.
+For non-Research anatomy skills, DevForgeAI skill-validator additionally checks: all sub-phase kinds present with Gate, Slice, Record and Handoff bound to sequencer operations; persona and critic are different files; `must_not` and `writes` present in every agent file and every agent's `tools` matching the role its `writes` declares; the SKILL.md Bash grammar is no wider than the model-callable operations; handoff outcomes cover every status the skill can return, including `could_not_run`. Research is validated against `src/devforgeai/skills/research/` and its typed schemas instead.
 
 ## 15. Provenance
 

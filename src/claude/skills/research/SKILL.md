@@ -8,7 +8,7 @@ disable-model-invocation: true
 # Research adapter for Claude Code
 
 This file is a manual, uninstalled thin provider adapter source template. The provider-neutral authority is
-`capabilities/research/capability.md`. Read that entry document and each linked
+`references/capability.md`. Read that entry document and each linked
 contract before executing a persistent run.
 
 Core 0.1.0 is the exact current Core dependency. This manual source template has

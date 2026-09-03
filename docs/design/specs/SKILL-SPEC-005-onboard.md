@@ -173,7 +173,7 @@ Character count: 854 / 1024.
 | run file and context bundle | YAML and JSON written by the sequencer at `devforgeai phase start`: `phase`, `fence`, `granted_keys`, `attempts`, `max_attempts`, `lease`, `gate_policy`, plus the sliced context | `.devforgeai/work/<run>/run.yaml`, `.devforgeai/work/<run>/context.json` | yes |
 | repository manifests and configuration | ecosystem-native (`pyproject.toml`, `requirements*.txt`, `package.json`, `*.csproj`, `Directory.Packages.props`, `go.mod`, `Cargo.toml`, `pom.xml`, `build.gradle*`, `Gemfile`, `composer.json`, `setup.cfg`, `tox.ini`, `Makefile`) | `docs/design/examples/fixtures/onboard/pyproject.toml` | yes |
 | repository source tree | any | `docs/design/examples/fixtures/onboard/ledger/accounts.py` | yes |
-| sealed Research dossier | directory of typed records governed by `capabilities/research/` | `docs/research/ledger/runs/RUN-000001/` | no; without one, no external document may be admitted |
+| sealed Research dossier | directory of typed records governed by `src/devforgeai/skills/research/` | `docs/research/ledger/runs/RUN-000001/` | no; without one, no external document may be admitted |
 | current OBSERVED files | markdown, `observed-constraints` template | `docs/architecture/architecture.md` | no; absent on a first run |
 
 ### Outputs
@@ -550,7 +550,7 @@ Multi-package repositories: write one anchor for the ecosystem the repository ro
 
 This phase owes `docs/architecture/architecture.md` inside the candidate root, whose OBSERVED section carries constraints that came from documents, not from code. Edit the file where it sits under `candidate.root`; every other path in the root stays as the previous checkpoint left it.
 
-Admission rule. A README, ADR, wiki page or CONTRIBUTING file enters the provenance chain only through a sealed Research dossier under `docs/research/<slug>/runs/RUN-NNNNNN/`. Cite RUN plus the applicable Source, Evidence and Claim ids and the sealed manifest digest on the entry's Evidence line; a bare digest is not a provenance reference. Dossier conformance is Research Core's, checked under `capabilities/research/`; this phase cites ids and does not validate the dossier.
+Admission rule. A README, ADR, wiki page or CONTRIBUTING file enters the provenance chain only through a sealed Research dossier under `docs/research/<slug>/runs/RUN-NNNNNN/`. Cite RUN plus the applicable Source, Evidence and Claim ids and the sealed manifest digest on the entry's Evidence line; a bare digest is not a provenance reference. Dossier conformance is Research Core's, checked under `src/devforgeai/skills/research/`; this phase cites ids and does not validate the dossier.
 
 Candidate discovery. Glob for `README*`, `CONTRIBUTING*`, `ADR*`, `docs/**/*.md` and `*.wiki` outside `docs/architecture/` and `docs/research/`. Record every candidate and its admission state in the note, and each rejected candidate as one `issues` row.
 
@@ -716,7 +716,7 @@ Overlays, copied over the base fixture for the eval whose id they name:
 | `overlays/eval-3/docs/research/ledger/runs/RUN-000001/evidence.jsonl` | one line: `EVD-000001` quoting the release-policy sentence, citing `SRC-000001` |
 | `overlays/eval-3/docs/research/ledger/runs/RUN-000001/claims.jsonl` | one line: `CLM-000001`, the claim that releases are approved during a named maintenance window, citing `EVD-000001` |
 
-The dossier overlay carries the identifiers an OBS Evidence line cites. Its record shapes are governed by `capabilities/research/`, and dossier conformance is Research Core's, not onboard's: the eval checks the citation, not the dossier.
+The dossier overlay carries the identifiers an OBS Evidence line cites. Its record shapes are governed by `src/devforgeai/skills/research/`, and dossier conformance is Research Core's, not onboard's: the eval checks the citation, not the dossier.
 
 ### evals/evals.json (used verbatim)
 

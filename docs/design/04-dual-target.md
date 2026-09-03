@@ -177,11 +177,25 @@ hook_fault` whenever the status is `could_not_run`. `gate_policy` (`BLOCK |
 REQUIRE_HUMAN | WARN | OFF`) is a defect-to-action map declared per artifact and
 is never a returned status. A generated adapter for either target returns
 exactly this set and never maps a failure to `pass`. Research keeps its separate
-typed status vocabulary under `capabilities/research/`.
+typed status vocabulary under `src/devforgeai/skills/research/`.
 
 The actor boundary — what each provider's hooks can identify, which direct
 writes are denied, and how a worker result is bound to a real agent identity —
 is stated once in `09-hook-dispatcher.md`. This document does not restate it.
+
+## Source layout in the DevForgeAI repository
+
+Decided 2026-09-03. `src/` holds only what the installer deploys into a target project's operational folders, and each `src/` subfolder mirrors its destination one to one:
+
+| Source | Installed to | Holds |
+|---|---|---|
+| `src/devforgeai/` | `.devforgeai/` | provider-neutral skill sources (`skills/<name>/`: capability, workflow, contracts, templates, later `skill.yaml`), hook dispatcher, sequencer |
+| `src/claude/` | `.claude/` | Claude adapters: `skills/<name>/SKILL.md`, `agents/*.md` |
+| `src/agents/` | `.agents/` | Codex skill adapters: `skills/<name>/SKILL.md`, `agents/openai.yaml` |
+| `src/codex/` | `.codex/` | Codex agent profiles and hooks |
+| `python/devforgeai/` | site-packages via the wheel | the Python package (Research Core, CLI); never copied into a target tree |
+
+The neutral copy of a skill's supporting material lives once, under `src/devforgeai/skills/<name>/`. The installer copies it into each provider adapter's `references/` at install time, flattened to one level as the Agent Skills specification recommends, and `skill-validator` diffs every installed copy against the neutral source. No `references/` folder is hand-maintained under `src/claude/` or `src/agents/`. Adapter `SKILL.md` files cite the skill-relative `references/<file>` path, which is what exists at runtime; design documents and worker prompts cite the neutral `src/devforgeai/skills/<name>/` path.
 
 ## Shared assets
 
@@ -191,7 +205,7 @@ The state schema, the handoff envelope and its renderer, `stack.yaml`, and each 
 
 skill-validator runs after every compile and checks:
 
-1. For non-Research anatomy skills, anatomy compliance: all seven sub-phase kinds present; Gate, Slice, Record and Handoff bound to the sequencer operations that perform them; Work, Write and Review each bound to a named worker; persona and critic separated; Work may repeat. Research is checked against `capabilities/research/` instead.
+1. For non-Research anatomy skills, anatomy compliance: all seven sub-phase kinds present; Gate, Slice, Record and Handoff bound to the sequencer operations that perform them; Work, Write and Review each bound to a named worker; persona and critic separated; Work may repeat. Research is checked against `src/devforgeai/skills/research/` instead.
 2. For non-Research anatomy skills, the primary window contract: compiled SKILL.md reads nothing but `state.yaml`, contains no inline content prompts, dispatches every LLM sub-phase, and exposes a Bash grammar no wider than `devforgeai status | phase start <skill> <arg> | phase fail --reason | validate | promote <run>`. Every worker profile declares `writes: candidate`, `writes: evidence` or `writes: none` and a tool list matching that role. Research uses its uninstalled provider-adapter source contract and deterministic Core contract instead; live provider execution remains unavailable.
 3. Provider best practices for the target, including the six-field portable frontmatter rule and target-side placement of provider-specific keys.
 4. Conformance to the originating spec document (for project-specific skills).

@@ -173,7 +173,7 @@ Column meanings:
 |---|---|---|---|
 | init | none | — | none; the command is a thin wrapper over the deterministic installer, and `devforgeai phase start` refuses it |
 | status | none | — | none; the command is a thin wrapper over `devforgeai status` |
-| research | external | runner `devforgeai-research`; fence `docs/research/<arg>/**` | none here; the Research Core CLI executes it under `capabilities/research/`, and `devforgeai phase start` refuses it (exit 3 when the runner is absent) |
+| research | external | runner `devforgeai-research`; fence `docs/research/<arg>/**` | none here; the Research Core CLI executes it under `src/devforgeai/skills/research/`, and `devforgeai phase start` refuses it (exit 3 when the runner is absent) |
 | onboard | document | `docs/architecture/sourcetree.md`, `docs/architecture/techstack.md`, `docs/architecture/architecture.md`, `.devforgeai/stack.yaml` | 5, below |
 | brainstorm | document | `docs/brainstorm/<arg>.md` | 5 |
 | pm | document | `docs/PM/<arg>/prd.md`, `docs/PM/<arg>/backlog-ideas.md` | 4 |
@@ -526,7 +526,7 @@ The three verdict rows are the whole of what `02-skill-roster.md` calls a "findi
 
 No handoff row is a call. `02-skill-roster.md` used to give `plan` a call to `/analyze`, `skill-generator` a call to `/skill-validate`, `retro` a call to `/amend`, `architect` a loop back to `/brainstorm` and `dev` a call to `/clarify`. None of those can nest: `phase start` refuses while a run is active, and there is no operation that suspends a run. Each is a handoff whose first `next` step is that command, run after the run was promoted or abandoned.
 
-Research is the exception. Its typed handoff contract is `capabilities/research/contracts/handoff.md`; on the successful path Research Core writes it and the framework does not restate it. A Research failure returns a typed error, seals nothing, and the framework handoff is rendered from that error, taking `next` from the error's repair route. The rule that a user is never left asking "what's next?" therefore holds on every path.
+Research is the exception. Its typed handoff contract is `src/devforgeai/skills/research/contracts/handoff.md`; on the successful path Research Core writes it and the framework does not restate it. A Research failure returns a typed error, seals nothing, and the framework handoff is rendered from that error, taking `next` from the error's repair route. The rule that a user is never left asking "what's next?" therefore holds on every path.
 
 ## 7. `stack.yaml`
 

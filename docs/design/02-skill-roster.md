@@ -1,8 +1,8 @@
 # Skill Roster
 
-All skills except Research share the anatomy in `01-skill-anatomy.md`. Research is governed by the normative P0-P9 contract under `capabilities/research/`. This document lists what each skill adds. `05-subagent-sets.md` is authoritative for worker names; the "Extra workers" column below is a strict subset of it.
+All skills except Research share the anatomy in `01-skill-anatomy.md`. Research is governed by the normative P0-P9 contract under `src/devforgeai/skills/research/`. This document lists what each skill adds. `05-subagent-sets.md` is authoritative for worker names; the "Extra workers" column below is a strict subset of it.
 
-Every anatomy-governed non-Research skill owns its templates under `.devforgeai/skills/<name>/templates/`. The template a skill *produces* is the template the next skill *gates on*. Research uses the contracts and typed schemas under `capabilities/research/`.
+Every anatomy-governed non-Research skill owns its templates under `.devforgeai/skills/<name>/templates/`. The template a skill *produces* is the template the next skill *gates on*. Research uses the contracts and typed schemas under `src/devforgeai/skills/research/`.
 
 | Skill | Gates incoming | Produces (templates) |
 |-------|----------------|----------------------|
@@ -56,7 +56,7 @@ Every anatomy-governed non-Research skill owns its templates under `.devforgeai/
 
 ## Handoff decision tables
 
-Every anatomy-governed skill ends in a Handoff. Research produces its typed Handoff only on the successful path defined by `capabilities/research/contracts/handoff.md`; current failures return errors and no canonical failed Handoff or receipt. The table below is the `handoff.outcomes` block each anatomy-governed skill declares and the executable-success or reserved-failure summary for Research. `{x}` placeholders are filled from the applicable canonical state.
+Every anatomy-governed skill ends in a Handoff. Research produces its typed Handoff only on the successful path defined by `src/devforgeai/skills/research/contracts/handoff.md`; current failures return errors and no canonical failed Handoff or receipt. The table below is the `handoff.outcomes` block each anatomy-governed skill declares and the executable-success or reserved-failure summary for Research. `{x}` placeholders are filled from the applicable canonical state.
 
 | Skill | Outcome | Next steps (in order) |
 |-------|---------|-----------------------|
@@ -138,7 +138,7 @@ See `03-brownfield.md`.
 
 ### research
 - Any phase may propose a Research request. In Core 0.1.0, persistence still requires an explicit human invocation and exact request-digest confirmation; parent work orders are rejected before mutation. Implicit selection is advisory-only and writes nothing.
-- The normative P0–P9 workflow, schemas, evidence custody, and handoff gates live under `capabilities/research/`. JSON/JSONL is canonical; Markdown is derived.
+- The normative P0–P9 workflow, schemas, evidence custody, and handoff gates live under `src/devforgeai/skills/research/`. JSON/JSONL is canonical; Markdown is derived.
 - Research defines contracts for read-only discovery, evidence-extraction, contrary-evidence, and fresh-verification workers. Core 0.1.0 does not launch provider workers or validate the illustrative worker-result objects. Research Core remains the sole canonical writer.
 - The canonical Handoff stops at `READY_TO_SEAL`. `COMPLETE` appears only after sealing, registry publication, root-view readback, and receipt construction. Research conclusions remain `PROPOSED` until the requesting phase owner accepts applicability.
 

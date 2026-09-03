@@ -61,7 +61,7 @@ Updated at the end of every wave. Newest entry first. Each entry says what exist
 
 1. Recompute every `depends_on` hash (V3) after the cross-review lands; nothing may edit 00-11 or templates after that without a re-hash.
 2. Delete `docs/design/examples/SKILL-SPEC-001-dev-tdd.md` (absorbed into SKILL-SPEC-001-dev).
-3. Full battery: verify.py V1-V4, V8; conformance; `PYTHONPATH=src python3 -m pytest tests/research -q`.
+3. Full battery: verify.py V1-V4, V8; conformance; `PYTHONPATH=python python3 -m pytest tests/research -q`.
 4. Update this file and memory.
 
 **Open decisions for the owner**
