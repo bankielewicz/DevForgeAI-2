@@ -16,6 +16,22 @@ downgrades `unresolvable-source` and nothing else.
 runs; copy the fixture without `overlays/`, then copy one overlay over it (see
 `overlays/README.md`).
 
+## The Node sibling
+
+`../dev-tdd-node/` is the same story in a different ecosystem: the same three
+acceptance criteria, the same three test names, `commands.source:
+.devforgeai/stack.yaml#node` instead of `#python`, and `node:test` plus
+`node --check` in place of pytest and an `ast.parse` sweep. It carries no
+`overlays/`; the eval prompts are written against this fixture.
+
+This tree is the **control**, and it is unchanged from before the Node fixture
+existed. `demo_sequencer.sh` runs both fixtures in both candidate modes — four
+complete runs — so a Python failure there is a sequencer regression rather than
+a side effect of the conversion. What the pair establishes is exactly this: two
+interpreted ecosystems run through the same stack-selected workflow. It does not
+establish compiled-stack support, arbitrary Node-version compatibility, or
+automatic stack detection; see `../dev-tdd-node/README.md`.
+
 ## What a run does to this tree
 
 Nothing, until the run is promoted. `devforgeai phase start` creates a candidate

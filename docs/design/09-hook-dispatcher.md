@@ -195,7 +195,7 @@ The model-provided `agent` field is not identity, and `claimed_paths` is not evi
 
 ```
 $ python3 docs/design/examples/hooks/run_conformance.py
-198/198 rows hold (124 dispatcher, 35 grammar, 39 backstops)
+206/206 rows hold (124 dispatcher, 35 grammar, 47 backstops)
 ```
 
 The table covers: the documented identity-free tool event; fabricated identity rejection; actor-bound SubagentStart/Stop; valid red and green receipts; wrong agent, outside-fence and forbidden-ORM rejection; canonical aliases; primary-window and nested-agent controls; red-only tests and green-only code; every path in a multi-path change set; delete/move/traversal/framework targets; malformed state, run-file, stack and receipt input; pre-write and post-write package/import checks; explicit Dapper-allowed and Entity-Framework-denied cases; raw stack-command denial; phase keys; brokered-subprocess mutation detection outside `ignore_dirs`; the closed sequencer grammar and the hook-only marker; redirects, pipelines, variables, helper execution and Git mutation; the six read-only Git subcommands admitted inside a candidate root and denied outside it; MCP denial; escalation denial; handoff and recursion-stop behavior; ConfigChange; the `--lenient` flag as the only accepted `phase start` option; each of the ten `devforgeai-research` operations admitted with and without a run active, an eleventh subcommand refused, a redirect around one refused, and the runner refused to a phase worker; the `devforgeai status` block rendering the active run's handoff envelope, rendering the most recent one when no run is active, and printing the run block alone when there is none; and behaviour with no run active.

@@ -10,7 +10,7 @@ forbidden_text: ["TODO", "TBD", "{{", "}}", "<fill in>"]
 # required_sections derived: 11's row records only that this is not a Markdown artifact, so the five
 #   sections are the key groups of the section contract in 10-sequencer-and-contracts.md section 7 -
 #   identity (version, compiled, package_manager, manifests, ignore_dirs), commands, tests (test_glob, test_layout,
-#   runner_probe), packages plus extractors, and forbidden_imports.
+#   junit_dialect, runner_probe), packages plus extractors, and forbidden_imports.
 # render: the instance frontmatter is one section of .devforgeai/stack.yaml, installed under an anchor
 #   name matching id_pattern; a story pins the whole file by hash and names that anchor
 #   (10 section 7). The body is the design-time explanation of each key, not part of the installed YAML.
@@ -42,6 +42,7 @@ commands:
     timeout_s: 600
 test_glob: "{{test glob}}"
 test_layout: "{{placement convention}}"
+junit_dialect: generic     # optional; generic | pytest | node. Which runner writes junit_path
 runner_probe:
   argv: ["{{program}}", "--version"]
   exit_ok: 0
@@ -75,6 +76,8 @@ One entry per key the sequencer may broker: `build`, `test`, `lint`, `format`, w
 ## Tests
 
 `test_glob` says where tests live and `test_layout` names the placement convention a red phase must follow. `runner_probe` is the cheap liveness check whose miss is `runner_missing`, not a phase failure.
+
+`junit_dialect` is optional and defaults to `generic`. It names the runner that writes `junit_path`, because a JUnit file does not say which runner produced it and runners disagree about what its elements mean. `generic` reads the file literally: a `<failure>` is a test that ran and failed an assertion, an `<error>` is a test that never ran. `pytest` and `node` name runners that report both outcomes through the same element, and the oracle normalises them before it classifies: a throw in a test body — a `NameError`, a `ReferenceError` — becomes `COLLECTION_ERROR` instead of counting as the failing assertion a red phase owes, and a test file that registered no test at all becomes `NO_TESTS` instead of the pass node reports for it. Naming the dialect never loosens a gate; leaving it at `generic` for a runner that needs one lets a throw stand in for an assertion.
 
 ## Packages
 

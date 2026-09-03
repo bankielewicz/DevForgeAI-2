@@ -707,6 +707,357 @@ def story_anchored_backstop() -> tuple[bool, str]:
                     + (start_out or run_out)[-200:])
 
 
+# ---------- runner dialect normalisation ----------
+#
+# `junit_dialect` exists because a runner's JUnit is not self-describing. Every
+# case below was written against the live reporter and the XML shape it produces
+# is recorded beside it; each row proves the red gate refuses the shape with the
+# classification that shape deserves, rather than the one a literal read gives.
+# The `generic` reading of each hostile case is noted too, because that reading
+# is what the dialect exists to correct — and what every other row still gets.
+
+PLAN_NAMES = ("test_slugify_basic", "test_slugify_unicode", "test_slugify_empty")
+
+PYTEST_HOSTILE = {
+    # <testsuite tests="0" errors="0" failures="0"/> and no testcase at all.
+    # Generic already reads this as NO_TESTS; the row holds the reading.
+    "empty": "",
+    # <testcase name="tests.test_text"><error message="collection failure">
+    # carrying the SyntaxError traceback. Generic already reads this as
+    # COLLECTION_ERROR, because pytest reports an unparseable module as <error>.
+    "syntax": (
+        "from tinyapp.text import slugify\n"
+        "\n"
+        "def test_slugify_basic(:\n"
+        "    assert slugify('Hello, World!') == 'hello-world'\n"
+    ),
+    # Three <failure message="NameError: name 'slugifyy' is not defined">, one
+    # per test_plan name. Generic reads all three as failed assertions and the
+    # red gate advances: a throw in the test body satisfies nothing, and this is
+    # the case the pytest dialect exists for.
+    "nameerror": "".join(
+        f"def {name}():\n"
+        f"    assert slugifyy('Hello, World!') == 'hello-world'\n"
+        f"\n"
+        for name in PLAN_NAMES
+    ),
+}
+
+NODE_STACK = """node:
+  version: 1
+  compiled: false
+  package_manager: npm
+  manifests: [package.json]
+  junit_dialect: node
+  commands:
+    test:
+      argv:
+        - node
+        - --test
+        - --test-reporter=junit
+        - --test-reporter-destination=.devforgeai/work/junit.xml
+        - "tests/*.test.mjs"
+      cwd: "."
+      junit_path: .devforgeai/work/junit.xml
+      timeout_s: 300
+  test_glob: "tests/*.test.mjs"
+  test_layout: sibling-tests-dir
+  ignore_dirs: [node_modules, dist]
+  runner_probe: {argv: [node, --version], exit_ok: 0}
+  packages: {allow: [], deny: []}
+  extractors: []
+  forbidden_imports: []
+"""
+
+NODE_PLAN_NAMES = ("slugify basic", "slugify unicode", "slugify empty")
+
+NODE_STORY = """---
+id: STORY-001
+epic: EPIC-001
+sprint: sprint-001
+scope: feature
+status: ready
+template: story
+template_version: 3
+requires_skill: dev-tdd
+risk_tier: LOW
+size: S
+gate_policy:
+  unresolved_assumption: BLOCK
+  stale_hash: BLOCK
+  unresolvable_source: BLOCK
+  write_fence_violation: BLOCK
+  test_runner_missing: REQUIRE_HUMAN
+  criterion_without_test: BLOCK
+blocked_by: []
+provenance:
+  - source: docs/plan/tinyapp/epics/EPIC-001.md#story-001
+    hash: sha256:fixture0000000000000000000000000000000000000000000000000000000000
+context:
+  - source: docs/architecture/techstack.md#testing
+    status: INTENDED
+    hash: sha256:fixture0000000000000000000000000000000000000000000000000000000002
+    excerpt: |
+      Tests live under tests/ and are named <module>.test.mjs. The runner is
+      node's own, and it writes JUnit XML the oracle reads.
+write_fence:
+  - tinyapp/text.mjs
+  - tests/text.test.mjs
+commands:
+  source: .devforgeai/stack.yaml#node
+  hash: sha256:fixture0000000000000000000000000000000000000000000000000000000004
+  use: [test]
+test_plan:
+  - criterion: 1
+    file: tests/text.test.mjs
+    name: slugify basic
+  - criterion: 2
+    file: tests/text.test.mjs
+    name: slugify unicode
+  - criterion: 3
+    file: tests/text.test.mjs
+    name: slugify empty
+---
+
+# STORY-001: Add slugify helper
+
+## Goal
+
+Provide `slugify(title)` from `tinyapp/text.mjs` so page titles can become
+URL-safe path segments.
+
+## Context
+
+See the frontmatter context bundle. `tinyapp/text.mjs` exists and exports no
+`slugify`. `tests/text.test.mjs` does not exist.
+
+## Interface
+
+```js
+// tinyapp/text.mjs
+export function slugify(title) {}
+```
+
+Pure function. Never throws for a string argument.
+
+## Acceptance Criteria
+
+1. `slugify("Hello, World!")` returns `"hello-world"`.
+2. `slugify("  Ünïcödé  Tïtle ")` returns `"unicode-title"`.
+3. `slugify("")` and `slugify("!!!")` both return `""`.
+
+## Unchanged Behaviour
+
+None.
+
+## Out of Scope
+
+- Transliteration of non-Latin scripts.
+
+## Verification
+
+- Red: `test` exits non-zero; each `test_plan` name fails on an assertion.
+- Green: `test` exits zero; only `tinyapp/text.mjs` changed since red.
+
+## Clarifications
+
+None.
+"""
+
+NODE_FILES = {
+    "package.json": '{\n  "name": "tinyapp",\n  "private": true,\n  "type": "module"\n}\n',
+    "tinyapp/text.mjs": "export const NAME = 'tinyapp';\n",
+}
+
+# The honest red. Every test_plan name is present and fails on an assertion,
+# so the oracle must reach EXPECTED_TEST_FAILURE. The `typeof` guard is the
+# reason this is an assertion at all: a named import of an export the module
+# does not have is a link-time SyntaxError, which node reports as a file-level
+# failure and the dialect correctly refuses as COLLECTION_ERROR. A namespace
+# import always links, so the missing export is asserted rather than thrown.
+NODE_RED_TEXT = """import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as text from '../tinyapp/text.mjs';
+
+function slug(value) {
+  assert.equal(typeof text.slugify, 'function', 'slugify is not exported');
+  return text.slugify(value);
+}
+
+test('slugify basic', () => {
+  assert.equal(slug('Hello, World!'), 'hello-world');
+});
+
+test('slugify unicode', () => {
+  assert.equal(slug('  Ünïcödé  Tïtle '), 'unicode-title');
+});
+
+test('slugify empty', () => {
+  assert.equal(slug(''), '');
+  assert.equal(slug('!!!'), '');
+});
+"""
+
+NODE_GREEN_TEXT = """export const NAME = 'tinyapp';
+
+export function slugify(title) {
+  const ascii = String(title).normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');
+  return ascii.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+"""
+
+NODE_HOSTILE = {
+    # <testcase name="tests/text.test.mjs"/> with no failure child, exit 0, and
+    # the reporter's own `pass 1` comment: node names the file as a testcase
+    # when the file registered no test, so generic reads an empty red as PASS.
+    "empty": "",
+    # <testcase name="tests/text.test.mjs" failure="test failed"> wrapping
+    # <failure type="testCodeFailure" message="test failed"> whose body is
+    # `code: 'ERR_TEST_FAILURE', failureType: 'testCodeFailure'` and no
+    # assertion marker: a module that would not parse looks like one ordinary
+    # failing test, so generic reads it as TEST_FAILURE.
+    "syntax": """import test from 'node:test';
+import assert from 'node:assert/strict';
+
+test('slugify basic', ( => {
+  assert.equal('a', 'a');
+});
+""",
+    # Three <failure type="testCodeFailure" message="slugifyy is not defined">
+    # under the exact test_plan names, each body carrying
+    # `cause: ReferenceError: slugifyy is not defined` and no assertion marker.
+    # Generic reads three failing assertions on the right names and lets the red
+    # gate through; this is the case the node dialect exists for.
+    "reference": "".join(
+        ["import test from 'node:test';\n",
+         "import assert from 'node:assert/strict';\n\n"]
+        + [f"test({name!r}, () => {{\n"
+           f"  assert.equal(slugifyy('Hello, World!'), 'hello-world');\n"
+           f"}});\n\n"
+           for name in NODE_PLAN_NAMES]
+    ),
+}
+
+
+def make_node_project(label: str) -> Path:
+    """A minimal, dependency-free Node project, written here rather than copied.
+
+    The node rows must not ride on another fixture: the manifest, the module,
+    the story and the stack section the gate and the oracle read all come from
+    this file, so an edit elsewhere cannot quietly disarm them.
+    """
+    root = Path(tempfile.mkdtemp(prefix=f"dfai-{label}-"))
+    for relative, text in NODE_FILES.items():
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+    (root / "tests").mkdir()
+    (root / "STORY-001.md").write_text(NODE_STORY)
+    (root / ".devforgeai").mkdir()
+    (root / ".devforgeai" / "stack.yaml").write_text(NODE_STACK)
+    (root / ".devforgeai" / "state.yaml").write_text("version: 1\nstories: {}\nruns: {}\n")
+    (root / ".gitignore").write_text(GITIGNORE)
+    return root
+
+
+def set_junit_dialect(root: Path, anchor: str, dialect: str) -> None:
+    """Name the runner that writes `junit_path`, as a techstack phase would."""
+    path = root / ".devforgeai" / "stack.yaml"
+    doc = yaml.safe_load(path.read_text())
+    doc[anchor]["junit_dialect"] = dialect
+    path.write_text(yaml.safe_dump(doc, sort_keys=False))
+
+
+def last_oracle(root: Path, run_id: str = "STORY-001") -> str:
+    """The classification the oracle recorded, refused phases included."""
+    return str((record(root, run_id).get("last_oracle") or {}).get("classification") or "")
+
+
+REFUSAL_NEEDLE = {
+    "NO_TESTS": "NO_TESTS: the test command collected nothing",
+    "COLLECTION_ERROR": "COLLECTION_ERROR: tests must fail on an assertion",
+}
+
+
+def pytest_dialect_row(case: str, want: str) -> tuple[bool, str]:
+    """One hostile pytest suite: the red gate must refuse it as `want`."""
+    root = make_project(f"dialect-py-{case}")
+    set_junit_dialect(root, "python", "pytest")
+    start_code, start_out = sequence(root, "phase", "start", "dev", "STORY-001", "--lenient")
+    if start_code:
+        return False, f"gate refused the pytest-dialect project: {start_out[-300:]}"
+    code, output = deliver(root, RED, "red", {"tests/test_text.py": PYTEST_HOSTILE[case]})
+    got = last_oracle(root)
+    passed = all((
+        code == 2,                                  # the phase is refused
+        got == want,                                # for the right reason
+        REFUSAL_NEEDLE[want] in output,             # and says so
+        record(root)["phase"] == "red",             # the run does not advance
+    ))
+    return passed, (f"exit={code} classification={got} want={want} "
+                    f"phase={record(root)['phase']}\n" + output[-260:])
+
+
+def pytest_honest_red_row() -> tuple[bool, str]:
+    """`junit_dialect: pytest` still reads a real failing assertion as red."""
+    root = make_project("dialect-py-honest")
+    set_junit_dialect(root, "python", "pytest")
+    start_code, start_out = sequence(root, "phase", "start", "dev", "STORY-001", "--lenient")
+    if start_code:
+        return False, f"gate refused the pytest-dialect project: {start_out[-300:]}"
+    code, output = deliver(root, RED, "red", {"tests/test_text.py": RED_TEXT})
+    got = last_oracle(root)
+    passed = code == 0 and got == "EXPECTED_TEST_FAILURE" and record(root)["phase"] == "green"
+    return passed, (f"exit={code} classification={got} phase={record(root)['phase']}\n"
+                    + output[-260:])
+
+
+def node_dialect_row(case: str, want: str) -> tuple[bool, str]:
+    """One hostile `node --test` suite: the red gate must refuse it as `want`."""
+    if shutil.which("node") is None:
+        return False, "COULD_NOT_RUN: node is not on PATH, so this row did not run"
+    root = make_node_project(f"dialect-node-{case}")
+    start_code, start_out = sequence(root, "phase", "start", "dev", "STORY-001", "--lenient")
+    if start_code:
+        return False, f"gate refused the node project: {start_out[-300:]}"
+    code, output = deliver(root, RED, "red", {"tests/text.test.mjs": NODE_HOSTILE[case]})
+    got = last_oracle(root)
+    passed = all((
+        code == 2,
+        got == want,
+        REFUSAL_NEEDLE[want] in output,
+        record(root)["phase"] == "red",
+    ))
+    return passed, (f"exit={code} classification={got} want={want} "
+                    f"phase={record(root)['phase']}\n" + output[-260:])
+
+
+def node_honest_row() -> tuple[bool, str]:
+    """A real node red is EXPECTED_TEST_FAILURE and the green after it is PASS."""
+    if shutil.which("node") is None:
+        return False, "COULD_NOT_RUN: node is not on PATH, so this row did not run"
+    root = make_node_project("dialect-node-honest")
+    start_code, start_out = sequence(root, "phase", "start", "dev", "STORY-001", "--lenient")
+    if start_code:
+        return False, f"gate refused the node project: {start_out[-300:]}"
+    red_code, red_out = deliver(root, RED, "red", {"tests/text.test.mjs": NODE_RED_TEXT})
+    red_class, red_phase = last_oracle(root), record(root)["phase"]
+    green_code, green_out = deliver(root, GREEN, "green",
+                                    {"tinyapp/text.mjs": NODE_GREEN_TEXT})
+    green_class, green_phase = last_oracle(root), record(root)["phase"]
+    passed = all((
+        red_code == 0,
+        red_class == "EXPECTED_TEST_FAILURE",
+        red_phase == "green",
+        green_code == 0,
+        green_class == "PASS",
+        green_phase == "refactor",
+    ))
+    return passed, (f"red={red_code}/{red_class}/{red_phase} "
+                    f"green={green_code}/{green_class}/{green_phase}\n"
+                    + (green_out or red_out)[-260:])
+
+
 VALID_STACK = """python:
   version: 1
   compiled: false
@@ -2172,6 +2523,21 @@ BACKSTOPS = [
     ("the receipt route accepts Dapper and rejects Entity Framework", dapper_policy_backstop),
     ("qa and review open a story-anchored document run that can broker `test`",
      story_anchored_backstop),
+    ("junit_dialect: pytest reads an empty suite as NO_TESTS",
+     lambda: pytest_dialect_row("empty", "NO_TESTS")),
+    ("junit_dialect: pytest reads an unparseable test module as COLLECTION_ERROR",
+     lambda: pytest_dialect_row("syntax", "COLLECTION_ERROR")),
+    ("junit_dialect: pytest reads a NameError in the test body as COLLECTION_ERROR",
+     lambda: pytest_dialect_row("nameerror", "COLLECTION_ERROR")),
+    ("junit_dialect: pytest still reads a failing assertion as EXPECTED_TEST_FAILURE",
+     pytest_honest_red_row),
+    ("junit_dialect: node reads an empty test file as NO_TESTS, not the pass node reports",
+     lambda: node_dialect_row("empty", "NO_TESTS")),
+    ("junit_dialect: node reads a JavaScript syntax error as COLLECTION_ERROR",
+     lambda: node_dialect_row("syntax", "COLLECTION_ERROR")),
+    ("junit_dialect: node reads a ReferenceError under a test_plan name as COLLECTION_ERROR",
+     lambda: node_dialect_row("reference", "COLLECTION_ERROR")),
+    ("junit_dialect: node reds on assertions and greens on the same suite", node_honest_row),
     ("stack.yaml is writable only by its two producer phases, and schema-checked",
      stack_writer_backstop),
     ("amend's adr phase writes the registry ADR path, header-checked", adr_accepted_backstop),
