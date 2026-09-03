@@ -9,37 +9,37 @@ author: "DevForgeAI plan skill"
 date: 2026-09-02
 depends_on:
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:a6bbaf9af2d69f7ede18d7c40f242c42edb26d79be964ffec3f386d6347014c2
+    hash: sha256:5afb88c46aa635c961564af8e58c799a44f387c6bd877eeac2ec7568f73aba7e
     excerpt: "For an anatomy-governed skill, the primary window (provider entry adapter + skill orchestration) does light, trivial work only. It dispatches workers and calls the sequencer. It never writes state, never advances a phase, and never decides that a phase passed."
   - source: docs/design/01-skill-anatomy.md#handoff-contract
     hash: sha256:dc50836dc15a928b0c4758ef3a671c6f78d5c7db7ea207c923b917d89faa9e96
     excerpt: "Every anatomy-governed skill run ends with a handoff. The sequencer writes `.devforgeai/work/<run>/handoff.json` at `phase next` and at `phase fail`; the block below is that file's rendering, and it is the only handoff the primary window prints."
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:511733ee35ca74fd5a5c0b59f225d7d975788e7d43d939f44c23b7aa8460cff0
+    hash: sha256:7c1d67f1154e49247e5dc178fcc1512bdbd53af378c360aeafe69bffed1136ab
     excerpt: "| review | 4 | `report` | `review_writer` | docs | 2 | — | document | — |"
   - source: docs/design/10-sequencer-and-contracts.md#3-4-re-resolving-sources-and-the-one-downgrade
     hash: sha256:722dadc1737749e30d244f222aaa1d8b845bc93f4a573b16f662719e58b49bcd
     excerpt: "The story gate re-resolves every `provenance[]` and `context[]` entry as well as `commands`."
   - source: docs/design/10-sequencer-and-contracts.md#5-2-validation-order
-    hash: sha256:9f1bf77b7e84302ff6f3f20260228d57390cc97ab8e8d3f68f52c3ff2658aab8
+    hash: sha256:9cf7115cdfa637023edc22cbdf5f64c106b1eba340598c8dc97b68361cb76b0f
     excerpt: "when the phase is report-producing (`review`/`report`, `qa`/`report`, `skill-validator`/`report`), `evidence_refs` names exactly one report inside the fence, and that report's frontmatter carries a `verdict` in `pass`, `findings`, `fail`."
   - source: docs/design/10-sequencer-and-contracts.md#5-4-transition-oracles
-    hash: sha256:ffa41b5d270dc260e28fa9f6bdbc855069a6e922d1148c74b25860dba63484dc
+    hash: sha256:076840ec9db03155bc9edcceb587e2aa1ca8bf3849e7a8b742f788d1a3b2315f
     excerpt: "the phase declared `writes: docs` and `changed[]` is non-empty, unless it is marked conditional, in which case an empty change set needs a non-empty `note`; every changed path exists in the root with the bytes the checkpoint will hold"
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:bca72c10668178e0f4da43e03aaafbf24d2a57ec12f71a16b078880dd496677a
+    hash: sha256:3c4c95bbd73b5499e5569e650f84eea84cb68404c0909f5f1819c0f3a5c7b3d4
     excerpt: "| `review`, promoted, `verdict: findings` or `fail` | `/dev <arg> --fix` |"
   - source: docs/design/11-artifact-registry.md#1-template-registry
     hash: sha256:fabb8d2f142dcde1a31bc53768f8a46d01cac3ea4a7f6b73db22479cc89b5553
     excerpt: "`review-report` | `.devforgeai/skills/review/templates/review-report.md` | 1 | `^FIND-[0-9]{3}$` | story, template, template_version, status, verdict, depends_on | Compliance, Security, Style, Findings"
   - source: docs/design/11-artifact-registry.md#2-artifact-path-patterns
-    hash: sha256:2d2e97afff50edf6b35bf674b1de217c684d5091361e5f1deae12de52b95fb51
+    hash: sha256:858455b885ac6c1ddbe427a433ba715f7266d08b90e105135172877e29ea0ecc
     excerpt: "For a document run the run id is `<skill>-<arg>`, so the rendered view of `review`'s `report` phase is `docs/reports/review-review-STORY-001-report.md`."
   - source: docs/design/02-skill-roster.md#handoff-decision-tables
     hash: sha256:1dac784b4670cc7559f323011dfe304dfe8c0baf349063162f90d76d902c5d3c
     excerpt: "| review | pass (`verdict: pass`) | `/qa {story}` |"
   - source: docs/design/05-subagent-sets.md#sets-per-skill
-    hash: sha256:9e12f3beb236a025c18d40e741c09ba675bd71d2d87f56e2b205c7556b944bf9
+    hash: sha256:f2957217c9af147e4a7ea03749cbe6efda266bd56d403f39aa25c9a655872609
     excerpt: "review | compliance-checker, security-checker, style-checker, review-writer"
   - source: docs/design/08-story-specification.md#what-a-story-must-carry-and-why
     hash: sha256:c8c466567a5e85ebcd61de29320f8c72f581f99a9b6e8d7dbd98e80f04861fcb
@@ -52,9 +52,9 @@ A stranger with no conversation history must be able to build this skill from th
 
 `review` opens a story-anchored document run. Its argument is a story id, the same story gate that `dev` runs re-runs here, and the story's `commands`, `test_plan` and `gate_policy` map are copied into the enforcement block. Its fence is the report path, so its workers cannot touch code.
 
-The run gets its own candidate root, created by the sequencer at `devforgeai phase start` from canonical HEAD, exactly as every other run does. It does not attach to the story's `dev` root. The order per story is `dev` → `devforgeai promote <run>` → `review` → `qa`, and `STORY_IN_FLIGHT` enforces it: `devforgeai phase start review <story>` is refused while that story's `dev` run is `active` or `ready_to_promote`. So by the time this run opens, the story's code is in the canonical tree, and the fresh root holds it at the `base` checkpoint. The three inspection workers read that checkpoint and change nothing in it; each writes its findings file into its own run-scoped scratch at `.devforgeai/work/<run>/evidence/<agent>/`, which is gitignored and never promoted. `review_writer` is the run's one producer: it writes the report inside the root, under the run's fence, with `Edit` and `Write`, and the report reaches the canonical checkout only when the user runs `devforgeai promote <run>`. Judging promoted code in a clean root is the MVP form of the clean verification worktree; the detached read-only variant that decision D8 moves into `12-post-mvp.md` stays deferred.
+The run gets its own candidate root, created by the sequencer at `devforgeai phase start` from canonical HEAD, exactly as every other run does. It does not attach to the story's `dev` root. The order per story is `dev` → `devforgeai promote <run>` → `review` → `qa`, and `STORY_IN_FLIGHT` enforces it: `devforgeai phase start review <story>` is refused while that story's `dev` run is `active` or `ready_to_promote`. So by the time this run opens, the story's code is in the canonical tree, and the fresh root holds it at the `base` checkpoint. The three inspection workers read that checkpoint and change nothing anywhere: each declares `writes: none`, carries no write tool, and returns its detailed evidence in the receipt's `findings` string, which the sequencer persists verbatim to `.devforgeai/work/<run>/evidence/<agent>/findings.md` — a run-scoped path the worker cannot choose, gitignored and never promoted — where `review_writer` reads it. `review_writer` is the run's one producer: it writes the report inside the root, under the run's fence, with `Edit` and `Write`, and the report reaches the canonical checkout only when the user runs `devforgeai promote <run>`. Judging promoted code in a clean root is the MVP form of the clean verification worktree; the detached read-only variant that decision D8 moves into `12-post-mvp.md` stays deferred.
 
-Two `writes` vocabularies meet here and mean different things. The registry phase's mode — `none` for the three inspections, `docs` for the report — says what a phase may change inside the candidate root. The worker header's `writes` — `candidate`, `evidence` or `none` — says where that agent's tools may write at all. An inspection worker is `writes: none` against the root and `writes: evidence` in its header, because its findings file lives outside the root.
+Two `writes` vocabularies meet here and mean different things. The registry phase's mode — `none` for the three inspections, `docs` for the report — says what a phase may change inside the candidate root. The worker header's `writes` — `candidate` or `none` — says whether that agent is given a write tool at all. An inspection worker is `writes: none` in both vocabularies: it changes nothing inside the root, and it carries no `Write`, `Edit` or `apply_patch` anywhere. Its evidence reaches disk only through the `findings` string the sequencer persists for it.
 
 ## 0. Generator instructions
 
@@ -103,14 +103,14 @@ Follow its section 0 exactly. Output directory: ./out. Eval mode: quick.
 | R1 | explicit | Take one story id and produce `docs/reports/review-<story>.md` against the `review-report` template. Source: `11-artifact-registry.md` section 1 and section 2. |
 | R2 | explicit | Judge compliance, security and style in three separate phases, each dispatching one worker in its own context window. Source: `10-sequencer-and-contracts.md` section 4 registry. |
 | R3 | explicit | Run before `qa`, so `qa` tests reviewed code. Source: `02-skill-roster.md` per-skill detail for review. |
-| R4 | implicit | Change no code: the three inspection workers change nothing in the candidate root and write only into their own evidence scratch, the run's fence is the report path only, and a change anywhere else in the candidate root fails the phase at ingest. Source: write-model decisions D1 and D4. |
+| R4 | implicit | Change no code: the three inspection workers write nothing at all, the run's fence is the report path only, and a change anywhere else in the candidate root fails the phase at ingest. Source: write-model decisions D4 and D13. |
 | R5 | implicit | Re-gate the story on entry rather than trusting that `dev` gated it: the constitution may have changed since. Source: `01-skill-anatomy.md` gate section. |
 | R6 | implicit | Every finding carries an id matching `^FIND-[0-9]{3}$` and cites the file, the line range and the constitution or techstack anchor it violates, so `dev` can act on it without re-deriving it. Source: `11-artifact-registry.md` section 1 id pattern. |
 | R7 | discovered | The report's `verdict` field, not the worker `status`, carries the judgement. A worker returns `pass` when it completed its inspection, whatever it found; the phase fails only when the worker could not do its job. Source: `10-sequencer-and-contracts.md` section 3.1, which defines status as a worker outcome and never as a quality grade. |
 | R8 | discovered | No phase of `review` grants a stack command key, so this skill runs nothing and its verdicts rest on the evidence `dev` recorded plus the promoted code at this run's own `base` checkpoint. Source: `10-sequencer-and-contracts.md` section 4, review rows, run keys column, and write-model decision D8a. |
 | R9 | discovered | The report is written in the candidate root and reaches the canonical checkout only when the user runs `devforgeai promote <run>` on a run the last passing transition marked `ready_to_promote`; that command fast-forwards under the sequencer's lock and is refused with `STALE_BASE` or `DIRTY_TARGET` rather than merging. Promotion is never automatic and is never part of Handoff. Source: write-model decisions D2 and D7 as amended. |
 | R10 | discovered | `review_writer` holds the run's lease while it writes; the three inspection workers hold none and may read the checkpoint concurrently. Source: write-model decisions D3 and D6. |
-| R11 | discovered | Each inspection worker records its findings as a file under `.devforgeai/work/<run>/evidence/<agent>/` and names it in the receipt's `evidence_refs`; `issues[]` stays the bounded summary `review_writer` and the handoff quote. That scratch is gitignored, is outside the candidate root and the fence, and is never promoted. Source: write-model decisions D1, D6 and D8a as amended. |
+| R11 | discovered | Each inspection worker writes nothing. It returns its detailed evidence in the receipt's `findings` string, at most 16,384 UTF-8 bytes, and the sequencer persists that string verbatim to `.devforgeai/work/<run>/evidence/<agent>/findings.md` at the identity-bound `SubagentStop`; `issues[]` stays the bounded routing summary `review_writer` and the handoff quote. The worker chooses neither the path nor the name, and the persisted file is gitignored, outside the candidate root and the fence, and never promoted; `review_writer` reads it by path. Source: write-model decision D13. |
 | R12 | discovered | The run opens its own candidate root from canonical HEAD and never attaches to the story's `dev` root; `STORY_IN_FLIGHT` refuses `devforgeai phase start review <story>` while that story's `dev` run is `active` or `ready_to_promote`, so this skill judges promoted code. A finding that needs a code change routes to a new `/dev {story} --fix` run, never to an edit in this run's root. Source: write-model decision D12. |
 
 ## 3. Description
@@ -253,14 +253,21 @@ skill: "review"
 phase: "compliance | security | style | report"
 agent: "compliance_checker | security_checker | style_checker | review_writer"
 status: pass | fail | needs_user | could_not_run
-reason_code: runner_missing | timeout | network | hook_fault   # required only when status is could_not_run
+reason_code: runner_missing | timeout | network | hook_fault | provider_tool_refused | prerequisite_missing | checkpoint_fault   # required only when status is could_not_run
 candidate: {id: "review-STORY-001", input_checkpoint: "base | compliance | security | style"}
 claimed_paths: ["docs/reports/review-STORY-001.md"]   # report phase only; empty everywhere else
 evidence_refs: [".devforgeai/work/review-STORY-001/compliance-report.md"]   # at most 16
 note: "at most three lines"
 issues: [{id, kind, text}]              # at most 10
+findings: "the inspection worker's detailed evidence"  # judges only, at most 16384 UTF-8 bytes: required on pass or fail, optional on needs_user or could_not_run
 next: ""                                # refused: no review phase declares rewind_to
 ```
+
+The `reason_code` set separates infrastructure failures that look alike from the primary window. `provider_tool_refused` is the provider declining a tool call before any DevForgeAI hook ran — the case that made this specification's inspection workers `writes: none`. `prerequisite_missing` is a worktree-mode prerequisite the `SessionStart` self-test found absent. `checkpoint_fault` is a checkpoint the sequencer could not create, read or reset. `hook_fault` stays reserved for a missing worker identity on the stop event or a malformed receipt. All of them roll up to `INFRA_FAILURE`.
+
+A judging phase returns `findings` and writes nothing. `findings` is required when a judge returns `pass` or `fail`, because those are the statuses whose working `review_writer` reads, and optional when it returns `needs_user` or `could_not_run`; the same 16,384-byte bound applies either way. `review_writer` never carries it on any status. At the identity-bound `SubagentStop`, after the receipt validates, the sequencer writes the decoded string verbatim to `.devforgeai/work/<run>/evidence/<agent>/findings.md` — a fixed path the worker cannot choose or name — and `review_writer`, the handoff and `<phase>-result.json` reach it by that path. That is persistence of a returned result, not a merge into the tree. A `findings` string over 16,384 UTF-8 bytes is refused like any other receipt defect and is never truncated; a `findings` key on `review_writer`'s receipt is refused as an unknown key would be.
+
+The `findings` body reaches the primary window as part of the subagent's result, exactly as any subagent result does: a hook can validate a final message but cannot suppress it. What stays isolated is the worker's transcript, its file reads, its tool traffic and its intermediate reasoning. The receipt still carries no report body and no code.
 
 `gate_policy` (`BLOCK | REQUIRE_HUMAN | WARN | OFF`) is a defect-to-action map declared in the consumed story, never a status returned here. An unknown key is refused. The report's own frontmatter carries `verdict`, and the sequencer reads it from the file `evidence_refs` names: it selects the handoff row and therefore `next`, while the run's `status` and the handoff's `outcome` stay `pass`, because reporting a defect is a passing run.
 
@@ -309,9 +316,9 @@ One row per registry phase, in phase order. `<run>` is `review-<story>`, the `<s
 
 | phase | worker | deterministic gate check | gate_policy | evidence file | transition oracle |
 |---|---|---|---|---|---|
-| `compliance` | `compliance_checker` | document fence gate: `docs/reports/review-<story>.md` is declared, repository-relative, free of `..`, and not sequencer-owned; no run that is `active` or `ready_to_promote` names this story (`STORY_IN_FLIGHT`), which is what makes the story's `dev` work promoted before this run opens; story gate, because the skill is story-anchored: template v3, `status: ready`, no `ASSUMPTION:` before `## Clarifications`, `blocked_by` chain done, every `provenance[]` and `context[]` entry re-resolved to its recorded digest, `write_fence`, `test_plan` and `commands` present, `commands.hash` equal to the current `stack.yaml` digest, the anchored section satisfying the `stack.yaml` contract; at ingest, `writes: none` against the root requires an empty `claimed_paths` and a candidate root unchanged since the `base` checkpoint the run opened at, while the worker's own write under `.devforgeai/work/review-<story>/evidence/compliance_checker/` is admitted and is not part of `changed` | the story's map, copied into the enforcement block: `unresolved_assumption: BLOCK`, `stale_hash: BLOCK`, `unresolvable_source: BLOCK` (downgraded to a recorded warning only by `--lenient` on a story outside `docs/plan/`, or by `WARN`/`OFF` on a `scope: hotfix` story), `write_fence_violation: BLOCK` | `.devforgeai/work/review-<story>/compliance-result.json`, `.devforgeai/work/review-<story>/compliance-report.md` | `report_only`: no file outside the fence changed since the gate snapshot and the whole-tree package and import policy holds |
-| `security` | `security_checker` | `writes: none` against the root: `claimed_paths` is empty and nothing changed in the root; the worker holds no lease, so a write tool call inside the root is denied at `PreToolUse`, while its own scratch at `.devforgeai/work/review-<story>/evidence/security_checker/` is admitted; the receipt's `agent` resolves to `security_checker` and matches the stop event's `agent_type` | `write_fence_violation: BLOCK` | `.devforgeai/work/review-<story>/security-result.json`, `.devforgeai/work/review-<story>/security-report.md` | `report_only`: as `compliance` |
-| `style` | `style_checker` | as `security`, with its own scratch at `.devforgeai/work/review-<story>/evidence/style_checker/`; the phase grants no command key, so `devforgeai run` is refused for this worker on the key as well as on the lease | `write_fence_violation: BLOCK` | `.devforgeai/work/review-<story>/style-result.json`, `.devforgeai/work/review-<story>/style-report.md` | `report_only`: as `compliance` |
+| `compliance` | `compliance_checker` | document fence gate: `docs/reports/review-<story>.md` is declared, repository-relative, free of `..`, and not sequencer-owned; no run that is `active` or `ready_to_promote` names this story (`STORY_IN_FLIGHT`), which is what makes the story's `dev` work promoted before this run opens; story gate, because the skill is story-anchored: template v3, `status: ready`, no `ASSUMPTION:` before `## Clarifications`, `blocked_by` chain done, every `provenance[]` and `context[]` entry re-resolved to its recorded digest, `write_fence`, `test_plan` and `commands` present, `commands.hash` equal to the current `stack.yaml` digest, the anchored section satisfying the `stack.yaml` contract; at ingest, `writes: none` requires an empty `claimed_paths` and a candidate root unchanged since the `base` checkpoint the run opened at, which the worker cannot violate because it carries no write tool; its receipt carries a `findings` string — required on `pass` or `fail`, optional on `needs_user` or `could_not_run` — which the sequencer persists to `.devforgeai/work/review-<story>/evidence/compliance_checker/findings.md` after the receipt validates | the story's map, copied into the enforcement block: `unresolved_assumption: BLOCK`, `stale_hash: BLOCK`, `unresolvable_source: BLOCK` (downgraded to a recorded warning only by `--lenient` on a story outside `docs/plan/`, or by `WARN`/`OFF` on a `scope: hotfix` story), `write_fence_violation: BLOCK` | `.devforgeai/work/review-<story>/compliance-result.json`, `.devforgeai/work/review-<story>/compliance-report.md` | `report_only`: no file outside the fence changed since the gate snapshot and the whole-tree package and import policy holds |
+| `security` | `security_checker` | `writes: none`: the worker carries no write tool at all, `claimed_paths` is empty and nothing changed in the root; its `findings` string is persisted by the sequencer to `.devforgeai/work/review-<story>/evidence/security_checker/findings.md`; the receipt's `agent` resolves to `security_checker` and matches the stop event's `agent_type` | `write_fence_violation: BLOCK` | `.devforgeai/work/review-<story>/security-result.json`, `.devforgeai/work/review-<story>/security-report.md` | `report_only`: as `compliance` |
+| `style` | `style_checker` | as `security`, with its `findings` persisted to `.devforgeai/work/review-<story>/evidence/style_checker/findings.md`; the phase grants no command key, so `devforgeai run` is refused for this worker on the key as well as on the lease | `write_fence_violation: BLOCK` | `.devforgeai/work/review-<story>/style-result.json`, `.devforgeai/work/review-<story>/style-report.md` | `report_only`: as `compliance` |
 | `report` | `review_writer` | `writes: docs`: the lease named in the run file is the dispatched agent's (`LEASE_HELD`), and `changed`, derived from the checkpoint diff, is a subset of `claimed_paths` (`UNCLAIMED_CHANGE`) and holds nothing but the run's fence path, `docs/reports/review-<story>.md`; the whole-tree package and import policy scan over the root finds no violation | `write_fence_violation: BLOCK` | `.devforgeai/work/review-<story>/report-result.json`, `.devforgeai/work/review-<story>/report-report.md`, then `.devforgeai/work/review-<story>/handoff.json` | `document`: the phase produced at least one file and every declared output with non-null content exists on disk. On pass this is the last phase: the run is marked `ready_to_promote`, enforcement is cleared, and the first handoff block names `devforgeai promote <run>`; the second block is written by that command once the user asks for it |
 
 Attempt budgets are 2 for every phase. No phase declares `rewind_to`, so a `next` value in any receipt is refused; a failure retries the same phase and then closes the run `REQUIRE_HUMAN`. No phase grants a stack command key, so `review` runs no build, test, lint or format command at any transition, and the three inspection workers carry no `devforgeai run` surface at all.
@@ -326,21 +333,21 @@ One subsection per registry phase. Each becomes `references/<phase>.md` verbatim
 
 #### references/compliance.md
 
-The `compliance` phase asks one question: does the change honour the excerpts the story carried. You judge; you change nothing in the candidate root, and the one file you write is your findings file at `.devforgeai/work/review-<story>/evidence/compliance_checker/findings.md`, which you name in the receipt's `evidence_refs`.
+The `compliance` phase asks one question: does the change honour the excerpts the story carried. You judge and you write nothing: you have no `Write`, no `Edit` and no `apply_patch`, and the candidate root is byte-identical when you finish. Your detailed evidence goes in the receipt's `findings` string, capped at 16,384 UTF-8 bytes and refused rather than truncated if it exceeds that, and the sequencer persists it for you at `.devforgeai/work/review-<story>/evidence/compliance_checker/findings.md` once the receipt validates. Do not try to record it under another filename, as JSON, or through a shell redirect: a judge that is refused a write has no write to make.
 
 - The story's `context[]` entries are the standard, and they are verbatim slices with an anchor and a digest that the gate re-resolved on entry. Judge against the excerpt, not against a remembered rule and not against the whole constitution: an excerpt that binds is marked `status: INTENDED`, and one marked `OBSERVED` is advisory, describing what the code already does rather than what it must do.
 - The subject is the story's `write_fence` paths at the `base` checkpoint of this run's own candidate root, which holds the story's code as its promoted `dev` run left it in the canonical tree. Read them there. Where `dev` ran, `.devforgeai/work/<story>/green-report.md` and `refactor-report.md` list what each phase changed, which is the fastest way to see the change rather than the whole file.
 - Check the story's `## Interface`, `## Out of Scope` and `## Unchanged Behaviour` sections against the code at that `base` checkpoint: behaviour the story excluded but the code added is a compliance finding, not a style one, because the story is the authority the change was authorised by.
-- Record every excerpt you checked in the findings file, including the ones the change honours. A review that lists only defects cannot be distinguished later from a review that stopped early, and `issues` is bounded, so the full list belongs in the file and the defects belong in `issues`.
+- Record every excerpt you checked in `findings`, including the ones the change honours. A review that lists only defects cannot be distinguished later from a review that stopped early, and `issues` is bounded at ten rows, so the full list belongs in `findings` and the defects belong in `issues`.
 - One finding per defect, each carrying the path with a line range and the anchor of the excerpt it breaks. A finding with no anchor cannot be acted on by `dev` without re-deriving the whole judgement.
 - Return `pass` when the inspection completed, whatever it found, with an empty `claimed_paths`. Return `fail` only when the inspection could not be completed — a fence path that does not exist at the checkpoint, or a `context[]` excerpt that is empty. Return `needs_user` when two excerpts contradict each other, because that is a decision for the constitution's owner and `needs_user` closes the run on the first ask rather than retrying.
 
 #### references/security.md
 
-The `security` phase inspects the change for the classes a story cannot be assumed to have considered. You judge; you change nothing in the candidate root, and the one file you write is your findings file at `.devforgeai/work/review-<story>/evidence/security_checker/findings.md`, which you name in the receipt's `evidence_refs`.
+The `security` phase inspects the change for the classes a story cannot be assumed to have considered. You judge and you write nothing: you have no `Write`, no `Edit` and no `apply_patch`, and the candidate root is byte-identical when you finish. Your detailed evidence goes in the receipt's `findings` string, capped at 16,384 UTF-8 bytes and refused rather than truncated if it exceeds that, and the sequencer persists it for you at `.devforgeai/work/review-<story>/evidence/security_checker/findings.md` once the receipt validates. Do not try to record it under another filename, as JSON, or through a shell redirect: a judge that is refused a write has no write to make.
 
-- Cover five classes and say so explicitly for each in the findings file, even when the class is not present in the change: input handling and validation, secret and credential handling, authorisation and access decisions, injection surface (query construction, command construction, deserialisation, path construction), and error and log disclosure.
-- Scope is the change plus what it calls. A pre-existing weakness the story did not touch is recorded in the findings file as context, not raised as a finding against this story, because a finding routes to `/dev {story} --fix` and that story has no authority to change code outside its fence.
+- Cover five classes and say so explicitly for each in `findings`, even when the class is not present in the change: input handling and validation, secret and credential handling, authorisation and access decisions, injection surface (query construction, command construction, deserialisation, path construction), and error and log disclosure.
+- Scope is the change plus what it calls. A pre-existing weakness the story did not touch is recorded in `findings` as context, not raised as a finding against this story, because a finding routes to `/dev {story} --fix` and that story has no authority to change code outside its fence.
 - The techstack excerpt in the story's `context[]` often bans a whole class of construct for a reason quoted in the stack policy's `forbidden_imports`. A violation of that ban already fails a `dev` phase at ingest, so a finding here means the construct arrived by a route the policy does not match; say which route.
 - Rate each finding with a severity the report carries, and justify it by what an attacker gains, not by how hard the fix is.
 - Do not write the fix, and do not spell one out. This phase changes no code anywhere, and a suggested patch in a finding invites a `dev` run that implements it without a story authorising it.
@@ -348,9 +355,9 @@ The `security` phase inspects the change for the classes a story cannot be assum
 
 #### references/style.md
 
-The `style` phase checks the change against the project's own conventions, not against a general style opinion. You judge; you change nothing in the candidate root, and the one file you write is your findings file at `.devforgeai/work/review-<story>/evidence/style_checker/findings.md`, which you name in the receipt's `evidence_refs`.
+The `style` phase checks the change against the project's own conventions, not against a general style opinion. You judge and you write nothing: you have no `Write`, no `Edit` and no `apply_patch`, and the candidate root is byte-identical when you finish. Your detailed evidence goes in the receipt's `findings` string, capped at 16,384 UTF-8 bytes and refused rather than truncated if it exceeds that, and the sequencer persists it for you at `.devforgeai/work/review-<story>/evidence/style_checker/findings.md` once the receipt validates. Do not try to record it under another filename, as JSON, or through a shell redirect: a judge that is refused a write has no write to make.
 
-- The rules are the constitution's style slice and the sourcetree slice in the story's `context[]`: naming, layout, ownership of paths, and the test placement convention. A rule that is not in an excerpt is not a rule here; record it in the findings file as an observation instead of raising it as a finding.
+- The rules are the constitution's style slice and the sourcetree slice in the story's `context[]`: naming, layout, ownership of paths, and the test placement convention. A rule that is not in an excerpt is not a rule here; record it in `findings` as an observation instead of raising it as a finding.
 - Check that every changed path is where the sourcetree excerpt says that kind of file belongs, and that test files match the naming convention the techstack excerpt states. A file in the right place with the wrong name is a finding, because the next story's fence will be drawn from the same convention.
 - Where the project authorises a `lint` or `format` command in its stack section, that check is not this phase's job: no `review` phase grants a command key, this worker carries no `devforgeai run` surface, and the `refactor` transition of the `dev` run already required `lint` to exit zero. Report only what a linter cannot see, such as a name that is legal but contradicts the excerpt's convention.
 - Keep findings separable from compliance ones. If the rule comes from the constitution's Style section it belongs here; if it comes from Principles, Mandates or Constraints it belongs to `compliance`. The report has one section for each, and `retro` counts them separately.
@@ -360,7 +367,7 @@ The `style` phase checks the change against the project's own conventions, not a
 
 The `report` phase renders the three inspections into the one artifact a later skill cites. You write that report inside the candidate root the status block names, at the run's fence path, using `Edit` and `Write`; you run no command; you finish with the receipt.
 
-- Read the three earlier reports under `.devforgeai/work/review-<story>/`, and the findings file each inspection worker left under `.devforgeai/work/review-<story>/evidence/<agent>/`. The reports are the sequencer's rendering of the accepted receipts, including each worker's `issues` and the oracle's problem rows; the findings files hold the working behind them. Both are evidence rather than a claim.
+- Read the three earlier reports under `.devforgeai/work/review-<story>/`, and the `findings.md` the sequencer persisted for each inspection worker under `.devforgeai/work/review-<story>/evidence/<agent>/`. The reports are the sequencer's rendering of the accepted receipts, including each worker's `issues` and the oracle's problem rows; the persisted findings hold the working behind them, written by the sequencer from the string the worker returned. Both are evidence rather than a claim.
 - Fill `assets/review-report.md`. Every frontmatter key the `review-report` template header requires is present: `story`, `template`, `template_version`, `status`, `verdict` and `depends_on`. Every required section is present: Compliance, Security, Style, Findings.
 - Number findings `FIND-001` upward across all three sections in the order they were raised, so a finding id is stable enough to quote in a `dev` run and in a retro.
 - Set `verdict: pass` only when the Findings section is empty. Any finding at all, at any severity, is `verdict: findings`, because a report that grades its own severity threshold is a report nobody can act on mechanically.
@@ -373,7 +380,7 @@ The `report` phase renders the three inspections into the one artifact a later s
 
 One block per worker. `must_not` is compiled into the agent prompt verbatim.
 
-`writes` is the header D1 requires of every worker: `evidence` for the three inspection workers, `candidate` for `review_writer`, which is this skill's only producer. A judge's `tools` carry `Write`, admitted only under `.devforgeai/work/<run>/evidence/<agent>/`, plus `Bash(devforgeai status)` and nothing else that reaches a shell; a write anywhere else, the candidate root included, is denied at `PreToolUse`. The writer's carry `Edit` and `Write` — `apply_patch` on the Codex target — admitted under the candidate root, and no `devforgeai run` surface, because no `review` phase grants a key. Section 7g compiles these blocks into provider-native subagent files.
+`writes` is the header every worker declares, and its enum is `candidate | none`: `none` for the three inspection workers, `candidate` for `review_writer`, which is this skill's only producer. A judge's `tools` carry `Read`, `Grep`, `Glob` and `Bash(devforgeai status)` and nothing else: no `Write`, no `Edit`, no `apply_patch`, and nothing else that reaches a shell. A judge's evidence reaches disk through the receipt's required `findings` string, which the sequencer persists on its behalf. The writer's carry `Edit` and `Write` — `apply_patch` on the Codex target — admitted under the candidate root, and no `devforgeai run` surface, because no `review` phase grants a key. Section 7g compiles these blocks into provider-native subagent files.
 
 ```yaml
 name: compliance_checker
@@ -385,16 +392,16 @@ inputs:
   - the story's write_fence paths at the base checkpoint of candidate.root, which is canonical HEAD after the story's dev run was promoted
   - .devforgeai/work/<story>/green-report.md and refactor-report.md when a dev run recorded them
 outputs:
-  - a findings file at .devforgeai/work/review-<story>/evidence/compliance_checker/findings.md, one row per excerpt checked, including those the change honours
-  - a receipt whose issues carry one bounded row per departure, each naming the path with a line range and the excerpt anchor, and whose evidence_refs name that findings file
+  - a receipt whose findings string carries one row per excerpt checked, including those the change honours, which the sequencer persists under this run's evidence directory
+  - a receipt whose issues carry one bounded row per departure, each naming the path with a line range and the excerpt anchor, and whose evidence_refs name the story and the checkpoint the departures were read from
 must_not:
   - judge against a rule no context[] excerpt states
   - treat an OBSERVED excerpt as binding
   - raise a finding about a path outside the story's write_fence
-  - write anywhere but .devforgeai/work/review-<story>/evidence/compliance_checker/, or run any build, test, lint or format command
-tools: [Read, Grep, Glob, Write, Bash(devforgeai status)]
+  - write any file, or run any build, test, lint or format command
+tools: [Read, Grep, Glob, Bash(devforgeai status)]
 granted_keys: []
-writes: evidence
+writes: none
 returns: devforgeai.worker-result/v1
 ```
 
@@ -407,16 +414,16 @@ inputs:
   - the story id, its context[] excerpts, and its Interface section
   - the story's write_fence paths at the base checkpoint of candidate.root, and the code they call
 outputs:
-  - a findings file at .devforgeai/work/review-<story>/evidence/security_checker/findings.md, stating what was inspected for each of the five classes even when nothing was found
-  - a receipt whose issues carry one bounded row per defect, each with a class, a severity, the path with a line range and the exposure, and whose evidence_refs name that findings file
+  - a receipt whose findings string states what was inspected for each of the five classes even when nothing was found, which the sequencer persists under this run's evidence directory
+  - a receipt whose issues carry one bounded row per defect, each with a class, a severity, the path with a line range and the exposure, and whose evidence_refs name the checkpoint the defects were read from
 must_not:
   - write a patch text inside a finding
   - raise a pre-existing weakness the story did not touch as a finding; record it as context
   - assign a severity by how hard the fix looks rather than by what an attacker gains
-  - write anywhere but .devforgeai/work/review-<story>/evidence/security_checker/, or run any build, test, lint or format command
-tools: [Read, Grep, Glob, Write, Bash(devforgeai status)]
+  - write any file, or run any build, test, lint or format command
+tools: [Read, Grep, Glob, Bash(devforgeai status)]
 granted_keys: []
-writes: evidence
+writes: none
 returns: devforgeai.worker-result/v1
 ```
 
@@ -429,15 +436,15 @@ inputs:
   - the story id and its context[] excerpts for the constitution style slice, the sourcetree slice and the techstack testing slice
   - the story's write_fence paths at the base checkpoint of candidate.root
 outputs:
-  - a findings file at .devforgeai/work/review-<story>/evidence/style_checker/findings.md, listing every convention checked
-  - a receipt whose issues carry one bounded row per departure, each naming the path and the convention it contradicts, and whose evidence_refs name that findings file
+  - a receipt whose findings string lists every convention checked, which the sequencer persists under this run's evidence directory
+  - a receipt whose issues carry one bounded row per departure, each naming the path and the convention it contradicts, and whose evidence_refs name the excerpts the conventions were read from
 must_not:
   - raise a preference no excerpt states as a finding; record it as an observation
   - duplicate a finding that belongs to the compliance phase's sections of the constitution
-  - write anywhere but .devforgeai/work/review-<story>/evidence/style_checker/, or run any build, test, lint or format command
-tools: [Read, Grep, Glob, Write, Bash(devforgeai status)]
+  - write any file, or run any build, test, lint or format command
+tools: [Read, Grep, Glob, Bash(devforgeai status)]
 granted_keys: []
-writes: evidence
+writes: none
 returns: devforgeai.worker-result/v1
 ```
 
@@ -447,7 +454,7 @@ skill: review
 responsibility: Write docs/reports/review-<story>.md inside the candidate root, rendering the three inspections against the review-report template and adding no judgement of its own.
 inputs:
   - the devforgeai status block, which names run, candidate.root, phase and fence
-  - .devforgeai/work/review-<story>/compliance-report.md, security-report.md and style-report.md, and the findings file each inspection worker left under .devforgeai/work/review-<story>/evidence/
+  - .devforgeai/work/review-<story>/compliance-report.md, security-report.md and style-report.md, and the findings.md the sequencer persisted for each inspection worker under .devforgeai/work/review-<story>/evidence/
   - the story id and the anchors and digests its context[] entries carry
   - assets/review-report.md
 outputs:
@@ -479,7 +486,10 @@ The `handoff.outcomes` block this skill declares in `skill.yaml`, taken from `02
 | `fail` at any phase, attempts exhausted (`REQUIRE_HUMAN`) | repair the named defect, then `/review {story}` — the run is blocked, not closed, and that command resumes it at `run.yaml#blocked_at` with attempts reset | sequencer |
 | `needs_user` at any phase (`REQUIRE_HUMAN`, no retry) | answer the question the worker raised, then `/review {story}` — the same resume | sequencer |
 | `REQUIRE_HUMAN` at any phase, and the story itself must change before the review can finish | `devforgeai phase fail --reason <text>`, then `/clarify {story}` | sequencer renders the `phase fail` step; another skill on the same story cannot open until this run is closed |
-| `could_not_run`, `reason_code: hook_fault` (no worker identity on the stop event) | install or repair the hook dispatcher, then `/review {story}` | sequencer, through the missing-runner route |
+| `could_not_run`, `reason_code: provider_tool_refused` (the provider declined a worker's tool call before any DevForgeAI hook ran) | report the refused call to the spec author, then `/review {story}` — a worker asking for a tool its role does not carry is a specification defect, not a project fault | sequencer, through the missing-runner route |
+| `could_not_run`, `reason_code: prerequisite_missing` (a worktree-mode prerequisite the `SessionStart` self-test names) | install or repair the named prerequisite, then `/review {story}` | sequencer, through the missing-runner route |
+| `could_not_run`, `reason_code: checkpoint_fault` (the sequencer could not create, read or reset a checkpoint) | inspect the candidate root, then `devforgeai phase fail --reason <text>` and `/review {story}` | sequencer, through the missing-runner route |
+| `could_not_run`, `reason_code: hook_fault` (no worker identity on the stop event, or a malformed receipt) | install or repair the hook dispatcher, then `/review {story}` | sequencer, through the missing-runner route |
 | `could_not_run`, `reason_code: timeout` or `network` | remove the cause named in the report, then `/review {story}` | sequencer, through the missing-runner route |
 | `devforgeai phase fail --reason` recorded a block (`BLOCK`) | `/review {story} --fix` | sequencer |
 | gate: unresolved ASSUMPTION in the story | `/clarify {story}`, then `/review {story}` | adapter, from the refusal on stderr |
@@ -499,34 +509,34 @@ Each section 7e contract compiles to one provider-native subagent file per targe
 
 | Worker | name | tools | model | writes | Claude file | Codex file |
 |---|---|---|---|---|---|---|
-| `compliance_checker` | `compliance_checker` | `Read, Grep, Glob, Write, Bash(devforgeai status)` | `inherit` | evidence | `.claude/agents/review-compliance_checker.md` | `.codex/agents/review-compliance_checker.toml` |
-| `security_checker` | `security_checker` | `Read, Grep, Glob, Write, Bash(devforgeai status)` | `inherit` | evidence | `.claude/agents/review-security_checker.md` | `.codex/agents/review-security_checker.toml` |
-| `style_checker` | `style_checker` | `Read, Grep, Glob, Write, Bash(devforgeai status)` | `inherit` | evidence | `.claude/agents/review-style_checker.md` | `.codex/agents/review-style_checker.toml` |
+| `compliance_checker` | `compliance_checker` | `Read, Grep, Glob, Bash(devforgeai status)` | `inherit` | none | `.claude/agents/review-compliance_checker.md` | `.codex/agents/review-compliance_checker.toml` |
+| `security_checker` | `security_checker` | `Read, Grep, Glob, Bash(devforgeai status)` | `inherit` | none | `.claude/agents/review-security_checker.md` | `.codex/agents/review-security_checker.toml` |
+| `style_checker` | `style_checker` | `Read, Grep, Glob, Bash(devforgeai status)` | `inherit` | none | `.claude/agents/review-style_checker.md` | `.codex/agents/review-style_checker.toml` |
 | `review_writer` | `review_writer` | `Read, Grep, Glob, Edit, Write, Bash(devforgeai status)` | `inherit` | candidate | `.claude/agents/review-review_writer.md` | `.codex/agents/review-review_writer.toml` |
 
 `description` is one sentence naming when the primary dispatches the worker, because that is the field the provider matches a dispatch against:
 
 | Worker | description |
 |---|---|
-| `compliance_checker` | Dispatch when `devforgeai status` names phase `compliance` of a `review` run; it reports where the story's change departs from the binding excerpts the story carried, and writes only its findings file in the run's evidence scratch. |
-| `security_checker` | Dispatch when `devforgeai status` names phase `security` of a `review` run; it inspects the change for the five security classes and reports each defect with a severity, writing only its findings file in the run's evidence scratch. |
-| `style_checker` | Dispatch when `devforgeai status` names phase `style` of a `review` run; it checks the change against the naming, layout and test-placement conventions the excerpts state, writing only its findings file in the run's evidence scratch. |
+| `compliance_checker` | Dispatch when `devforgeai status` names phase `compliance` of a `review` run; it reports where the story's change departs from the binding excerpts the story carried, and writes nothing, returning its working in the receipt's findings string. |
+| `security_checker` | Dispatch when `devforgeai status` names phase `security` of a `review` run; it inspects the change for the five security classes and reports each defect with a severity, writing nothing and returning its working in the receipt's findings string. |
+| `style_checker` | Dispatch when `devforgeai status` names phase `style` of a `review` run; it checks the change against the naming, layout and test-placement conventions the excerpts state, writing nothing and returning its working in the receipt's findings string. |
 | `review_writer` | Dispatch when `devforgeai status` names phase `report` of a `review` run; it writes the review report in the candidate root from the three inspection reports, adding no finding of its own. |
 
 The body of each file is the four-part outline `templates/agent-md.md` fixes, filled from the worker's section 7e contract and its `references/<phase>.md`:
 
-1. **Job** — the `responsibility` sentence, expanded to what a good result looks like and what it leaves to the next worker. `review_writer`'s body opens with the work: "You write the review report inside the candidate root the status block names, using Edit and Write; finish with the receipt." Each inspection worker's opens with "You judge …; you change nothing in the candidate root, and the one file you write is your findings file under the run's evidence scratch; finish with the receipt."
+1. **Job** — the `responsibility` sentence, expanded to what a good result looks like and what it leaves to the next worker. `review_writer`'s body opens with the work: "You write the review report inside the candidate root the status block names, using Edit and Write; finish with the receipt." Each inspection worker's opens with the template's own `writes: none` sentence: "You judge …. You write nothing. Finish with the receipt."
 2. **Inputs** — one line per `inputs:` entry, and nothing outside that list is opened. The first entry is always the `devforgeai status` block the primary pasted, which is where the run id, the candidate root, the phase and the fence come from.
 3. **Rules** — the `must_not` lines verbatim, each with the mechanism that catches it: the fence check and the claimed-path check at ingest, the phase's `writes` mode against the root, the header's `writes` scope for the agent's own tools, the lease, the `document` oracle.
-4. **Receipt** — the `devforgeai.worker-result/v1` object from section 6, the statuses this worker may return, and the rule that the final message is exactly that object with no fence and no prose. `review_writer`'s adds that the report's frontmatter `verdict` is what the sequencer reads through `evidence_refs`.
+4. **Receipt** — the `devforgeai.worker-result/v1` object from section 6, the statuses this worker may return, and the rule that the final message is exactly that object with no fence and no prose. `review_writer`'s adds that the report's frontmatter `verdict` is what the sequencer reads through `evidence_refs`, and that `findings` is forbidden on its receipt. Each inspection worker's adds that `findings` is required on `pass` and `fail` and optional on `needs_user` and `could_not_run`, is capped at 16,384 UTF-8 bytes either way, is where the detailed working goes, and is persisted by the sequencer to a fixed path the worker does not choose.
 
 Provider differences, stated rather than assumed:
 
 - Claude-only frontmatter keys — `hooks`, `memory`, `background`, `permissionMode`, `maxTurns`, `effort`, `disallowedTools`, `mcpServers`, `color` and the git-worktree isolation key — are omitted from every compiled file. The framework's own isolation is one subagent per phase and the candidate root the sequencer owns; forking a worktree from the default branch would take this run away from the checkpoint the story's `dev` run left, which is the thing it exists to judge.
 - `skills:` preloads nothing for any of the four. The phase guidance a worker needs is `references/<phase>.md`, which its body links, and preloading the `review` skill would put the primary's dispatch loop inside a worker.
 - `model` is `inherit` for all four: no source in this specification's `depends_on` set assigns a per-worker model, and inheriting keeps a run's four phases on one model.
-- The Codex file carries `name`, `description`, `sandbox_mode`, `approval_policy` and `developer_instructions`. Every one of the four runs in the writable-workspace mode, because each writes something; the difference between a judge and the writer is the path each may write, which the hook dispatcher enforces on both providers. `apply_patch` is the write tool in place of `Edit` and `Write`.
-- Neither provider carries the lease or the fence in the agent file. They live in `.devforgeai/work/<run>/run.yaml` and are enforced by the hook dispatcher, so a stale agent file cannot widen what a worker may write. A judge's `Write` is admitted by path — its own `.devforgeai/work/<run>/evidence/<agent>/` — not by the tool list alone.
+- The Codex file carries `name`, `description`, `sandbox_mode`, `approval_policy` and `developer_instructions`. `sandbox_mode` is the writable-workspace mode for `review_writer` and the read-only mode for the three inspection workers, which is Codex's equivalent of the `tools` split; `apply_patch` is the write tool `review_writer` uses in place of `Edit` and `Write`, and the three judges carry no write tool on either target. The provider itself was observed refusing a report-shaped file write from a subagent on Claude, undocumented and relied on in neither direction, so the design does not depend on a hook catching it: a judge has no write tool to be caught with, and its evidence reaches disk only as the `findings` string the sequencer persists.
+- Neither provider carries the lease or the fence in the agent file. They live in `.devforgeai/work/<run>/run.yaml` and are enforced by the hook dispatcher, so a stale agent file cannot widen what a worker may write. `review_writer`'s write is admitted by path — under the candidate root and inside the fence — not by the tool list alone; the three inspection workers carry no write tool on either target, so there is nothing to admit.
 
 ## 8. Bundled resources
 
@@ -580,9 +590,9 @@ One file per worker in section 7e. No file for Gate, Record or Handoff.
 
 | File | Worker (from section 7) | writes | Compiled to |
 |------|-------------------------|--------|-------------|
-| `compliance_checker.md` | `compliance_checker` | evidence | `.claude/agents/review-compliance_checker.md`, `.codex/agents/review-compliance_checker.toml` |
-| `security_checker.md` | `security_checker` | evidence | `.claude/agents/review-security_checker.md`, `.codex/agents/review-security_checker.toml` |
-| `style_checker.md` | `style_checker` | evidence | `.claude/agents/review-style_checker.md`, `.codex/agents/review-style_checker.toml` |
+| `compliance_checker.md` | `compliance_checker` | none | `.claude/agents/review-compliance_checker.md`, `.codex/agents/review-compliance_checker.toml` |
+| `security_checker.md` | `security_checker` | none | `.claude/agents/review-security_checker.md`, `.codex/agents/review-security_checker.toml` |
+| `style_checker.md` | `style_checker` | none | `.claude/agents/review-style_checker.md`, `.codex/agents/review-style_checker.toml` |
 | `review_writer.md` | `review_writer` | candidate | `.claude/agents/review-review_writer.md`, `.codex/agents/review-review_writer.toml` |
 
 ## 9. Gotchas and edge cases
@@ -610,8 +620,11 @@ Each row is a real behaviour of the current implementation or a resolved contrad
 | An author expects the report to appear in the working tree as soon as `review_writer` finishes | Nothing is in the canonical checkout until the user promotes | The report is written in the candidate root and reaches canonical only when the user runs `devforgeai promote <run>` on a run the last passing transition marked `ready_to_promote`; that command fast-forwards under the lock and is refused as `STALE_BASE` or `DIRTY_TARGET` rather than merging. A run blocked before its last phase stays `active` and is not promotable; its root keeps the report for inspection. **Decision (D2, D7 as amended):** the primary session stays in the canonical checkout, and promotion is never automatic. |
 | `review` needs a tree to judge, and an earlier draft attached the run to the story's `dev` root at the `refactor` checkpoint | The judges read an unpromoted root, so a clean review can be recorded against code that never reaches canonical, and the attachment contradicts `STORY_IN_FLIGHT`, which refuses `phase start review <story>` for exactly that story | `review` opens its own candidate root from canonical HEAD, like every other run. The order per story is `dev` → `devforgeai promote <run>` → `review` → `qa`, and `STORY_IN_FLIGHT` refuses this run while the story's `dev` run is `active` or `ready_to_promote`, so the `base` checkpoint the judges read already contains the promoted work. A finding needing a code change routes to a new `/dev {story} --fix` run, never to an edit inside this root. **Decision (D12):** judging promoted code in a clean root is the MVP form of the clean verification worktree; the detached read-only variant D8 moves into `12-post-mvp.md` stays deferred, and nothing here gates on it. |
 | Two agents write into the root at once | The checkpoint diff cannot attribute a change, so `changed` matches no single receipt | The run file records the lease; the hook layer binds it at `SubagentStart` to the provider's agent identity, and a write from any other agent is denied at `PreToolUse` (`LEASE_HELD`). On Codex, where the pre-write event carries no identity, the root itself is the fence and the check is path-under-root. **Decision (D3, D6):** only `review_writer` ever holds this skill's lease. |
-| `AUTHOR-BRIEF.md` section 3 says every worker is read-only and section 6 requires every `must_not` block to end with "write any file, or run any build, test, lint or format command" | `review_writer` compiled from that trailer is told not to do the job D1 gives it | `WRITE-MODEL-REVISION.md` is the decision register for this wave and supersedes the brief's write model wherever they differ. **Decision (D1, D9, as amended):** `review_writer`'s trailer ends "write outside the candidate root, or run any command other than `devforgeai status`"; each judge's ends "write anywhere but `.devforgeai/work/<run>/evidence/<agent>/`, or run any build, test, lint or format command". Both lead with the job. |
-| A judge is given no way to record its working | The per-excerpt and per-class tables have to fit in `issues`, which is bounded at ten rows, so a thorough inspection loses its evidence | Each inspection worker writes one findings file under its own `.devforgeai/work/<run>/evidence/<agent>/` and names it in `evidence_refs`; `issues` stays the bounded summary, and `review_writer` reads both. **Decision (D1, D6, D8a, as amended):** that scratch is run-scoped, gitignored, outside the candidate root and outside the fence, so it is never part of `changed` and is never promoted. |
+| `AUTHOR-BRIEF.md` section 3 says every worker is read-only and section 6 requires every `must_not` block to end with "write any file, or run any build, test, lint or format command" | `review_writer` compiled from that trailer is told not to do the job D1 gives it | `WRITE-MODEL-REVISION.md` is the decision register for this wave and supersedes the brief's write model wherever they differ. **Decision (D1, D9, as amended):** `review_writer`'s trailer ends "write outside the candidate root, or run any command other than `devforgeai status`". Each judge's trailer is the brief's own line, "write any file, or run any build, test, lint or format command", because D13 gives a judge no write at all (**D13 item 1**). Both lead with the job. |
+| A judge is given no way to record its working | The per-excerpt and per-class tables have to fit in `issues`, which is bounded at ten rows, so a thorough inspection loses its evidence | The judge returns them in the receipt's `findings` string, at most 16,384 UTF-8 bytes, and the sequencer writes that string verbatim to `.devforgeai/work/<run>/evidence/<agent>/findings.md` at the identity-bound `SubagentStop` once the receipt validates. `issues` stays the bounded routing summary, and `review_writer` reads both. **Decision (D13 items 1-3):** each inspection worker declares `writes: none` and carries no write tool; the earlier evidence-directory write amendment is superseded and that third `writes` value is removed from the enum, because Claude Code 2.1.259 was observed refusing a subagent's write of a report-shaped Markdown file before any hook ran, with an undocumented heuristic that may not be relied on in either direction. The path is fixed and the worker chooses neither it nor the name. |
+| A judge, denied a write, works around it | It writes `findings.json` or `notes.txt` in the same directory, which the observed provider heuristic happens to allow, or it redirects a Bash command into a file, and the design's guarantee that a judge changes nothing becomes an accident of one provider's undocumented filter | There is no workaround, because there is nothing to work around. The judge carries no `Write`, no `Edit` and no `apply_patch`, and its Bash surface is `devforgeai status` alone, which the single-argv rule forbids compounding with a redirect. **Decision (D13 item 5):** a judge that is refused a write has no write to make; its evidence goes in `findings`. |
+| A worker's tool call is refused by the provider before any DevForgeAI hook runs | The refusal looks like a hook failure, and an author routes it to "repair the hook dispatcher", which repairs nothing | It is `could_not_run` with `reason_code: provider_tool_refused`, rolling up to `INFRA_FAILURE`, and its section 7f row says a worker asking for a tool its role does not carry is a specification defect. `hook_fault` stays reserved for a missing worker identity on the stop event or a malformed receipt. **Decision (D13 item 6):** the taxonomy version stays 1 with the code added, and every place this specification enumerated `reason_code` carries it. |
+| An author reads the isolation guarantee as covering a judge's findings | The claim that no worker output body reaches the primary window is false on both providers — a subagent returns its result to the parent, and a hook can validate a final message but cannot suppress it — so the design rests on something the runtime does not do | The bounded `findings` body does enter the primary window, as part of the subagent's result, exactly as any subagent result does. What stays isolated is the worker's transcript, its file reads, its tool traffic and its intermediate reasoning. **Decision (D13 item 4):** the guarantee this specification makes is that the primary window opens no artifact file and that no receipt carries a report body or code; `review_writer` returns no `findings` at all. |
 | The compiled agent file is expected to carry the fence or the lease | An installed file drifts from the run file and an author treats it as authority | The agent file carries `name`, `description`, `tools`, `model` and the body; the fence and the lease live in `.devforgeai/work/<run>/run.yaml` and are enforced by the hook dispatcher. **Decision (section 7g):** every Claude-only key — hooks, memory, background, `permissionMode`, `maxTurns`, `effort`, `disallowedTools`, `mcpServers`, colour and the git-worktree isolation key — is omitted, and `skills:` preloads nothing. |
 | The `report` phase writes no file because nothing was found | The `document` oracle fails the transition with "phase report produced no document inside the fence" | A clean review still writes its report, with `verdict: pass` and an empty Findings section. The artifact is the evidence that the review happened, and `qa`'s `depends_on` edge expects it. |
 | The eval workspaces are copies with no `.git` | An author writes worktree mode as the only materialisation and the run cannot open | The sequencer probes for a git repository at the project root and records `candidate.mode`: worktree mode when one exists with at least one commit, copy mode otherwise. The section 10 workspaces are copy mode, where a checkpoint is a tree-hash manifest plus a copy-aside and promotion copies the changed path's bytes under the lock. **Decision (D2):** one contract, two materialisations. |
@@ -628,7 +641,7 @@ Each row is a real behaviour of the current implementation or a resolved contrad
 - `SKILL.md` is under 500 lines and contains identity, the four-row phase list, the dispatch loop and the handoff table, and no phase guidance.
 - `agents/` holds exactly four files, named for the four canonical workers; `references/` holds exactly five.
 - Every `must_not` block ends with its role's closing line: the evidence-scratch line for the three judges, the candidate-root line for `review_writer`. No judge's `tools` value exceeds `Read`, `Grep`, `Glob`, `Write` and `Bash(devforgeai status)`; `review_writer`'s adds `Edit` and no run surface.
-- A judge's run leaves the candidate root byte-identical and writes exactly one file, under `.devforgeai/work/<run>/evidence/<agent>/`.
+- A judge's run leaves the candidate root and the canonical tree byte-identical and writes no file at all. On `pass` or `fail` its receipt carries a non-empty `findings` string, and the sequencer persists that string to `.devforgeai/work/<run>/evidence/<agent>/findings.md`, which `review_writer` reads by path.
 - Every agent file declares `writes`, and its value matches the phase's row in section 7c.
 - The `SKILL.md` Bash grammar is no wider than `devforgeai status`, `devforgeai phase start review <story> [--lenient]`, `devforgeai phase fail --reason <text>`, `devforgeai validate` and `devforgeai promote <run>`.
 - In a run, the primary-window transcript contains no read of the story or of the code under review, and no file write.
@@ -706,9 +719,9 @@ Quick-mode results are generation feedback only: one enabled run per eval and no
 
 | Kind | Value |
 |------|-------|
-| Tools | `SKILL.md`: `Read`, `Agent`, and a Bash grammar no wider than `devforgeai status \| phase start review <story> [--lenient] \| phase fail --reason \| validate \| promote <run>`. Judges (`compliance_checker`, `security_checker`, `style_checker`): `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` and `Write`, admitted only under `.devforgeai/work/<run>/evidence/<agent>/`. Producer (`review_writer`): those plus `Edit`, with writes admitted under the candidate root. No worker carries a `devforgeai run` surface, because no `review` phase grants a stack command key. |
+| Tools | `SKILL.md`: `Read`, `Agent`, and a Bash grammar no wider than `devforgeai status \| phase start review <story> [--lenient] \| phase fail --reason \| validate \| promote <run>`. Judges (`compliance_checker`, `security_checker`, `style_checker`): `Read`, `Grep`, `Glob` and `Bash(devforgeai status)`, and no write tool of any kind on either target. Producer (`review_writer`): those plus `Edit` and `Write`, with writes admitted under the candidate root. No worker carries a `devforgeai run` surface, because no `review` phase grants a stack command key. |
 | MCP servers | none |
-| Runtime | Python 3.11+ and PyYAML 6+ for the sequencer and the hook dispatcher. Worktree mode additionally needs `git` with a repository at the project root, at least one commit, `.devforgeai/work/` ignored, and both the provider's settings file and `.devforgeai/stack.yaml` tracked; the `SessionStart` self-test checks all five and fails `phase start` with `could_not_run: hook_fault` rather than falling back to copy mode. `review` itself runs no project command; the eval workspace additionally needs the `test` runner named by the fixture's `python` stack section, because it is built from a completed `dev` run. |
+| Runtime | Python 3.11+ and PyYAML 6+ for the sequencer and the hook dispatcher. Worktree mode additionally needs `git` with a repository at the project root, at least one commit, `.devforgeai/work/` ignored, and both the provider's settings file and `.devforgeai/stack.yaml` tracked; the `SessionStart` self-test checks all five and fails `phase start` with `could_not_run: prerequisite_missing` rather than falling back to copy mode. `review` itself runs no project command; the eval workspace additionally needs the `test` runner named by the fixture's `python` stack section, because it is built from a completed `dev` run. |
 | Project commands | none. `review` grants no run key at any phase, so it resolves no `stack.yaml` command. The story's `commands` block is still re-resolved at the gate, because a story whose `commands.hash` no longer matches `stack.yaml` is a story whose review would cite a stale stack. Contract: `10-sequencer-and-contracts.md` section 7. |
 | DevForgeAI/Core compatibility | Requires the sequencer grammar, the story-anchored document run, and the `devforgeai.worker-result/v1` schema of `10-sequencer-and-contracts.md`, 2026-09-02. `NOT_APPLICABLE` for Research Core: `review` is an anatomy-governed skill, not a Research adapter. |
 | Other skills | Consumes `story` from `plan`, `dev-notes` from `dev`, and `constitution`, `techstack` and `adr` from `architect` or `amend`. Produces `review-report` for `qa`, `dev` and `retro`. Invokes none of them: every edge is a handoff row. |
@@ -737,7 +750,7 @@ The generator produces one provider-neutral semantic package and a separate adap
 
 | Target | Install path | Invocation | Subagents | Notes |
 |--------|--------------|------------|-----------|-------|
-| claude | `.claude/skills/review/` plus `.claude/agents/` worker profiles | `/review STORY-NNN [--lenient]` | one provider-native subagent per canonical worker name: three judges that write only their findings file in the run's evidence scratch, one writer that writes the report in the candidate root | Provider-specific frontmatter keys (`argument-hint`, `disable-model-invocation`) are compiled into this target's `SKILL.md` only. |
+| claude | `.claude/skills/review/` plus `.claude/agents/` worker profiles | `/review STORY-NNN [--lenient]` | one provider-native subagent per canonical worker name: three judges that carry no write tool and return their evidence in the receipt's `findings` string, one writer that writes the report in the candidate root | Provider-specific frontmatter keys (`argument-hint`, `disable-model-invocation`) are compiled into this target's `SKILL.md` only. |
 | codex | `.agents/skills/review/` plus `.codex/agents/` profiles | `$review STORY-NNN [--lenient]` | the same four, compiled per section 7g; the writer uses `apply_patch` and the writable-workspace sandbox mode | Portable six-field frontmatter only; policy goes in target-side configuration. |
 | both | separate `.claude/skills/review/` and `.agents/skills/review/` adapters | as above | as above | Share only provider-neutral resources; validate each adapter independently. |
 
@@ -779,8 +792,10 @@ wc -l <output-dir>/review/SKILL.md                        # must be < 500
 # every worker in section 7 has a prompt file, and no extra
 ls <output-dir>/review/agents/                            # compliance_checker.md security_checker.md style_checker.md review_writer.md
 # every agent file declares its role's write mode
-grep -l 'writes: evidence' <output-dir>/review/agents/*.md  # compliance_checker.md security_checker.md style_checker.md
+grep -l 'writes: none' <output-dir>/review/agents/*.md      # compliance_checker.md security_checker.md style_checker.md
 grep -l 'writes: candidate' <output-dir>/review/agents/*.md  # review_writer.md
+# no judge carries a write tool
+grep -LE 'Write|Edit|apply_patch' <output-dir>/review/agents/compliance_checker.md <output-dir>/review/agents/security_checker.md <output-dir>/review/agents/style_checker.md
 # one reference file per phase, plus envelope.md
 ls <output-dir>/review/references/                        # compliance.md security.md style.md report.md envelope.md
 # no leftover placeholders
@@ -789,7 +804,7 @@ grep -rnE 'T[O]DO|T[B]D|\{\{' <output-dir>/review || echo clean
 python3 docs/design/specs/verify.py --only v1,v2,v4
 ```
 
-For non-Research anatomy skills, DevForgeAI skill-validator additionally checks: all sub-phase kinds present with Gate, Record and Handoff bound to sequencer operations; the inspection workers and the writer are different files; `must_not` and `writes` present in every agent file, `writes` in `candidate | evidence | none`, no judge's `tools` exceed `Read`, `Grep`, `Glob`, `Write` and `Bash(devforgeai status)`, and the writer's exceed those only by `Edit`; the `SKILL.md` Bash grammar is no wider than the five model-callable operations; handoff outcomes cover every status the skill can return, including `could_not_run`.
+For non-Research anatomy skills, DevForgeAI skill-validator additionally checks: all sub-phase kinds present with Gate, Record and Handoff bound to sequencer operations; the inspection workers and the writer are different files; `responsibility`, `must_not` and `writes` present in every agent file, `writes` in `candidate | none`, no judge's `tools` exceed `Read`, `Grep`, `Glob` and `Bash(devforgeai status)`, and the writer's exceed those only by `Edit` and `Write`; the `SKILL.md` Bash grammar is no wider than the five model-callable operations; handoff outcomes cover every status the skill can return, including `could_not_run` with every `reason_code` the skill can return.
 
 ## 15. Provenance
 

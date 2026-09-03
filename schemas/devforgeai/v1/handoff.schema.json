@@ -113,6 +113,13 @@
       "items": {"$ref": "#/$defs/open_item"},
       "description": "Open items group: ambiguities, risks, and blocked rows carried forward, each with an owner."
     },
+    "findings_paths": {
+      "type": "array",
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^\\.devforgeai/work/[^\\\\]+/evidence/[^\\\\]+/findings\\.md$"},
+      "description": "Result group: one path per judge phase of this run whose receipt carried `findings`. The sequencer wrote each file itself, verbatim from the receipt, at ingest; no worker chose the path or the name. A later phase's worker and a human reader open the judge's detailed evidence here. Absent when the run has run no judge phase yet."
+    },
     "verdict": {
       "enum": ["pass", "findings", "fail"],
       "description": "Result group: the report verdict, present only for a report-producing skill (review, qa, skill-validator). The sequencer reads it from the frontmatter of the report the last phase's receipt named in `evidence_refs`. It selects the handoff row and therefore `next`; it never changes `outcome`, which stays `pass` because reporting a defect is a passing run."

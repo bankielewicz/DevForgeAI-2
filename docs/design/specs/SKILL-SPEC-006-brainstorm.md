@@ -9,19 +9,19 @@ author: "DevForgeAI plan skill, wave 2 spec author"
 date: 2026-09-02
 depends_on:
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:a6bbaf9af2d69f7ede18d7c40f242c42edb26d79be964ffec3f386d6347014c2
+    hash: sha256:5afb88c46aa635c961564af8e58c799a44f387c6bd877eeac2ec7568f73aba7e
     excerpt: "**The model dispatches, the sequencer decides.** For an anatomy-governed skill, the primary window (provider entry adapter + skill orchestration) does light, trivial work only."
   - source: docs/design/01-skill-anatomy.md#handoff-contract
     hash: sha256:dc50836dc15a928b0c4758ef3a671c6f78d5c7db7ea207c923b917d89faa9e96
     excerpt: "Every anatomy-governed skill run ends with a handoff. The sequencer writes `.devforgeai/work/<run>/handoff.json` at `phase next` and at `phase fail`; the block below is that file's rendering, and it is the only handoff the primary window prints."
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:511733ee35ca74fd5a5c0b59f225d7d975788e7d43d939f44c23b7aa8460cff0
+    hash: sha256:7c1d67f1154e49247e5dc178fcc1512bdbd53af378c360aeafe69bffed1136ab
     excerpt: "| brainstorm | 2 | `research_request` | `research_requester` | none | 2 | — | report_only | — |"
   - source: docs/design/10-sequencer-and-contracts.md#5-2-validation-order
-    hash: sha256:9f1bf77b7e84302ff6f3f20260228d57390cc97ab8e8d3f68f52c3ff2658aab8
+    hash: sha256:9cf7115cdfa637023edc22cbdf5f64c106b1eba340598c8dc97b68361cb76b0f
     excerpt: "| 10 | `changed[]` is a subset of `claimed_paths` | refuse, reason `UNCLAIMED_CHANGE`; this **is** a phase attempt, because real bytes were written outside the claim |"
   - source: docs/design/10-sequencer-and-contracts.md#5-4-transition-oracles
-    hash: sha256:ffa41b5d270dc260e28fa9f6bdbc855069a6e922d1148c74b25860dba63484dc
+    hash: sha256:076840ec9db03155bc9edcceb587e2aa1ca8bf3849e7a8b742f788d1a3b2315f
     excerpt: "the phase declared `writes: docs` and `changed[]` is non-empty, unless it is marked conditional, in which case an empty change set needs a non-empty `note`; every changed path exists in the root with the bytes the checkpoint will hold"
   - source: docs/design/11-artifact-registry.md#1-template-registry
     hash: sha256:fabb8d2f142dcde1a31bc53768f8a46d01cac3ea4a7f6b73db22479cc89b5553
@@ -36,7 +36,7 @@ depends_on:
     hash: sha256:1dac784b4670cc7559f323011dfe304dfe8c0baf349063162f90d76d902c5d3c
     excerpt: "| brainstorm | pass | `/pm {slug}` |"
   - source: docs/design/05-subagent-sets.md#sets-per-skill
-    hash: sha256:9e12f3beb236a025c18d40e741c09ba675bd71d2d87f56e2b205c7556b944bf9
+    hash: sha256:f2957217c9af147e4a7ea03749cbe6efda266bd56d403f39aa25c9a655872609
     excerpt: "| brainstorm | idea-capturer, research-requester (prepares a complete request file, stops for the human's explicit digest-confirmed Research invocation, then consumes the sealed dossier), idea-clusterer, brainstorm-writer, critic |"
 ---
 
@@ -95,7 +95,7 @@ Follow its section 0 exactly. Output directory: ./out. Eval mode: quick.
 | R5 | implicit | The primary window stays in the canonical checkout, reads `.devforgeai/state.yaml` and nothing else, dispatches by path plus the `devforgeai status` block, and prints the handoff the sequencer rendered (`01-skill-anatomy.md#primary-window-contract`). |
 | R6 | implicit | A claim carried by an idea and not supported by a cited source is tagged `ASSUMPTION:` in the document, so plan's later gate can see it (`01-skill-anatomy.md`, persona rule). |
 | R7 | discovered | The fence is exactly one path, `docs/brainstorm/<slug>.md`, and three phases declare `writes: docs`. Each therefore edits that same file in turn inside the candidate root, over the bytes the previous phase's checkpoint left. Resolved in section 9, row G-1. |
-| R8 | discovered | The registry declares `research_request` `writes: none`, so nothing it does reaches the candidate root. The worker header declares `writes: evidence`: it writes the complete request body to `.devforgeai/work/<run>/evidence/research_requester/request.md`, names it in `evidence_refs`, and returns `status: needs_user` with the invocation and that path in its note. Resolved in section 9, row G-3. |
+| R8 | discovered | The `research_request` phase and worker declare `writes: none`, so the worker changes nothing anywhere. It returns the complete request body in required `findings`; after receipt validation the sequencer persists it to `.devforgeai/work/<run>/evidence/research_requester/findings.md`. A `needs_user` note carries the invocation and persisted path. Resolved in section 9, row G-3. |
 | R9 | discovered | Brownfield input is the OBSERVED constraint sections that exist plus current source citations; no OBSERVED architecture document is required (`02-skill-roster.md#brainstorm`). |
 
 ## 3. Description
@@ -150,8 +150,8 @@ Character count: 805 / 1024.
 
 ### UC-2: An idea rests on outside evidence
 - **User says:** "capture these pricing options; one of them assumes the competitor charges per seat"
-- **Steps:** 1. `idea_capturer` writes the document with the pricing ideas into the candidate root. 2. `research_requester` writes the complete request body into its own run-scoped evidence directory and returns `status: needs_user`, naming that file in `evidence_refs` and the exact invocation in its note.
-- **Result:** the captured document is promoted, the run is closed with a `REQUIRE_HUMAN` handoff naming the request file, and the human runs `/research` and then `/brainstorm inbox` again, where `research_requester` finds the sealed dossier and returns `pass` with its references.
+- **Steps:** 1. `idea_capturer` writes the document with the pricing ideas into the candidate root. 2. `research_requester` returns the complete request body in required `findings` with `status: needs_user`; the sequencer persists it at the fixed evidence path, and the note carries that path and exact invocation.
+- **Result:** the run blocks with a `REQUIRE_HUMAN` handoff naming the persisted request body, and the human copies it to the request path, runs `/research`, and then resumes `/brainstorm inbox`, where `research_requester` finds the sealed dossier and returns `pass` with its references.
 
 ### UC-3: Revisiting archived ideas
 - **User says:** "pull the archived inbox ideas back out, we want another look"
@@ -227,7 +227,7 @@ IDEA-001, IDEA-002
 
 ### Return envelope (DevForgeAI-anatomy skills only)
 
-One schema, both providers: `devforgeai.worker-result/v1`, normative in `schemas/devforgeai/v1/worker-result.schema.json`. A worker's final message is exactly this object, with no Markdown fence and no surrounding prose. A document writer has already edited the file inside the candidate root when it returns; the receipt claims what it wrote. `research_requester` and `brainstorm_critic` change nothing inside the candidate root and claim nothing; each writes its own file into `.devforgeai/work/<run>/evidence/<agent>/` and names it in `evidence_refs`.
+One schema, both providers: `devforgeai.worker-result/v1`, normative in `schemas/devforgeai/v1/worker-result.schema.json`. A worker's final message is exactly this object, with no Markdown fence and no surrounding prose. A document writer has already edited the file inside the candidate root when it returns; the receipt claims what it wrote. `research_requester` and `brainstorm_critic` change nothing anywhere and claim nothing; each returns `findings`, which the sequencer persists to its fixed `.devforgeai/work/<run>/evidence/<agent>/findings.md` path. `findings` is **required** on a judge receipt whose status is `pass` or `fail`, **optional** on a judge's `needs_user` or `could_not_run` — where the judge may have nothing to report — and **forbidden** on a producer receipt, on every status; the 16384-UTF-8-byte bound is the same wherever it is present, and an oversize string refuses the receipt.
 
 ```yaml
 schema: devforgeai.worker-result/v1
@@ -236,7 +236,7 @@ skill: "brainstorm"
 phase: "capture"
 agent: "idea_capturer"
 status: pass | fail | needs_user | could_not_run
-reason_code: runner_missing | timeout | network | hook_fault   # required only when status is could_not_run
+reason_code: runner_missing | timeout | network | hook_fault | provider_tool_refused | prerequisite_missing | checkpoint_fault   # required only when status is could_not_run
 candidate: {id: "brainstorm-inbox", input_checkpoint: "base"}
 claimed_paths: ["docs/brainstorm/inbox.md"]   # root-relative, at most 64; empty on any non-pass status
 evidence_refs: ["docs/brainstorm/inbox.md"]   # at most 16
@@ -270,14 +270,14 @@ The primary window stays in the canonical checkout and never opens the idea sour
 | 0 | Gate | sequencer: `devforgeai phase start brainstorm <slug>`, which also opens the candidate root | sequencer | n/a |
 | 1 | Slice | sequencer: a step inside `phase start` that resolves the incoming artifact's hashed bundle into `.devforgeai/work/<run>/context.json`. No worker (section 9, row G-2) | sequencer | n/a |
 | 2 | Work: `capture` | worker: `idea_capturer` | candidate | required |
-| 3 | Work: `research_request` | worker: `research_requester` | evidence | required |
+| 3 | Work: `research_request` | worker: `research_requester` | none | required |
 | 4 | Work: `cluster` | worker: `idea_clusterer` | candidate | required |
 | 5 | Write: `write` | worker: `brainstorm_writer` | candidate | required |
-| 6 | Review: `critic` | worker: `brainstorm_critic` | evidence | required |
+| 6 | Review: `critic` | worker: `brainstorm_critic` | none | required |
 | 7 | Record | sequencer: `devforgeai phase next` | sequencer | n/a |
 | 8 | Handoff | sequencer: `devforgeai phase next`, which on the last passing transition marks the run `ready_to_promote` and renders the first block, a `REQUIRE_HUMAN` handoff naming `devforgeai promote <run>`; that command, run only after the user confirms in the session, renders the second | sequencer | n/a |
 
-`idea_capturer` is the persona and `brainstorm_critic` is the critic: different files, different prompts, and the critic changes nothing inside the candidate root. A persona reviewing its own output is the hallucination vector this separation removes. `research_requester` is a judge too: it decides which claims need sealed evidence and writes the request into its own run-scoped evidence directory. A judge's `Write` is confined to its own run-scoped evidence directory, `.devforgeai/work/<run>/evidence/<agent>/`, which is gitignored, lies outside the candidate root, and is never promoted. Its findings file lives there and is named in `evidence_refs`; `issues[]` stays the bounded summary the handoff carries. Nothing a judge writes can reach the checkpoint diff, so its `claimed_paths` is empty on every status.
+`idea_capturer` is the persona and `brainstorm_critic` is the critic: different files, different prompts, and the critic changes nothing. A persona reviewing its own output is the hallucination vector this separation removes. `research_requester` is a judge too: it decides which claims need sealed evidence and returns the request body in `findings`. A judge carries no write tool. After receipt validation, the sequencer persists its `findings` to the fixed `.devforgeai/work/<run>/evidence/<agent>/findings.md` path, which is gitignored, lies outside the candidate root, and is never promoted; `issues[]` stays the bounded summary the handoff carries. A judge's `claimed_paths` is empty on every status.
 
 The `Isolation` column is the DevForgeAI worker-contract value compiled into the generated target profile, not Claude's `isolation` frontmatter field. The framework does not use Claude's worktree isolation or `EnterWorktree`: both fork from HEAD, and the run's phases build linearly on one candidate root instead.
 
@@ -288,10 +288,10 @@ The `Isolation` column is the DevForgeAI worker-contract value compiled into the
 | phase | worker | deterministic gate check | gate_policy | evidence file | transition oracle |
 |---|---|---|---|---|---|
 | `capture` | `idea_capturer` | run gate: no run is already active, `brainstorm` is a known `kind: document` skill, the fence entry `docs/brainstorm/<slug>.md` is repository-relative, free of `..` and not sequencer-owned, and no active or `ready_to_promote` run holds that path (`FENCE_OVERLAP`). Ingest validation: `changed` derived from the checkpoint diff is a subset of `claimed_paths` (`UNCLAIMED_CHANGE` otherwise), the single changed path is that fence entry under `candidate.root`, the written file is validated against the `brainstorm` template header before checkpointing, and the whole root is rescanned against the stack policy with the checkpoint refused on any violation | document run map `{unresolvable_source: BLOCK}`; `test_runner_missing` is not consulted because this phase brokers no command key | `.devforgeai/work/<run>/capture-result.json`, `capture-report.md` | `document`: at least one file produced inside the fence and `docs/brainstorm/<slug>.md` on disk |
-| `research_request` | `research_requester` | ingest validation: the registry declares the phase `writes: none` and the worker header `writes: evidence`, so `claimed_paths` is empty and any change inside the candidate root refuses the receipt as `UNCLAIMED_CHANGE`; the dispatcher allows this worker's writes only under `.devforgeai/work/<run>/evidence/research_requester/` and denies every other path at `PreToolUse`; `evidence_refs` names the request file and `note` is at most 16 KiB | `{unresolvable_source: BLOCK}` | `.devforgeai/work/<run>/research_request-result.json`, `research_request-report.md` | `report_only`: no file outside the fence changed since the gate snapshot and the whole-tree package and import policy holds |
+| `research_request` | `research_requester` | ingest validation: the phase and worker declare `writes: none`, so `claimed_paths` is empty and any candidate-root change refuses the receipt as `UNCLAIMED_CHANGE`; the worker carries no write tool and returns the complete request body in required `findings`, which the sequencer persists at its fixed path; `note` is at most 16 KiB | `{unresolvable_source: BLOCK}` | `.devforgeai/work/<run>/evidence/research_requester/findings.md`, `research_request-result.json`, `research_request-report.md` | `report_only`: no file outside the fence changed since the gate snapshot and the whole-tree package and import policy holds |
 | `cluster` | `idea_clusterer` | ingest validation as `capture`, over the bytes `capture`'s checkpoint left in the root. The phase's `input_checkpoint` is `capture`, so an edit built from anything else shows in the diff as a change the receipt did not claim | `{unresolvable_source: BLOCK}` | `.devforgeai/work/<run>/cluster-result.json`, `cluster-report.md` | `document`: at least one file produced and the fence path on disk |
 | `write` | `brainstorm_writer` | ingest validation as `cluster`, over the bytes `cluster`'s checkpoint left; `claimed_paths` holds at most 64 entries and no duplicate, `evidence_refs` at most 16, `issues` at most 10 | `{unresolvable_source: BLOCK}` | `.devforgeai/work/<run>/write-result.json`, `write-report.md` | `document`: at least one file produced and the fence path on disk |
-| `critic` | `brainstorm_critic` | ingest validation: the registry declares the phase `writes: none` and the worker header `writes: evidence`, so `claimed_paths` is empty and any change inside the candidate root refuses the receipt; the dispatcher confines this worker's writes to `.devforgeai/work/<run>/evidence/brainstorm_critic/`; the phase grants no command key, so a brokered run is refused for want of the hook marker | `{unresolvable_source: BLOCK}` | `.devforgeai/work/<run>/critic-result.json`, `critic-report.md`, then `handoff.json` | `report_only`: as `research_request`. On pass this is the last phase: the run is marked `ready_to_promote` and a `REQUIRE_HUMAN` handoff is written whose one forward command is `devforgeai promote <run>`; the `pass` handoff is the second block, written by that command once the user asks for it |
+| `critic` | `brainstorm_critic` | ingest validation: the phase and worker declare `writes: none`, so `claimed_paths` is empty and any candidate-root change refuses the receipt; the worker carries no write tool and returns required `findings`, which the sequencer persists at its fixed path; the phase grants no command key, so a brokered run is refused for want of the hook marker | `{unresolvable_source: BLOCK}` | `.devforgeai/work/<run>/evidence/brainstorm_critic/findings.md`, `critic-result.json`, `critic-report.md`, then `handoff.json` | `report_only`: as `research_request`. On pass this is the last phase: the run is marked `ready_to_promote` and a `REQUIRE_HUMAN` handoff is written whose one forward command is `devforgeai promote <run>`; the `pass` handoff is the second block, written by that command once the user asks for it |
 
 Promotion is not part of the run's phases. The last passing `devforgeai phase next` marks the run `ready_to_promote` and writes a `REQUIRE_HUMAN` handoff whose one forward command is `devforgeai promote <run>`; the candidate root and its checkpoints stay on disk and no canonical byte moves. The compiled `SKILL.md` runs that command only after the user confirms in the session, and it is that command — never `phase next` — that merges the candidate root into the canonical checkout under `.devforgeai/lock`, refusing on `STALE_BASE` when canonical HEAD has moved past the run's pinned `base_ref`, on `DIRTY_TARGET` when a dirty canonical file is among the changed paths, and on `MERGE_CONFLICT` when the rebase cannot replay the run. A refusal moves no canonical byte and leaves the run `ready_to_promote` with its root intact, so the command can be run again once the named cause is settled. The second handoff block is written by a promotion that succeeded, and its `next` is the section 7e row for the run's outcome. Each refusal is a handoff row in section 7e.
 
@@ -341,9 +341,9 @@ body:
 name: research_requester
 description: Dispatch this worker at the research_request phase to judge which captured claims need sealed external evidence and hand the human one complete request.
 skill: brainstorm
-writes: evidence
+writes: none
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Write]
+tools: [Read, Grep, Glob, Bash(devforgeai status)]
 skills: []
 compiled_to: [.claude/agents/brainstorm-research_requester.md, .codex/agents/brainstorm-research_requester.toml]
 responsibility: Report which captured claims need sealed external evidence and carry one complete research request body, or the sealed dossier references that already cover them.
@@ -354,21 +354,21 @@ inputs:
   - docs/brainstorm/<slug>.md inside the candidate root
   - docs/research/<slug>/runs/ (sealed dossier directories, by path)
 outputs:
-  - .devforgeai/work/<run>/evidence/research_requester/request.md, the complete request body, written in its own run-scoped evidence directory and named in evidence_refs
-  - note: the exact invocation a human runs and the path of that request file, when a claim needs sealed evidence
+  - findings: the complete request body; after receipt validation the sequencer persists it to .devforgeai/work/<run>/evidence/research_requester/findings.md
+  - note: the exact invocation a human runs and the fixed persisted path, when a claim needs sealed evidence
   - issues: one row per claim already covered, naming its RUN, Source, Evidence and Claim ids and the sealed manifest digest
 must_not:
   - invoke research, or treat an unconfirmed request as persistent evidence
   - cite a dossier by digest alone, without RUN, Source, Evidence and Claim ids
   - write any file, including a request file, or run any stack command key
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+tools_codex: [Read, Grep, Glob, Bash(devforgeai status)]
 isolation: required
 returns: devforgeai.worker-result/v1
 body:
   job: Judge each captured claim as covered, needing sealed evidence, or answerable by a person.
   inputs: The list above, read under the candidate root.
   rules: references/research_request.md, the three claim states, and the must_not list.
-  receipt: One devforgeai.worker-result/v1 object; claimed_paths is empty on every status, evidence_refs names the request file it wrote under its run-scoped evidence directory, and a needs_user note carries the invocation in one ask.
+  receipt: One devforgeai.worker-result/v1 object; claimed_paths is empty on every status, findings carries the request body, and a needs_user note carries the invocation and fixed persisted path in one ask.
 ```
 
 ```yaml
@@ -442,9 +442,9 @@ body:
 name: brainstorm_critic
 description: Dispatch this worker at the critic phase to judge the finished document for missing ids, unresolvable citations, cluster gaps and untagged claims.
 skill: brainstorm
-writes: evidence
+writes: none
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Write]
+tools: [Read, Grep, Glob, Bash(devforgeai status)]
 skills: []
 compiled_to: [.claude/agents/brainstorm-brainstorm_critic.md, .codex/agents/brainstorm-brainstorm_critic.toml]
 responsibility: Report every idea whose id or source citation is missing, every cluster naming an id the document does not contain, and every claim carrying neither a citation nor an ASSUMPTION tag.
@@ -454,21 +454,21 @@ inputs:
   - .devforgeai/work/<run>/capture-result.json, research_request-result.json, cluster-result.json and write-result.json (by path)
   - the source paths the document's provenance and idea entries cite
 outputs:
-  - .devforgeai/work/<run>/evidence/brainstorm_critic/findings.md, the full defect list, written in its own run-scoped evidence directory and named in evidence_refs
+  - findings: the full defect list; after receipt validation the sequencer persists it to .devforgeai/work/<run>/evidence/brainstorm_critic/findings.md
   - issues: one row per defect, naming the id and what is missing, bounded at ten
   - note: the counts of ideas, clusters, questions and citations examined
 must_not:
   - repair, reword or renumber anything it reports
   - pass an idea whose source citation names a path that does not exist
-  - write anywhere but its own run-scoped evidence directory, or run any stack command key
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+  - write any file, or run any stack command key
+tools_codex: [Read, Grep, Glob, Bash(devforgeai status)]
 isolation: required
 returns: devforgeai.worker-result/v1
 body:
   job: Judge the finished document against identity, citation, cluster membership, claims and questions.
   inputs: The list above, read under the candidate root; nothing is opened outside it.
   rules: references/critic.md, the five properties, and the must_not list.
-  receipt: One devforgeai.worker-result/v1 object; claimed_paths is empty on every status, evidence_refs names the findings file it wrote under its run-scoped evidence directory, and each defect is also one issues row.
+  receipt: One devforgeai.worker-result/v1 object; claimed_paths is empty on every status, findings carries the complete defect list for sequencer persistence, and each defect is also one bounded issues row.
 ```
 
 ### 7e. Handoff outcomes
@@ -515,12 +515,12 @@ Brownfield input. When OBSERVED constraint sections exist, an idea that contradi
 
 #### `references/research_request.md`
 
-This phase judges. The registry declares the phase `writes: none`, and the worker header declares `writes: evidence`: its `Write` reaches only `.devforgeai/work/<run>/evidence/research_requester/`, and a change the checkpoint diff reveals inside the candidate root refuses the receipt as `UNCLAIMED_CHANGE`.
+This phase judges and changes nothing anywhere. Return the complete research request body in required `findings`; after validation the sequencer persists it to `.devforgeai/work/<run>/evidence/research_requester/findings.md`. A candidate-root change refuses the receipt as `UNCLAIMED_CHANGE`.
 
 Read the open-questions rows whose route is sealed research evidence, and the claims tagged `ASSUMPTION:` in the captured document. For each, decide which of three states it is in:
 
 - **Already covered.** A sealed dossier under `docs/research/<slug>/runs/RUN-NNNNNN/` carries a claim answering it. Record the RUN with its Source, Evidence and Claim ids and the sealed manifest digest as one `issues` row. A digest alone is not a provenance reference and does not count as coverage.
-- **Needs sealed evidence.** No dossier covers it. Write one complete request body — the questions, the scope, and the acceptance the requester wants — to `request.md` under this worker's run-scoped evidence directory, name it in `evidence_refs`, and return `status: needs_user` with empty `claimed_paths` and a note carrying that path and the exact invocation: `/research <slug> --request <request-file> --confirm-request <sha256>` on Claude, or the `$research` form on Codex. This phase cannot write the request file, so the note states that the human saves the recorded body and confirms its normalized digest. Persistence in Research Core requires that human confirmation; nothing here can supply it.
+- **Needs sealed evidence.** No dossier covers it. Put one complete request body — the questions, scope and requested acceptance — in `findings`, and return `status: needs_user` with empty `claimed_paths` and a note carrying the fixed persisted findings path and exact invocation: `/research <slug> --request <request-file> --confirm-request <sha256>` on Claude, or the `$research` form on Codex. The sequencer persists the validated body; the human copies it to the chosen request path and confirms its normalized digest. Persistence in Research Core requires that human confirmation; nothing here can supply it.
 - **Answerable without research.** The route is a person, not evidence. Leave it in the questions table and return `pass`.
 
 When every claim is covered or answerable, return `pass` with the coverage rows and no request. A `needs_user` closes the run, so raise it once, with every claim that needs evidence in the same request, rather than one claim at a time.
@@ -552,7 +552,7 @@ Set `status: draft` in the frontmatter. The document becomes pm's input as it st
 
 #### `references/critic.md`
 
-This phase judges. The registry declares the phase `writes: none`, and the worker header declares `writes: evidence`: write the full defect list to `findings.md` under `.devforgeai/work/<run>/evidence/brainstorm_critic/`, name it in `evidence_refs`, and change nothing inside the candidate root.
+This phase judges and changes nothing anywhere. Return the full defect list in required `findings`; after validation the sequencer persists it to `.devforgeai/work/<run>/evidence/brainstorm_critic/findings.md`.
 
 Report each defect as one `issues` row, naming the id and what is missing:
 
@@ -602,7 +602,7 @@ The script prints JSON to stdout and diagnostics to stderr, documents `--help`, 
 | File | Content | Load when |
 |------|---------|-----------|
 | `capture.md` | entry shape, id rules, carrying forward, reviving archived ideas, assumption tagging, brownfield input | dispatching `idea_capturer` |
-| `research_request.md` | the three claim states, what a complete request body carries, where it is written in the run-scoped evidence directory, and why confirming its digest stays the human's | dispatching `research_requester` |
+| `research_request.md` | the three claim states, what a complete request body carries, where the sequencer persists it, and why confirming its digest stays the human's | dispatching `research_requester` |
 | `cluster.md` | what a cluster is, the exactly-one-cluster rule, what passes through unchanged | dispatching `idea_clusterer` |
 | `write.md` | the four things completed here, provenance resolution, the citation-or-tag rule | dispatching `brainstorm_writer` |
 | `critic.md` | the five properties checked and why repair belongs elsewhere | dispatching `brainstorm_critic` |
@@ -628,7 +628,7 @@ The script prints JSON to stdout and diagnostics to stderr, documents `--help`, 
 |-----------|-----------------|--------------------|
 | G-1: three `writes: docs` phases and a one-path fence | The `document` oracle fails a `writes: docs` phase that changed no file, so all three must edit the same path in turn; the phases build linearly on one candidate root, so each sees exactly what the previous checkpoint left | Each writing phase reads the current bytes in its own dispatch and edits the file in place: `capture` creates it, `cluster` replaces one section, `write` completes it. The reference files state exactly what each phase may change, the checkpoint diff shows what it did change, and the critic compares the parts that were meant to pass through |
 | G-2: Slice has no phase | `01-skill-anatomy.md` and `05-subagent-sets.md` give Slice to a framework worker, but no registry phase dispatches one, and receipt validation binds the stop event's `agent_type` to the active phase's worker | Slice is a sequencer step inside `devforgeai phase start`: it resolves the incoming artifact's already-hashed bundle and writes `.devforgeai/work/<run>/context.json`, which every worker of the run is handed by path. This spec promises no slice phase and ships no slice agent file |
-| G-3: where the research request lives | `05-subagent-sets.md` says `research_requester` prepares a request file, but the run fence holds only the brainstorm document, and the write-model revision removed the receipt's `evidence` object that an earlier draft used | The worker is a judge with `writes: evidence`: it writes the request body to `.devforgeai/work/<run>/evidence/research_requester/request.md`, a gitignored run-scoped path outside the candidate root that is never promoted, and names it in `evidence_refs`. The note carries that path and the invocation, so a 16 KiB note is not the ceiling on the request. The human copies the file where Research wants it and confirms its digest; Research persistence requires that confirmation, so the worker writing the body but not the final request file loses nothing |
+| G-3: where the research request lives | `05-subagent-sets.md` says `research_requester` prepares a request body, but the run fence holds only the brainstorm document | The judge changes nothing and returns the body in required `findings`; after validation the sequencer persists it to `.devforgeai/work/<run>/evidence/research_requester/findings.md`, a gitignored run-scoped path outside the candidate root that is never promoted. The note carries that path and the invocation. The human copies the file where Research wants it and confirms its digest; Research persistence requires that confirmation. |
 | G-4: the user typed the ideas instead of naming a file | A dispatch carrying a dozen pasted ideas is an inline prompt longer than a dispatch instruction, which skill-validator rejects (`01-skill-anatomy.md`, Enforcement), and a worker in a fresh window cannot see the conversation | The dispatch names a path and nothing else. When no idea source path and no existing brainstorm document exist, `capture` returns `status: needs_user` with a note naming what it looked for, and the handoff asks for the ideas to be saved to a file and the command re-run. That keeps the ideas in a citable source, which is also what every `Source:` line depends on |
 | G-5: template conformance at pm's gate | `01-skill-anatomy.md` describes the gate validating the incoming artifact against its template; `document_gate` in `examples/hooks/devforgeai.py` checks the fence only, so pm's run gate does not read this document | The story gate re-resolves every `provenance` and `context` entry and `commands.hash`, with a placeholder digest reported as `unresolvable-source` under `gate_policy`; the document gate does not. This document is therefore checked when a story quotes it, and `scripts/check_brainstorm.py` is the deterministic form a human or continuous-integration step runs meanwhile. `AUTHOR-BRIEF.md` section 12 supersedes its own OI-2 row on this point |
 | G-6: the declared handoff table and the printed `next` | `01-skill-anatomy.md` says the sequencer selects a row from the skill's `handoff.outcomes`; `examples/hooks/devforgeai.py` selects `next` from the fixed table in `10-sequencer-and-contracts.md` section 6 | Section 7e is the declared intent carried in `skill.yaml`; a completed or `REQUIRE_HUMAN` document run currently prints `/status`. Read the handoff for what a given run printed |
@@ -637,10 +637,11 @@ The script prints JSON to stdout and diagnostics to stderr, documents `--help`, 
 | G-9: two ideas that are really one | Merging them at capture destroys the id pm archives by; keeping duplicates inflates the count | Capture both, then let `cluster` place them in one cluster. The clusters carry the relationship; the ids carry the identity |
 | G-10: an idea arrives with no problem statement anywhere | The writer invents a problem, and pm scopes to the invention | `write` states the problem in the source's own terms with its citation. When the source states none, the problem paragraph carries an `ASSUMPTION:` tag and an open-questions row routed to the requester |
 | G-11: the slug names no existing document and the user names no source | `capture` has nothing to read and would write an empty document, which the `document` oracle accepts and pm's gate cannot use | `capture` writes nothing and returns `status: needs_user` with empty `claimed_paths` and a note naming what it looked for. A document with no ideas is not a brainstorm; asking once is cheaper than three phases of nothing |
-| G-12: the receipt no longer carries an `evidence` object | Earlier drafts gave each phase `evidence.ideas`, `evidence.assumptions`, `evidence.clusters`, `evidence.questions` and `evidence.checked`. The receipt schema in the write-model revision removes `evidence` and adds `claimed_paths` and `evidence_refs`, which are paths, not rows | Every one of those rows already has a home in the document the phase wrote: ids and Source lines in `## Ideas`, tags on their own lines, membership in `## Clusters`, routes in `## Open Questions`. `evidence_refs` points at that file, `note` carries the counts, and `issues` carries what could not be written, bounded at ten rows. The two judges write their own findings under `.devforgeai/work/<run>/evidence/<agent>/`, which `evidence_refs` names. Nothing that a later phase reads was lost, because every later phase reads the document or that directory |
+| G-12: the receipt no longer carries an `evidence` object | Earlier drafts gave each phase `evidence.ideas`, `evidence.assumptions`, `evidence.clusters`, `evidence.questions` and `evidence.checked`. The receipt schema in the write-model revision removes `evidence` and adds `claimed_paths`, `evidence_refs` and the bounded judge-only `findings` string | Every producer row already has a home in the document the phase wrote: ids and Source lines in `## Ideas`, tags on their own lines, membership in `## Clusters`, and routes in `## Open Questions`. Producer `evidence_refs` points at that file, `note` carries counts, and `issues` carries what could not be written. The two judges return their complete reports in `findings`; after validation, the sequencer persists each string to `.devforgeai/work/<run>/evidence/<agent>/findings.md`. Nothing a later phase reads is lost. |
 | G-13: the primary window and the candidate root | A worker cannot resolve `candidate.root` from the canonical tree, and pasting artifact content into a dispatch is the restatement the anti-ceremony rules forbid | The one thing the dispatch carries beyond paths and ids is the `devforgeai status` block, which names `run`, `candidate.root`, `phase`, `fence` and `granted_keys`. It is generated, not composed, and it is the only sanctioned paste |
 | G-14: an earlier draft said promotion is the last thing the run does and that `devforgeai phase next` merges the candidate root | An author compiles a `SKILL.md` that never asks the user, and the run's files land in the canonical checkout without a human decision | Promotion is never automatic. The last passing transition sets `runs.<run>.status: ready_to_promote` and writes a `REQUIRE_HUMAN` handoff whose only forward step is `devforgeai promote <run>`; the compiled `SKILL.md` runs that command only after the user confirms in the session, and that command writes the second handoff block, whose `next` is the section 7e row for the run's outcome. Every run ends in two blocks, not one, and `STALE_BASE`, `DIRTY_TARGET` and `MERGE_CONFLICT` are refusals of `devforgeai promote <run>` that leave the run `ready_to_promote` with its root intact, never refusals of `devforgeai phase next`. **Decision (D7, as amended; `10-sequencer-and-contracts.md` sections 5.4, 6 and 12.4):** the sequencer may not close a run onto the canonical tree on its own. |
 | G-15: An earlier draft said a `REQUIRE_HUMAN` block closes the run, so "no flag resumes a closed one" | An author writes a repair route that opens a fresh run, and `devforgeai phase start` refuses it — the blocked run is still `active` — or writes `devforgeai phase fail --reason <text>` into every recovery row and throws away work the run had already checkpointed | A block is not a close. A `needs_user` result and an exhausted attempt budget both leave the run `active` with its lease released, its candidate root and checkpoints on disk, and `run.yaml#blocked_at` naming the phase. `devforgeai phase start` with the same skill and the same argument **resumes** that run at `blocked_at` with `attempts` reset to zero instead of refusing it, so `/brainstorm {slug}` is the whole recovery once the human has acted. Only another skill on the same story needs `devforgeai phase fail --reason <text>` first, and that call is what abandons the root. **Decision (`10-sequencer-and-contracts.md` sections 2, 3, 5.4 and 6):** blocked runs resume; they are not reopened. |
+| G-16: an earlier draft gave `research_requester` and `brainstorm_critic` a `Write` fenced to their own run-scoped evidence directories | Claude Code 2.1.259 was observed refusing a subagent's write of a report-shaped Markdown file before any hook ran, with an undocumented heuristic that may not be relied on in either direction, so a judge that must write a findings file cannot finish its phase | Each judge declares `writes: none` and carries no `Write`, `Edit` or `apply_patch`. It returns its complete bounded report in the receipt's `findings` string — required on `pass` or `fail`, optional on `needs_user` or `could_not_run`, at most 16,384 UTF-8 bytes, refused rather than truncated — and the sequencer writes that string verbatim to `.devforgeai/work/<run>/evidence/<agent>/findings.md` at the identity-bound `SubagentStop` once the receipt validates. The worker chooses neither the path nor the name, does not name it in its own `evidence_refs`, and has no workaround through `findings.json`, `notes.txt` or a shell redirect. A tool call the provider refuses before any hook runs is `could_not_run` with `reason_code: provider_tool_refused`; `hook_fault` stays reserved for a missing worker identity or a malformed receipt, and a failed worktree prerequisite is `prerequisite_missing`. The bounded `findings` body does enter the primary window as part of the subagent's result, exactly as any subagent result does; what stays isolated is the worker's transcript, its file reads, its tool traffic and its intermediate reasoning. **Decision (D13):** judges write nothing; the sequencer persists what they return. |
 
 ## 10. Success criteria and test cases
 
@@ -701,7 +702,7 @@ Overlays, copied over the base fixture for the eval whose id they name:
     {
       "id": 2,
       "prompt": "Continue the inbox brainstorm. The sequencer is not installed; the run file is open at phase research_request and this working copy is the candidate root. Dispatch that phase's worker and show me the receipt it returns.",
-      "expected_output": "A research_requester receipt with status needs_user, empty claimed_paths, and a note carrying one complete request body covering the competitor pricing claim followed by the research invocation with --request and --confirm-request.",
+      "expected_output": "A research_requester receipt with status needs_user, empty claimed_paths, findings carrying one complete request body covering the competitor pricing claim, and a note carrying the research invocation with --request and --confirm-request plus the fixed persisted path.",
       "files": [],
       "expectations": [
         "The research_requester receipt has status needs_user and an empty claimed_paths list",
@@ -733,7 +734,7 @@ Overlays, copied over the base fixture for the eval whose id they name:
 
 | Kind | Value |
 |------|-------|
-| Tools | `SKILL.md`: `Read`, `Agent`, and a Bash grammar no wider than the five model-callable operations `devforgeai status \| phase start <skill> <arg> \| phase fail --reason \| validate \| promote <run>`. Document writers (`idea_capturer`, `idea_clusterer`, `brainstorm_writer`): `Read`, `Grep`, `Glob`, `Bash(devforgeai status)`, plus `Edit` and `Write`, which Codex serves as `apply_patch`; every write is denied outside `candidate.root` and outside the phase's fence. Judges (`research_requester`, `brainstorm_critic`): `Read`, `Grep`, `Glob`, `Bash(devforgeai status)`, plus `Write` confined to `.devforgeai/work/<run>/evidence/<agent>/`. No brainstorm phase grants a stack command key, so no worker carries `Bash(devforgeai run *)` |
+| Tools | `SKILL.md`: `Read`, `Agent`, and a Bash grammar no wider than the five model-callable operations `devforgeai status \| phase start <skill> <arg> \| phase fail --reason \| validate \| promote <run>`. Document writers (`idea_capturer`, `idea_clusterer`, `brainstorm_writer`): `Read`, `Grep`, `Glob`, `Bash(devforgeai status)`, plus `Edit` and `Write`, which Codex serves as `apply_patch`; every write is denied outside `candidate.root` and outside the phase's fence. Judges (`research_requester`, `brainstorm_critic`): `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` and no write tool; they return required `findings` for sequencer persistence. No brainstorm phase grants a stack command key, so no worker carries `Bash(devforgeai run *)` |
 | MCP servers | none |
 | Runtime | Python 3.11+ for `scripts/check_brainstorm.py`, which imports `PyYAML` and the standard library only. Worktree mode additionally requires `git` with at least one commit on the project; without it the run falls back to copy mode |
 | Project commands | none. Every brainstorm phase declares an empty run-key set, so no `stack.yaml` key is brokered during this skill's run; a document run carries `commands: {}` (`10-sequencer-and-contracts.md` section 9) |
@@ -763,7 +764,7 @@ The generator produces one provider-neutral semantic package and a separate adap
 
 | Target | Install path | Invocation | Subagents | Notes |
 |--------|--------------|------------|-----------|-------|
-| claude | `.claude/skills/brainstorm/` | `/brainstorm` with the slug as its argument | `.claude/agents/brainstorm-<role>.md`: three document writers with `Edit` and `Write` confined to the candidate root, two judges whose `Write` reaches only their run-scoped evidence directories | Provider-specific frontmatter keys are compiled into this target's `SKILL.md` only. `hooks`, `memory`, `background`, `permissionMode` and Claude's own `isolation` are omitted from every profile |
+| claude | `.claude/skills/brainstorm/` | `/brainstorm` with the slug as its argument | `.claude/agents/brainstorm-<role>.md`: three document writers with `Edit` and `Write` confined to the candidate root, and two judges with no write tool whose reports travel in `findings` | Provider-specific frontmatter keys are compiled into this target's `SKILL.md` only. `hooks`, `memory`, `background`, `permissionMode` and Claude's own `isolation` are omitted from every profile |
 | codex | `.agents/skills/brainstorm/` plus `.codex/agents/` profiles | `$brainstorm` with the slug as its argument | `.codex/agents/brainstorm-<role>.toml`: the same five names, with `apply_patch` in place of `Edit` and `Write` | Portable six-field frontmatter only; policy goes in target-side configuration |
 | both | separate `.claude/skills/brainstorm/` and `.agents/skills/brainstorm/` adapters | as above | as above | Share only provider-neutral resources; validate each adapter independently |
 
@@ -812,7 +813,7 @@ grep -rnE 'T[O]DO|T[B]D|\{\{' ./out/brainstorm || echo clean
 python3 docs/design/specs/verify.py --only v1,v2,v4
 ```
 
-For non-Research anatomy skills, DevForgeAI skill-validator additionally checks: all sub-phase kinds present with Gate, Record and Handoff bound to sequencer operations; persona and critic are different files; `must_not` present in every agent file; every agent declaring `writes: candidate` or `writes: evidence`, with a `writes: evidence` agent carrying no `Edit` and a `Write` fenced to its run-scoped evidence directory, and a `writes: candidate` agent carrying no tool beyond the read set plus `Edit` and `Write`; the `SKILL.md` Bash grammar no wider than the five model-callable operations; and handoff outcomes covering every status the skill can return, including `could_not_run`.
+For non-Research anatomy skills, DevForgeAI skill-validator additionally checks: all sub-phase kinds present with Gate, Record and Handoff bound to sequencer operations; persona and critic are different files; `must_not` present in every agent file; every agent declaring `writes: candidate` or `writes: none`, with a judge carrying no write tool and returning required `findings`, and a producer carrying only the read set plus its required edit tools; the `SKILL.md` Bash grammar no wider than the five model-callable operations; and handoff outcomes covering every status the skill can return, including `could_not_run`.
 
 ## 15. Provenance
 

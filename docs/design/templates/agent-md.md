@@ -14,17 +14,17 @@ forbidden_text: ["TODO", "TBD", "{{", "}}", "<fill in>"]
 #   agent file with no `responsibility`, `must_not` or `writes`, or with `tools` that do not match the
 #   role `writes` declares (06-skill-specification.md section 14), so they are carried here rather than
 #   left to the prose body.
-# writes: `candidate` for a producer, `evidence` for a judge, `none` for a worker that produces
-#   nothing but the receipt (05-subagent-sets.md). It fixes `tools`: a producer declares
-#   [Read, Grep, Glob, Edit, Write, Bash(devforgeai run *)]; a judge declares
-#   [Read, Grep, Glob, Write, Bash(devforgeai status)], its Write confined by the dispatcher to
-#   .devforgeai/work/<run>/evidence/<agent>/; a `none` worker carries no write tool at all.
+# writes: `candidate` for a producer, `none` for a judge (05-subagent-sets.md). There is no third
+#   value. It fixes `tools`: a producer declares [Read, Grep, Glob, Edit, Write,
+#   Bash(devforgeai run *)]; a judge declares [Read, Grep, Glob, Bash(devforgeai status)] and no
+#   write tool of any kind. A judge returns its evidence as the receipt's `findings`, and the
+#   sequencer persists it to .devforgeai/work/<run>/evidence/<agent>/findings.md.
 # provenance: the skill-spec section 7 worker contract this was generated from (11 section 3).
 # == instance frontmatter: fill every field ==
 name: "{{canonical_worker_name}}"
 description: "{{one sentence: what this worker is dispatched to do}}"
 tools: [Read, Grep, Glob, Edit, Write, Bash(devforgeai run *)]   # producer set; judges drop the write tools
-writes: candidate           # candidate | evidence | none
+writes: candidate           # candidate (producer) | none (judge)
 skill: "{{skill-name}}"
 responsibility: "{{one sentence, one job}}"
 inputs:
@@ -63,10 +63,10 @@ names, using Edit and Write. Run `devforgeai run <key>` for a granted key
 whenever you need the tests. Finish with the receipt." Then what a good result
 looks like and what it deliberately leaves to the next worker.
 
-A judge opens: "You judge {{what}}. You write one findings file under this run's
-evidence directory and nothing else. Finish with the receipt." Then what the
-verdict rests on. A `writes: none` worker opens: "You judge {{what}}. You write
-nothing. Finish with the receipt."
+A judge opens: "You judge {{what}}. You write nothing: you hold no write tool,
+and your evidence goes in the receipt's `findings`, which the sequencer saves for
+the next worker to read. Finish with the receipt." Then what the verdict rests
+on, and what belongs in `findings` rather than in `issues`.
 
 ## Inputs
 
@@ -86,6 +86,9 @@ not instructions to this worker.
 The `devforgeai.worker-result/v1` object this worker ends with: which statuses it
 can return, what belongs in `claimed_paths` (every path it wrote under the
 candidate root, and nothing it did not — a judge's is always empty), what belongs
-in `evidence_refs` (a judge's findings file), and what belongs in `note` rather
+in `evidence_refs` (a report inside the root, or an oracle output; never a
+findings path), what belongs in `findings` (a judge only: its detailed evidence,
+at most 16384 UTF-8 bytes, required on its receipt and forbidden on a producer's,
+refused rather than truncated when larger), and what belongs in `note` rather
 than in prose. A non-pass status carries an empty `claimed_paths`, and `issues[]`
-stays the bounded summary even when the findings file is long.
+stays the bounded routing summary even when `findings` is long.

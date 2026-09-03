@@ -9,11 +9,11 @@ author: "DevForgeAI spec author (wave 2)"
 date: 2026-09-02
 depends_on:
   - source: docs/design/10-sequencer-and-contracts.md#2-cli-grammar
-    hash: sha256:231b93094676198b131720e581f044d8c66b4f0b8dcd3dcb35e4350100807090
+    hash: sha256:87a07888354112467337a1b7a02b9111d2e2030e49ce8a25f22eb3f441ab87b7
     excerpt: |
       Skills whose kind is `none` have no phases and never open a run; their command is a thin wrapper over a deterministic operation. `status` wraps `devforgeai status`; the installer skill wraps the installer, which is not part of this grammar.
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:511733ee35ca74fd5a5c0b59f225d7d975788e7d43d939f44c23b7aa8460cff0
+    hash: sha256:7c1d67f1154e49247e5dc178fcc1512bdbd53af378c360aeafe69bffed1136ab
     excerpt: |
       | init | none | — | none; the command is a thin wrapper over the deterministic installer, and `devforgeai phase start` refuses it |
   - source: docs/design/09-hook-dispatcher.md#5-provider-configuration-and-installation
@@ -34,14 +34,14 @@ depends_on:
     excerpt: |
       | init | — | the target repository | `state.yaml`, documentation skeleton, hook files | onboard, brainstorm |
   - source: docs/design/01-skill-anatomy.md#state-file
-    hash: sha256:cec96cadc465f6269eaf0756ef40ff4299302e0754cd4cd887a2c44e50d4851d
+    hash: sha256:b6afd02f6be66c6d1f475f84e66e384d4613a92706e71e849dc091610de8b25a
     excerpt: "`/status` renders this file. Only the `devforgeai` sequencer writes it, and only at `phase start` (registering the run), at promotion or abandonment, and at `phase fail`; Research state is written only by Research Core."
   - source: docs/design/01-skill-anatomy.md#handoff-contract
     hash: sha256:dc50836dc15a928b0c4758ef3a671c6f78d5c7db7ea207c923b917d89faa9e96
     excerpt: |
       4. **Cold-session safe.** Every command works from a fresh session with no memory of this run, because it reads `state.yaml`.
   - source: docs/design/05-subagent-sets.md#sets-per-skill
-    hash: sha256:9e12f3beb236a025c18d40e741c09ba675bd71d2d87f56e2b205c7556b944bf9
+    hash: sha256:f2957217c9af147e4a7ea03749cbe6efda266bd56d403f39aa25c9a655872609
     excerpt: "| init | none; `SKILL.md` is a thin wrapper over its bundled `scripts/install.py` |"
   - source: docs/design/03-brownfield.md#entry-flow
     hash: sha256:4cc41530e239bbce842a2a0ce623ca484bf200e48bbc85c45ef60fc0f3948118
@@ -419,7 +419,7 @@ Every script takes arguments, prompts for nothing, prints data on stdout and dia
 | `hooks/policy.py` | the shared path, phase, result and stack-policy library both entry points import |
 | `hooks/devforgeai` | the wrapper the bare token resolves to |
 | `claude/settings.json` | the project `.claude/settings.json` fragment: hooks, permission rules, `disableAllHooks: false` |
-| `claude/agents/*.md` | Claude worker profiles for the dev family: `red_dev`, `green_dev` and `refactor_dev` declare `writes: candidate`, `smoke_qa` and `dev_critic` declare `writes: evidence` |
+| `claude/agents/*.md` | Claude worker profiles for the dev family: `red_dev`, `green_dev` and `refactor_dev` declare `writes: candidate`; `smoke_qa` and `dev_critic` declare `writes: none` and carry no write tool |
 | `codex/config.toml` | the project `.codex/config.toml` fragment: hooks on, workspace sandbox, no network or login shell, apps off, one open worker |
 | `codex/hooks.json` | the project `.codex/hooks.json` fragment: the same dispatcher with `--provider codex` |
 | `codex/agents/*.toml` | Codex worker profiles with the same names and the same `writes` declarations as the Claude ones |
@@ -467,6 +467,7 @@ No rule reads a file's contents, and no rule maps an extension or a manifest nam
 | OI-7 | init does not invoke `/brainstorm` or `/onboard`. The edge is the `next` key it seeds; a human or a fresh session runs that command. |
 | write model | Every other skill's document writers write their template-conforming files inside the run's candidate root with Edit and Write, and that root reaches the canonical checkout only when the user runs `devforgeai promote <run>` on a run the last passing transition marked `ready_to_promote`; promotion is never automatic and is never part of Handoff (D7, as amended). `init` has no run and no candidate root: it writes `.devforgeai/` directly, and the dispatcher permits that only while no `state.yaml` exists and refuses every `.devforgeai/` path by name afterwards (`AUTHOR-BRIEF.md` section 10, item I-1). A generated `SKILL.md` that asks for a candidate root, or that writes under `.devforgeai/` a second time, is refused by the dispatcher rather than by a sentence here. |
 | producer exceptions | `.devforgeai/stack.yaml` and `.devforgeai/provenance/adr/**` are the two paths a worker may write, and only from the four declared producer phases, inside the candidate root. `init` writes neither: `install.py` seeds `state.yaml` and the hook files, and the stack section arrives from `/onboard` or `/architect <slug>`. |
+| judge write model | The Claude worker profiles `init` installs for the `dev` family declare a `writes` value the dispatcher and skill-validator both read. An earlier draft gave `smoke_qa` and `dev_critic` a `Write` fenced to their own run-scoped evidence directories; Claude Code 2.1.259 was observed refusing a subagent's write of a report-shaped Markdown file before any hook ran, with an undocumented heuristic that may not be relied on in either direction. The installed profiles therefore declare `writes: none` and carry no `Write`, `Edit` or `apply_patch`; the `writes` enum is `candidate | none`. A judge returns its evidence in the receipt's `findings` string — required on `pass` or `fail`, optional on `needs_user` or `could_not_run`, at most 16,384 UTF-8 bytes — and the sequencer persists it to `.devforgeai/work/<run>/evidence/<agent>/findings.md`. A tool call the provider refuses before any hook runs is `could_not_run` with `reason_code: provider_tool_refused`; a worktree prerequisite the `SessionStart` self-test finds absent is `prerequisite_missing`; `hook_fault` stays reserved for a missing worker identity or a malformed receipt. `install.py` writes the profiles; it does not decide their contents. **Decision (D13).** |
 | OI-10 | init is the skill that fixes the missing positional argument for the rest of the roster. It writes `slug` into `state.yaml`, and `/onboard`, `/drift` and `/status` read it from there. When `--slug` is omitted the value is the sanitised repository directory name; when that sanitises to an empty string the installer exits 2 and asks for `--slug` explicitly. |
 
 ## 10. Success criteria and test cases

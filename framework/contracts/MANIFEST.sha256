@@ -1,11 +1,11 @@
 # DevForge contract v1 promotion candidate. Draft 2026-09-03. Verify from the repository root: sha256sum -c framework/contracts/MANIFEST.sha256
 # Section hashes (01 hash rule), checked by docs/design/specs/verify.py --only v3:
 #   docs/design/10-sequencer-and-contracts.md#2-cli-grammar  sha256:231b93094676198b131720e581f044d8c66b4f0b8dcd3dcb35e4350100807090
-#   docs/design/10-sequencer-and-contracts.md#3-status-vocabulary-and-gate-policy  sha256:620b4cfcd770a5c653047f88fb4a09afb53a59ece78948c18e970bc9beaec5e6
-113efa34bb1c38043629546c34de31682a89f886a68579502409f1a9decc0ae7  framework/contracts/error-taxonomy.yaml
-0d67cbb6832b4a85a12ff7dfd0bdb97d6da28b1763b42ae4df166b9d8cad040b  schemas/devforgeai/v1/error-taxonomy.schema.json
-5bc3b5d3c3c2064887a6adb98999a849a73546a6a789626e6f9f7e7952e15946  schemas/devforgeai/v1/handoff.schema.json
-82db7a8d1b56945f19010cb160ecae77d193b3e334969f62d01ad201c73bb9cd  schemas/devforgeai/v1/run.schema.json
+#   docs/design/10-sequencer-and-contracts.md#3-status-vocabulary-and-gate-policy  sha256:2c6a74802ef62ff191f9f21b7822e5ff72dd2dbe68ee80188d2d3446f3e3323f
+7560b879e66afb3a35d113c73e92abe3d2e96b0269526e9c37cc9f4f2220eb57  framework/contracts/error-taxonomy.yaml
+201263785b35244f3fb0d2d98e784dff73897fc43b065f514676d2abe0207e9b  schemas/devforgeai/v1/error-taxonomy.schema.json
+760ba9c632af70f01ee5fb62ecbb1b57875571523ad61b5cd0dd509953256199  schemas/devforgeai/v1/handoff.schema.json
+2bbbcb589e80c2f3c9f4384adb1295adaee3ca6758b0cfae23959dbc3df7049b  schemas/devforgeai/v1/run.schema.json
 0680f1ceca256b36afef0a01ca260736ed3138b8e42301d06252cb546819447f  schemas/devforgeai/v1/session.schema.json
 45b4d014ad4d2a3753c961b55dc96fc08fb4ebfbc51dc0be64fd1b0a5e64fef6  schemas/devforgeai/v1/stack.schema.json
-ee5a9bf405088554ae64187abe1dd5c68e50a7035f89b72c9336cd3e529da522  schemas/devforgeai/v1/worker-result.schema.json
+67bce4d09cbd18502a01b138675a4a9c3e402011c44081da6a0b7c0b040d974a  schemas/devforgeai/v1/worker-result.schema.json

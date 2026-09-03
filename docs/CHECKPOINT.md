@@ -2,6 +2,39 @@
 
 Updated at the end of every wave. Newest entry first. Each entry says what exists, what is verified, what is open, and the decision the owner is asked to make at that check-in.
 
+## Check-in 14 — 2026-09-03, D13-D15 deterministic implementation complete; provider acceptance open
+
+**Base and recovery**: PR 7 merged as `9c65fa5` before the uncommitted D13/D14 bytes were included. Branch `fix/d13-d14-judge-persistence` starts at that merge and carries the follow-up. Local-only `.codex-security/`, the component's installed `.claude/`, its installer-created `.gitignore`, and `out/` are excluded.
+
+**Implemented**: judges declare `writes: none`, carry no write tool and return bounded `findings`; the sequencer validates and persists those bytes at the fixed run evidence path and records `findings_paths` in the handoff. Producer receipts forbid `findings`. `provider_tool_refused` and `checkpoint_fault` are distinct from `hook_fault`; blocked-run and `/clarify` routing are deterministic. The contract, schemas, templates, provider profiles, all 18 specs, prototype dispatcher/sequencer, and hook reference agree. A Node 24 live fixture defect found during this closeout is also fixed: `--test-isolation=none` preserves the named JUnit cases required by the red oracle; the fixture now declares Node 24 rather than claiming Node 18 compatibility.
+
+**Verified locally**:
+
+- `python3 docs/design/specs/verify.py`: V1, V2, V3, V4, V8 and V9 pass; 18 specs checked and all 241 dependency entries resolve.
+- `python3 docs/design/examples/hooks/run_conformance.py`: 222/222 rows hold (131 dispatcher, 35 grammar, 56 backstops).
+- `bash docs/design/examples/hooks/demo_sequencer.sh`: Python and Node are green in copy and worktree modes.
+- `python3 components/hook-runtime/reference/claude-python/tests/run_tests.py`: 23/23 pass.
+- `git diff --check`: pass.
+
+**NOT_EVALUATED**: D13 item 8 still requires a fresh Claude Code session with non-empty judge findings, byte-identical sequencer persistence, unchanged candidate/canonical trees, and next-phase consumption by path. The dev skill must then be regenerated from the current spec and its three current evals must pass 7/7, 4/4 and 5/5. The untracked `out/` package predates D13 and remains the failed 2/7, 4/4, 4/5 evidence; it is not admitted as current acceptance. Until those two provider-facing steps pass, the follow-up PR is a draft and the framework state is IMPLEMENTED, not PROVEN.
+
+## Check-in 13 — 2026-09-03, gap-closure plan accepted with amendments; D13/D14 wave in progress
+
+**Plan**: Codex's `SDD-GAP-CLOSURE-2026-09-03` (branch `docs/sdd-research-gap-closure`, worktree `worktrees/sdd-research-gap-closure`, base 908b23b) is accepted by the owner with these amendments, which govern the plan until it is re-frozen:
+
+1. `decision_authority_id` identifies the human owner by a stable ID; no model, session or worker holds decision authority.
+2. Finish D13/D14, regenerate the dev skill, obtain passing evals, update and merge PR 7, then re-freeze the plan against that merge commit with every input digest recomputed.
+3. CP-01, CP-03 and CP-09 stages are not PASS merely because evidence exists. Each gets an `admitted_inputs` (pre-existing evidence) section with exact commit, subject digest, provider and version, command and result. Stages stay incomplete: CP-01 has partial Claude execution evidence (red, green, refactor proven; the smoke judge failure exposed) plus separate Codex hook-boundary evidence; CP-03 has Python and Node dialects with the proven cases only, Rust, the rest of the matrix and live parity open; CP-09 has the five deterministic promotion refusals only, with concurrency, crash recovery, CI parity and the remaining hostile cases open.
+4. CP-00 may admit evidence created before it. CP-01/03/09 are not "in progress" ahead of their CP-00 dependency; until CP-00 closes their evidence is labelled AVAILABLE_FOR_ADMISSION, not accepted or proven.
+5. GAP-11 and CP-01 gain two Claude Code 2.1.259 observations, bound to raw evidence and provider version, with provider-version change as a reopening condition: helper subagents emit lifecycle events without `agent_type`; report-looking Markdown writes such as `findings.md` are refused before the DevForgeAI hook sees them.
+6. Headless evaluations used `--allowedTools Skill Agent`; recorded as an allowlist, not a trust or permission bypass.
+7. A passing generated dev-skill evaluation package is an admission prerequisite for CP-01's full Claude dev-loop probe, not for CP-00.
+8. CP-02 stays. The roster exists (02-skill-roster.md); implementation and proof are missing. CP-03 may demonstrate configured Python and Node runner behaviour, but no stack-discovery or stack-neutrality claim is permitted until CP-02 closes.
+9. CP-12's immediate 90-trial run is replaced by CP-12-PILOT: one fresh trial per provider × condition × small/medium cell (12 trials); its only closure decision is whether harness, metrics, grader independence, time estimate and retained evidence are usable. It cannot close CP-12 or support an effectiveness claim; the human then decides on the full experiment.
+10. Immediate order: (1) finish and merge PR 7 with all dev evals passing; (2) rebase, re-freeze and accept the plan; (3) implement and close CP-00; (4) formally admit existing CP-01/03/09 evidence; (5) continue CP-01 and CP-03, schedule CP-02 before any stack-neutrality claim; (6) every other checkpoint stays proposed. The two-PR closure rule and the RESEARCHED / IMPLEMENTED / PROVEN vocabulary are preserved.
+
+**In progress (item 1)**: D13 (judges return `findings` in the receipt, sequencer persists; `provider_tool_refused`) and D14 (seven spec-001 defects, two SKILL.md defects) across docs, schemas, taxonomy, sequencer, conformance, agent files and all 18 specs; then the fresh-session judge persistence test, dev-skill regeneration and the three evals at 7/7, 4/4, 5/5. PR 7 is held open until then.
+
 ## Check-in 12 — 2026-09-03, live dev-loop proof prepared
 
 **Made**: scratch project `~/Projects/dfai-proof` (separate git repo, not part of this repository): the Python dev-tdd fixture, `stack.yaml`, the prototype sequencer/dispatcher/policy installed at `.devforgeai/hooks/`, the prototype `settings.claude.json`, the five dev worker agents compiled into `.claude/agents/` (placeholders replaced), a hand-written `dev` skill to the corrected template (66 lines, six-field frontmatter), `PROOF.md` (what to run and watch) and `collect.sh` (evidence gatherer). A `devforgeai` wrapper on PATH (`~/.local/bin/devforgeai`) locates the project-local sequencer by walking up from cwd; it replaced a dangling symlink to the legacy `.venv`.

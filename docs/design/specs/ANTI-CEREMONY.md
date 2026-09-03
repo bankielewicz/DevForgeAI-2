@@ -94,8 +94,10 @@ report done. Each item is a search you perform, and each failure names its fix.
    with a `stack.yaml` command key and the sequencer's brokered run.
 4. **Search for state writes.** `write`, `update`, `append`, `record`, `save` with an
    object under canonical `.devforgeai/`. Only the sequencer writes there. A producer writes
-   its artifacts inside the candidate root and claims their paths in the receipt; the run
-   file, the evidence files, `state.yaml` and promotion are the sequencer's.
+   its artifacts inside the candidate root and claims their paths in the receipt; a judge
+   writes nothing at all and returns its evidence as the receipt's `findings`; the run file,
+   the evidence files — `findings.md` included — `state.yaml` and promotion are the
+   sequencer's.
 5. **Search for content restatement.** Any place a worker's `inputs` or a dispatch step
    quotes, summarises or paraphrases a goal, an acceptance criterion, a requirement, or a
    constitution rule. Replace with the path and the id.
@@ -106,13 +108,15 @@ report done. Each item is a search you perform, and each failure names its fix.
    record the gap in section 9.
 7. **Check every `must_not` line.** Each must be a forbidden action a validation step or an
    oracle can catch — writing outside the candidate root or the fence, touching a test file
-   from a code phase, adding a package outside the allowlist. A `writes: evidence` worker's list
-   says "write anywhere but this run's evidence directory", a `writes: none` worker's says "write
-   any file", and a `writes: candidate` worker's never says it does not write. "Do not hallucinate" and "do not exceed
+   from a code phase, adding a package outside the allowlist. A `writes: none` worker is a
+   judge: its list says "write any file, anywhere" — it holds no write tool, and there is no
+   directory it may write instead — while a `writes: candidate` worker's never says it does
+   not write. Those two values are the whole enum. "Do not hallucinate" and "do not exceed
    scope" are not actions; replace them with the fence, the `writes` mode, or the critic
    phase's own oracle row.
 8. **Check every checklist you kept.** Every item resolves to a command with an exit code, a
-   file an oracle sees on disk, or an `evidence_refs` target the receipt names. If an item resolves to none
+   file an oracle sees on disk, an `evidence_refs` target the receipt names, or — on a judge
+   phase — a statement the receipt's `findings` must carry. If an item resolves to none
    of those, delete the item.
 9. **Ask the counterfactual, per paragraph.** Would this run look different if the model
    ignored this paragraph? If the only difference is what the model would say about itself,

@@ -92,6 +92,10 @@ node:
       argv:
         - node
         - --test
+        # Node 24's default process isolation collapses a failing file to one
+        # file-level JUnit case. In-process execution preserves the three named
+        # test cases the red oracle must compare with test_plan.
+        - --test-isolation=none
         - --test-reporter=junit
         - --test-reporter-destination=.devforgeai/work/junit.xml
         - tests/text.test.mjs

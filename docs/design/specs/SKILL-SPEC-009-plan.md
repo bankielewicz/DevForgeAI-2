@@ -9,7 +9,7 @@ author: "DevForgeAI wave-2 specification author"
 date: 2026-09-02
 depends_on:
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:a6bbaf9af2d69f7ede18d7c40f242c42edb26d79be964ffec3f386d6347014c2
+    hash: sha256:5afb88c46aa635c961564af8e58c799a44f387c6bd877eeac2ec7568f73aba7e
     excerpt: "**The model dispatches, the sequencer decides.** For an anatomy-governed skill, the primary window (provider entry adapter + skill orchestration) does light, trivial work only."
   - source: docs/design/01-skill-anatomy.md#dedicated-templates
     hash: sha256:55bd4a18d63e645adffa187d34256dc7db7370095dcbf9e96a190028f7e65a5e
@@ -18,25 +18,25 @@ depends_on:
     hash: sha256:7b068feb30e7cc2f66292b512ac179cd217df225fb58517d2aaadd30b25236dc
     excerpt: "A literal placeholder hash (`sha256:fixture...`, `sha256:PENDING`) is reported as `unresolvable-source`."
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:511733ee35ca74fd5a5c0b59f225d7d975788e7d43d939f44c23b7aa8460cff0
+    hash: sha256:7c1d67f1154e49247e5dc178fcc1512bdbd53af378c360aeafe69bffed1136ab
     excerpt: "| plan | 1 | `epics` | `epic_writer` | docs | 2 | — | document | — |"
   - source: docs/design/10-sequencer-and-contracts.md#3-4-re-resolving-sources-and-the-one-downgrade
     hash: sha256:722dadc1737749e30d244f222aaa1d8b845bc93f4a573b16f662719e58b49bcd
     excerpt: "The story gate re-resolves every `provenance[]` and `context[]` entry as well as `commands`."
   - source: docs/design/10-sequencer-and-contracts.md#5-2-validation-order
-    hash: sha256:9f1bf77b7e84302ff6f3f20260228d57390cc97ab8e8d3f68f52c3ff2658aab8
+    hash: sha256:9cf7115cdfa637023edc22cbdf5f64c106b1eba340598c8dc97b68361cb76b0f
     excerpt: "| 10 | `changed[]` is a subset of `claimed_paths` | refuse, reason `UNCLAIMED_CHANGE`; this **is** a phase attempt, because real bytes were written outside the claim |"
   - source: docs/design/10-sequencer-and-contracts.md#5-4-transition-oracles
-    hash: sha256:ffa41b5d270dc260e28fa9f6bdbc855069a6e922d1148c74b25860dba63484dc
+    hash: sha256:076840ec9db03155bc9edcceb587e2aa1ca8bf3849e7a8b742f788d1a3b2315f
     excerpt: "the phase declared `writes: docs` and `changed[]` is non-empty, unless it is marked conditional, in which case an empty change set needs a non-empty `note`; every changed path exists in the root with the bytes the checkpoint will hold"
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:bca72c10668178e0f4da43e03aaafbf24d2a57ec12f71a16b078880dd496677a
+    hash: sha256:3c4c95bbd73b5499e5569e650f84eea84cb68404c0909f5f1819c0f3a5c7b3d4
     excerpt: "`next` is never empty and is never a description. One exact command."
   - source: docs/design/11-artifact-registry.md#1-template-registry
     hash: sha256:fabb8d2f142dcde1a31bc53768f8a46d01cac3ea4a7f6b73db22479cc89b5553
     excerpt: "| `story` | `.devforgeai/skills/plan/templates/story.md` | 3 |"
   - source: docs/design/11-artifact-registry.md#2-artifact-path-patterns
-    hash: sha256:2d2e97afff50edf6b35bf674b1de217c684d5091361e5f1deae12de52b95fb51
+    hash: sha256:858455b885ac6c1ddbe427a433ba715f7266d08b90e105135172877e29ea0ecc
     excerpt: "| `docs/plan/<slug>/stories/STORY-NNN.md` | `story` | plan | sequencer |"
   - source: docs/design/11-artifact-registry.md#3-depends-on-edges
     hash: sha256:f3c304ff840d2027432f743288bccec0ea5bc5d7b99b7f41c8d524b1c3591da2
@@ -48,10 +48,10 @@ depends_on:
     hash: sha256:1dac784b4670cc7559f323011dfe304dfe8c0baf349063162f90d76d902c5d3c
     excerpt: "| plan | pass | `/analyze {slug}` to re-check traceability, then `/dev {first_story}` |"
   - source: docs/design/05-subagent-sets.md#sets-per-skill
-    hash: sha256:9e12f3beb236a025c18d40e741c09ba675bd71d2d87f56e2b205c7556b944bf9
+    hash: sha256:f2957217c9af147e4a7ea03749cbe6efda266bd56d403f39aa25c9a655872609
     excerpt: "| plan | epic-writer, story-writer, skill-spec-writer, dependency-mapper, estimator, sprint-writer, critic |"
   - source: docs/design/05-subagent-sets.md#contract-format
-    hash: sha256:23d8c21c51ca70b053f4661b32249b86a330c816e02db1219be72d5a9bc07a4e
+    hash: sha256:2b49e9bf10b0b95694f88e3682ff326a735eebe105e88488d1c5c12b8e0c83de
     excerpt: "`must_not` is compiled into the agent prompt verbatim."
   - source: docs/design/06-skill-specification.md#where-the-spec-sits-in-the-pipeline
     hash: sha256:3a3b21544bff9cfa31bc8529dbd0b0cf46952ea27169823452023b5433f5f62f
@@ -341,7 +341,7 @@ None.
 
 ### Return envelope (DevForgeAI-anatomy skills only)
 
-One schema, both providers: `devforgeai.worker-result/v1`, normative in `schemas/devforgeai/v1/worker-result.schema.json`. A worker's final message is exactly this object, with no Markdown fence and no surrounding prose. A document writer has already written its files inside the candidate root when it returns; the receipt claims what it wrote. `plan_critic` writes only into its own run-scoped evidence directory.
+One schema, both providers: `devforgeai.worker-result/v1`, normative in `schemas/devforgeai/v1/worker-result.schema.json`. A worker's final message is exactly this object, with no Markdown fence and no surrounding prose. A document writer has already written its files inside the candidate root when it returns; the receipt claims what it wrote. `plan_critic` writes nothing and returns its complete bounded report in `findings`, which the sequencer persists to the fixed judge-evidence path after receipt validation. `findings` is **required** on a judge receipt whose status is `pass` or `fail`, **optional** on a judge's `needs_user` or `could_not_run` — where the judge may have nothing to report — and **forbidden** on a producer receipt, on every status; the 16384-UTF-8-byte bound is the same wherever it is present, and an oversize string refuses the receipt.
 
 ```yaml
 schema: devforgeai.worker-result/v1
@@ -350,7 +350,7 @@ skill: "plan"
 phase: "stories"
 agent: "story_writer"
 status: pass | fail | needs_user | could_not_run
-reason_code: runner_missing | timeout | network | hook_fault   # required only when status is could_not_run
+reason_code: runner_missing | timeout | network | hook_fault | provider_tool_refused | prerequisite_missing | checkpoint_fault   # required only when status is could_not_run
 candidate: {id: "plan-shop", input_checkpoint: "epics"}
 claimed_paths: ["docs/plan/shop/stories/STORY-001.md"]   # root-relative, at most 64; empty on any non-pass status
 evidence_refs: ["docs/plan/shop/stories/STORY-001.md"]   # at most 16
@@ -399,11 +399,11 @@ Gate, Record and Handoff dispatch no LLM: they are `devforgeai` sequencer operat
 | 5 | Write: `dependencies` | worker: `dependency_mapper` | candidate, fields | preferred |
 | 6 | Write: `estimates` | worker: `estimator` | candidate, fields | preferred |
 | 7 | Write: `sprints` | worker: `sprint_writer` | candidate | required |
-| 8 | Review: `critic` | worker: `plan_critic` | evidence | required |
+| 8 | Review: `critic` | worker: `plan_critic` | none | required |
 | 9 | Record | sequencer: `devforgeai phase next` | sequencer | n/a |
 | 10 | Handoff | sequencer: `devforgeai phase next`, which on the last passing transition marks the run `ready_to_promote` and renders the first block, a `REQUIRE_HUMAN` handoff naming `devforgeai promote <run>`; that command, run only after the user confirms in the session, renders the second | sequencer | n/a |
 
-`epic_writer` is the persona and `plan_critic` is the critic. They are different workers with different prompts and different agent files, because a persona reviewing its own output is the hallucination vector the anatomy exists to remove. Six workers are producers that write inside the candidate root; `plan_critic` is a judge whose `Write` the dispatcher confines to `.devforgeai/work/<run>/evidence/plan_critic/`, a gitignored, run-scoped directory outside the candidate root that is never promoted. Its findings file lives there and is named in `evidence_refs`; `issues[]` stays the bounded summary the handoff carries.
+`epic_writer` is the persona and `plan_critic` is the critic. They are different workers with different prompts and different agent files, because a persona reviewing its own output is the hallucination vector the anatomy exists to remove. Six workers are producers that write inside the candidate root; `plan_critic` is a judge with no write tool. It returns its complete bounded report in `findings`, which the sequencer persists to `.devforgeai/work/<run>/evidence/plan_critic/findings.md` after validation. The judge never names its own not-yet-created findings path in `evidence_refs`; `issues[]` stays the bounded summary the handoff carries.
 
 For an anatomy-governed skill, `SKILL.md` dispatches each worker through the selected target's provider-native worker mechanism, using the generated target profile, file paths and the `devforgeai status` block. It never pastes or paraphrases artifact content, objectives, or acceptance criteria into the prompt. Its Bash grammar is exactly `devforgeai status | phase start <skill> <arg> | phase fail --reason | validate | promote <run>`; every other sequencer operation is hook-only. The `Isolation` column is the DevForgeAI contract value compiled into the target profile, not Claude's `isolation` frontmatter field; the framework does not use Claude's worktree isolation or `EnterWorktree`, because both fork from HEAD and the run's phases build linearly on one candidate root. Runtime verification of isolation is `12-post-mvp.md#pm-01`.
 
@@ -419,7 +419,7 @@ One row per registry phase, in registry order. `<run>` is `plan-<slug>`; `<phase
 | `dependencies` | `dependency_mapper` | ingest validation as `epics`, restricted by the registry's `writes: fields` mode, which the worker header carries as `writes: candidate` narrowed to a field fence: every changed path matches the field fence `docs/plan/<slug>/stories/*.md`, the file already existed, its body bytes are identical to the input checkpoint's, and its frontmatter diff touches nothing but `blocked_by`, `size` and `sprint`. A change outside that restriction refuses the receipt | `{unresolvable_source: BLOCK}` | `.devforgeai/work/<run>/dependencies-result.json`, `dependencies-report.md` | `report_only`: no file outside the fence changed since the input checkpoint and the whole-root package and import policy holds. A field-restricted phase may legitimately change nothing, so an empty change set passes |
 | `estimates` | `estimator` | ingest validation as `dependencies`, over the same field fence and the same three keys, on top of whatever the `dependencies` checkpoint left | `{unresolvable_source: BLOCK}` | `.devforgeai/work/<run>/estimates-result.json`, `estimates-report.md` | `report_only`: as `dependencies` |
 | `sprints` | `sprint_writer` | as `epics`, plus `scripts/check_sprint.py`: the id matches `^sprint-[0-9]{3}$`, the six frontmatter keys and four sections are present, and every id in `stories` names a story file that exists under `docs/plan/<slug>/stories/`. This phase also sets each scheduled story's `sprint` key in place, under the same field restriction the two preceding phases carry, so those edits are re-checked by `scripts/check_story.py` | `{unresolvable_source: BLOCK}` | `.devforgeai/work/<run>/sprints-result.json`, `sprints-report.md` | `document`: as `epics` |
-| `critic` | `plan_critic` | at ingest: `claimed_paths` is empty, because the registry declares the phase `writes: none` and the worker header `writes: evidence`, and any change inside the candidate root refuses the receipt as `UNCLAIMED_CHANGE`; the dispatcher confines this worker's writes to `.devforgeai/work/<run>/evidence/plan_critic/`; the phase grants no command key, so `devforgeai run` refuses every key it might name | `{unresolvable_source: BLOCK}` | `.devforgeai/work/<run>/critic-result.json`, `critic-report.md`, then `handoff.json` | `report_only`: as `dependencies`. On pass this is the last phase: the run is marked `ready_to_promote`, enforcement is cleared, and the first handoff's `next` is `devforgeai promote <run>`; the second handoff, written by that command once the user asks for it, takes its `next` from the section 7e table |
+| `critic` | `plan_critic` | at ingest: `claimed_paths` is empty because the phase and worker declare `writes: none`, and any candidate-root change refuses the receipt as `UNCLAIMED_CHANGE`; the worker carries no write tool and returns required `findings`, which the sequencer persists to its fixed evidence path; the phase grants no command key, so `devforgeai run` refuses every key it might name | `{unresolvable_source: BLOCK}` | `.devforgeai/work/<run>/evidence/plan_critic/findings.md`, `critic-result.json`, `critic-report.md`, then `handoff.json` | `report_only`: as `dependencies`. On pass this is the last phase: the run is marked `ready_to_promote`, enforcement is cleared, and the first handoff's `next` is `devforgeai promote <run>`; the second handoff, written by that command once the user asks for it, takes its `next` from the section 7e table |
 
 Attempt budgets, materialised into the run file from the registry, are 2 for every phase. No `plan` phase declares `rewind_to`, so a `fail` receipt carrying `next` is refused; a `fail` without `next` becomes a transition problem row, the phase retries to its limit, and the run then blocks `REQUIRE_HUMAN` (open item OI-4).
 
@@ -644,10 +644,10 @@ body:
 name: plan_critic
 description: Dispatch this worker at the critic phase to judge every artifact this run wrote against its template header and the upstream anchor it cites.
 skill: plan
-writes: evidence
+writes: none
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Write]
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+tools: [Read, Grep, Glob, Bash(devforgeai status)]
+tools_codex: [Read, Grep, Glob, Bash(devforgeai status)]
 skills: []
 compiled_to: [.claude/agents/plan-plan_critic.md, .codex/agents/plan-plan_critic.toml]
 responsibility: Check every artifact this run wrote against its template header and against the upstream anchor it cites, and report defects without repairing them.
@@ -657,24 +657,24 @@ inputs:
   - docs/PM/<slug>/prd.md and docs/architecture/constitution.md
   - references/critic.md, for the defect classes and the evidence a finding must carry
 outputs:
-  - .devforgeai/work/<run>/evidence/plan_critic/findings.md, the full defect list and the per-requirement coverage table, written in its own run-scoped evidence directory and named in evidence_refs
+  - findings: the full defect list and the per-requirement coverage table; required, at most 16,384 UTF-8 bytes, and persisted by the sequencer to .devforgeai/work/<run>/evidence/plan_critic/findings.md after receipt validation
   - issues: at most ten rows, each naming the file, the id and the defect class
   - note: the count of PRD requirement anchors covered by a story and uncovered
 must_not:
   - repair a defect it found
   - pass a story without quoting the criterion and the test_plan row that pair
   - report a defect against an artifact no phase of this run wrote
-  - write anywhere but its own run-scoped evidence directory, or run any stack command key
+  - use Write, Edit or apply_patch, name its own findings path in evidence_refs, or run any stack command key
 isolation: required
 returns: devforgeai.worker-result/v1
 body:
   job: Judge every artifact this run wrote against its template header and the upstream anchor it cites.
   inputs: The list above, read under the candidate root; nothing outside it is opened.
   rules: references/critic.md, the defect classes, and the must_not list.
-  receipt: One devforgeai.worker-result/v1 object; claimed_paths is empty on every status, evidence_refs names the findings file it wrote under its run-scoped evidence directory, and each defect is also one issues row.
+  receipt: One devforgeai.worker-result/v1 object; findings contains the complete defect report, claimed_paths is empty on every status, evidence_refs does not name the sequencer-created findings path, and each defect is also one issues row.
 ```
 
-A producer's tools are the read set plus `Edit` and `Write`, which Codex serves as `apply_patch`; a judge's are the read set plus a `Write` the dispatcher confines to `.devforgeai/work/<run>/evidence/<agent>/`, a gitignored, run-scoped directory outside the candidate root that is never promoted. Both include `Bash(devforgeai status)` and nothing else on the Bash surface, because no `plan` phase grants a stack command key (open item OI-3).
+A producer's tools are the read set plus `Edit` and `Write`, which Codex serves as `apply_patch`; a judge's are the read set alone, with no `Write`, no `Edit` and no `apply_patch` on either target. Its report reaches disk as the `findings` string the sequencer persists to `.devforgeai/work/<run>/evidence/<agent>/findings.md`, a gitignored, run-scoped path outside the candidate root that is never promoted. Both include `Bash(devforgeai status)` and nothing else on the Bash surface, because no `plan` phase grants a stack command key (open item OI-3).
 
 ### 7e. Handoff outcomes
 
@@ -784,7 +784,7 @@ Every script is deterministic, non-interactive, prints data to stdout and diagno
 |-----------|-----------------|--------------------|
 | OI-1: Slice belongs to a framework worker, but no `plan` phase dispatches one | The generated skill grows an eighth agent file with no registry phase to run it | Slice is a sequencer step inside `devforgeai phase start`: it resolves the incoming artifact's already-hashed bundle and writes `.devforgeai/work/<run>/context.json`, which every worker of the run is handed by path. That is the run-level bundle. Each story's own bundle is a different artifact, built by `story_writer`, which is why `references/story-bundle.md` carries those rules — verbatim excerpts, anchors, no summarising — as that worker's own contract. |
 | OI-2: provenance conformance at the gate | A `plan` spec that promised story-style re-resolution at its own gate would over-promise | `10-sequencer-and-contracts.md` section 3.4 carries full re-resolution, and section 4 makes `qa` and `review` the only story-anchored document skills. `plan`'s own gate is the fence gate alone, so nothing re-resolves the PRD or the constitution digests when this run opens. `02-skill-roster.md#plan` describes that check as `plan`'s gate; it is a requirement on the gate, not behaviour today, and `scripts/check_epic.py` is the designed replacement. |
-| OI-3: worker tools | A generator either gives every worker the same tools or widens a judge's to include an unfenced write | Tools follow the role. A producer carries `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` plus `Edit` and `Write`, which Codex serves as `apply_patch`; every write is denied outside `candidate.root` and outside the phase's fence, and a `writes: fields` phase is narrowed again to its field fence and its three keys. A judge carries the read set plus a `Write` the dispatcher confines to `.devforgeai/work/<run>/evidence/<agent>/`. `Bash(devforgeai run *)` is granted only where a phase declares run keys, and no `plan` phase does. |
+| OI-3: worker tools | A generator either gives every worker the same tools or widens a judge's to include an unfenced write | Tools follow the role. A producer carries `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` plus `Edit` and `Write`, which Codex serves as `apply_patch`; every write is denied outside `candidate.root` and outside the phase's fence, and a `writes: fields` phase is narrowed again to its field fence and its three keys. A judge carries the read set and no write tool at all; its report travels in the receipt's `findings` string, which the sequencer persists to `.devforgeai/work/<run>/evidence/<agent>/findings.md` (D13). `Bash(devforgeai run *)` is granted only where a phase declares run keys, and no `plan` phase does. |
 | OI-4: no outcome row for `status: fail` with no `next` | A reader assumes a failing critic passes silently | `examples/hooks/devforgeai.py` inserts `"<agent> reported fail"` as a transition problem row, so the phase retries to `max_attempts: 2` and then blocks `REQUIRE_HUMAN`. The `fail at any other phase` row in section 7e is that path. |
 | OI-5: `--retry`, `--reslice` and `--next-sprint` look like resume flags | A user expects `/plan {slug} --reslice {story}` to reopen a run and patch one story | No flag resumes anything. A blocked run resumes on its own account: it stays `active` with `run.yaml#blocked_at` naming the phase, and plain `devforgeai phase start plan {slug}` resumes it there with `attempts` reset, which is why `--retry` is unnecessary and is not implemented as a resume. Every other invocation — after `devforgeai phase fail --reason <text>` closed a run, or with no run open — starts fresh at `epics`, and the flags change only what the workers read: `--reslice` directs `story_writer` to rebuild the bundles of the named stories, `--next-sprint` directs `sprint_writer` to start after the last sprint marked done, and `--retry` is a plain re-run. `--scope` is the only flag whose value reaches the artifacts. The exact invocation is `/plan {slug} --reslice {story}`, with the slug positional and one or more story ids after the flag: the fence is `docs/plan/{arg}/**`, so a story id in the argument position would fence the run to a directory that does not exist. Every skill that routes here writes it that long form. |
 | OI-6: the ADR path is a producer exception | Not reachable from `plan` | `.devforgeai/provenance/adr/**` is declared for `architect`/`adr` and `amend`/`adr` and is not in `plan`'s fence. `plan` has no `adr` phase and writes nothing under `.devforgeai/provenance/`. It reads ADRs only through `analyze` and `retro` reports it consumes. |
@@ -803,11 +803,12 @@ Every script is deterministic, non-interactive, prints data to stdout and diagno
 | Two `plan` runs over the same slug | A second run's candidate root is cut from the canonical HEAD, so a story `/clarify` changed since the first run is in the root as the human left it | Each writer edits the file where it stands in the root, so a hand-edited story is carried forward rather than replaced. Where two runs genuinely overlap, `FENCE_OVERLAP` refuses the second at `phase start`, and where canonical HEAD moved under a run, promotion refuses `STALE_BASE` and the sequencer rebases and reruns the last oracle before retrying. |
 | A plan larger than sixty-four files | The receipt caps `claimed_paths` at 64 entries, and a change the receipt did not claim refuses the whole result as `UNCLAIMED_CHANGE`. One phase is one receipt, with no batching operation in the grammar, so the `stories` phase cannot write more than 64 stories and the `sprints` phase cannot write more than 64 sprint files and stamped stories together | The cap is a real ceiling, not a guideline, and this spec does not describe a plan above it as writable. The fix is in the receipt contract: raise the `claimed_paths` cap, or add a batching operation that lets one phase checkpoint several receipts under one transition. Until then a project above the ceiling is split into two slugs, each with its own `docs/plan/<slug>/` fence and its own run, and `/analyze` walks each separately. `references/stories.md` states the ceiling so `story_writer` stops at it and reports the remainder as an `issues` row rather than writing files it cannot claim. The same cap applies to `architect`'s `design` and `adr` phases, where it is unlikely to bite. |
 | The candidate root and the primary window | A worker cannot resolve `candidate.root` from the canonical tree, and pasting artifact content into a dispatch is the restatement the anti-ceremony rules forbid | Every anatomy run gets one candidate root, opened by `phase start` and owned by the sequencer until promotion or abandonment; the primary window stays in the canonical checkout. The one thing a dispatch carries beyond paths, ids and the scope and flag tokens is the `devforgeai status` block, which names `run`, `candidate.root`, `phase`, `fence` and `granted_keys`. It is generated, not composed, and it is the only sanctioned paste. Claude's own worktree isolation setting and `EnterWorktree` are not used: they fork from HEAD and would split the run's linear history |
-| The receipt no longer carries an `evidence` object | Earlier drafts gave the phases `evidence.epics`, `evidence.stories`, `evidence.specs`, `evidence.order`, `evidence.sizes`, `evidence.sprints` and `evidence.coverage`, and made `dependencies` and `estimates` return their rows for `sprint_writer` to apply | The two ordering phases now write their keys into the stories themselves, under the `writes: fields` restriction, so `blocked_by` and `size` live where every consumer already reads them. Every other row has a home in the artifact its phase wrote. `evidence_refs` points at those files, `note` carries the counts and the per-edge reasons, and `plan_critic` writes its findings file into its own run-scoped evidence directory. |
+| The receipt no longer carries an `evidence` object | Earlier drafts gave the phases `evidence.epics`, `evidence.stories`, `evidence.specs`, `evidence.order`, `evidence.sizes`, `evidence.sprints` and `evidence.coverage`, and made `dependencies` and `estimates` return their rows for `sprint_writer` to apply | The two ordering phases now write their keys into the stories themselves, under the `writes: fields` restriction, so `blocked_by` and `size` live where every consumer already reads them. Every producer row has a home in the artifact its phase wrote, and producer `evidence_refs` points at those files. `note` carries counts and per-edge reasons. `plan_critic` returns its report in `findings`, which the sequencer persists at its fixed run-scoped path after validation. |
 | A monorepo with two package managers | A story can pin only one `stack.yaml` anchor, so a story spanning two ecosystems cannot express its commands | `story_writer` writes one anchor per story and splits work that spans two ecosystems into two stories. Cross-package stories are out of scope; the deferred contract is `12-post-mvp.md#pm-09`. |
 | An earlier draft said promotion is the last thing the run does and that `devforgeai phase next` merges the candidate root | An author compiles a `SKILL.md` that never asks the user, and the run's files land in the canonical checkout without a human decision | Promotion is never automatic. The last passing transition sets `runs.<run>.status: ready_to_promote` and writes a `REQUIRE_HUMAN` handoff whose only forward step is `devforgeai promote <run>`; the compiled `SKILL.md` runs that command only after the user confirms in the session, and that command writes the second handoff block, whose `next` is the section 7e row for the run's outcome. Every run ends in two blocks, not one, and `STALE_BASE`, `DIRTY_TARGET` and `MERGE_CONFLICT` are refusals of `devforgeai promote <run>` that leave the run `ready_to_promote` with its root intact, never refusals of `devforgeai phase next`. **Decision (D7, as amended; `10-sequencer-and-contracts.md` sections 5.4, 6 and 12.4):** the sequencer may not close a run onto the canonical tree on its own. |
 | An earlier draft said a `REQUIRE_HUMAN` block closes the run, so "no flag resumes a closed one" | An author writes a repair route that opens a fresh run, and `devforgeai phase start` refuses it — the blocked run is still `active` — or writes `devforgeai phase fail --reason <text>` into every recovery row and throws away work the run had already checkpointed | A block is not a close. A `needs_user` result and an exhausted attempt budget both leave the run `active` with its lease released, its candidate root and checkpoints on disk, and `run.yaml#blocked_at` naming the phase. `devforgeai phase start` with the same skill and the same argument **resumes** that run at `blocked_at` with `attempts` reset to zero instead of refusing it, so `/plan {slug}` is the whole recovery once the human has acted. Only another skill on the same story needs `devforgeai phase fail --reason <text>` first, and that call is what abandons the root. **Decision (`10-sequencer-and-contracts.md` sections 2, 3, 5.4 and 6):** blocked runs resume; they are not reopened. |
 | An earlier section 7e row said an exhausted attempt budget closes the run and abandons its candidate root | An author promises that nothing survives a block, so a recovery route re-runs every phase from the start and the checkpoints the run had already earned are discarded | An attempt-limit block leaves the run `active` with its lease released and its root and every checkpoint on disk; `run.yaml#blocked_at` names the phase. Only `devforgeai phase fail --reason <text>` abandons the root, and only `devforgeai promote <run>` moves a byte into the canonical tree, so a blocked run has changed nothing canonical either way. **Decision (`10-sequencer-and-contracts.md` section 5.4):** blocked is `active`, not closed. |
+| An earlier draft gave `plan_critic` a `Write` fenced to its own run-scoped evidence directory | Claude Code 2.1.259 was observed refusing a subagent's write of a report-shaped Markdown file before any hook ran, with an undocumented heuristic that may not be relied on in either direction, so a judge that must write a findings file cannot finish its phase | The judge declares `writes: none` and carries no `Write`, `Edit` or `apply_patch`. It returns its complete bounded report in the receipt's `findings` string — required on `pass` or `fail`, optional on `needs_user` or `could_not_run`, at most 16,384 UTF-8 bytes, refused rather than truncated — and the sequencer writes that string verbatim to `.devforgeai/work/<run>/evidence/plan_critic/findings.md` at the identity-bound `SubagentStop` once the receipt validates. The worker chooses neither the path nor the name, does not name it in its own `evidence_refs`, and has no workaround through `findings.json`, `notes.txt` or a shell redirect. A tool call the provider refuses before any hook runs is `could_not_run` with `reason_code: provider_tool_refused`; `hook_fault` stays reserved for a missing worker identity or a malformed receipt, and a failed worktree prerequisite is `prerequisite_missing`. The bounded `findings` body does enter the primary window as part of the subagent's result, exactly as any subagent result does; what stays isolated is the worker's transcript, its file reads, its tool traffic and its intermediate reasoning. **Decision (D13):** judges write nothing; the sequencer persists what they return. |
 
 ## 10. Success criteria and test cases
 
@@ -905,7 +906,7 @@ Quick-mode results are generation feedback only: one enabled run per eval and no
 
 | Kind | Value |
 |------|-------|
-| Tools | SKILL.md: `Read`, `Agent`, and a Bash grammar no wider than the five model-callable operations `devforgeai status \| phase start <skill> <arg> \| phase fail --reason \| validate \| promote <run>`. Document writers (`epic_writer`, `story_writer`, `skill_spec_writer`, `dependency_mapper`, `estimator`, `sprint_writer`): `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` plus `Edit` and `Write`, which Codex serves as `apply_patch`, denied outside `candidate.root` and outside the phase's fence, and narrowed again to the field fence and the three keys for the two `writes: fields` phases. Judge (`plan_critic`): the same read set plus `Write` confined to `.devforgeai/work/<run>/evidence/<agent>/`. No `plan` phase grants a stack command key, so no worker carries `Bash(devforgeai run *)`. |
+| Tools | SKILL.md: `Read`, `Agent`, and a Bash grammar no wider than the five model-callable operations `devforgeai status \| phase start <skill> <arg> \| phase fail --reason \| validate \| promote <run>`. Document writers (`epic_writer`, `story_writer`, `skill_spec_writer`, `dependency_mapper`, `estimator`, `sprint_writer`): `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` plus `Edit` and `Write`, which Codex serves as `apply_patch`, denied outside `candidate.root` and outside the phase's fence, and narrowed again to the field fence and the three keys for the two `writes: fields` phases. The judge `plan_critic` carries the same read set with no `Write`, `Edit` or `apply_patch`; its report travels in `findings`. No `plan` phase grants a stack command key, so no worker carries `Bash(devforgeai run *)`. |
 | MCP servers | none |
 | Runtime | Python 3.11+ for the four bundled scripts; PyYAML 6+ for frontmatter and `stack.yaml` parsing. Worktree mode additionally requires `git` with at least one commit on the project; without it the run falls back to copy mode |
 | Project commands | none brokered. No `plan` phase declares a `run_keys` entry, so this run brokers no command and its run file carries `granted_keys: []`. Every story this skill writes names the `test` key, and `lint` where the pinned section defines it, through `commands.use`; `build` is required in that list when the pinned section has `compiled: true`. Keys are named, never a literal command; the sequencer resolves them from the hash-pinned section. Contract: `10-sequencer-and-contracts.md` section 7. |
@@ -937,7 +938,7 @@ The generator produces one provider-neutral semantic package and a separate adap
 
 | Target | Install path | Invocation | Subagents | Notes |
 |--------|--------------|------------|-----------|-------|
-| claude | `.claude/skills/plan/` | `/plan` with a slug, and an optional scope flag taking `feature`, `change` or `hotfix` | `.claude/agents/plan-<role>.md`: six document writers with `Edit` and `Write` confined to the candidate root, one judge whose `Write` reaches only its run-scoped evidence directory | Provider-specific frontmatter keys (`argument-hint`, `disable-model-invocation`) are compiled into this target's SKILL.md only. `hooks`, `memory`, `background`, `permissionMode` and Claude's own `isolation` are omitted from every profile. |
+| claude | `.claude/skills/plan/` | `/plan` with a slug, and an optional scope flag taking `feature`, `change` or `hotfix` | `.claude/agents/plan-<role>.md`: six document writers with `Edit` and `Write` confined to the candidate root, and one judge with no write tool whose report travels in `findings` | Provider-specific frontmatter keys (`argument-hint`, `disable-model-invocation`) are compiled into this target's SKILL.md only. `hooks`, `memory`, `background`, `permissionMode` and Claude's own `isolation` are omitted from every profile. |
 | codex | `.agents/skills/plan/` plus `.codex/agents/` profiles | `$plan` with a slug, and the same optional scope flag | `.codex/agents/plan-<role>.toml`: the same seven names, with `apply_patch` in place of `Edit` and `Write` | Portable six-field frontmatter only; policy goes in target-side configuration. |
 | both | separate `.claude/skills/plan/` and `.agents/skills/plan/` adapters | as above | as above | Share only provider-neutral resources; validate each adapter independently. |
 
@@ -1001,7 +1002,7 @@ Then the wave-4 battery over this specification:
 python3 docs/design/specs/verify.py --only v1,v2,v4
 ```
 
-For non-Research anatomy skills, DevForgeAI skill-validator additionally checks: all sub-phase kinds present with Gate, Record and Handoff bound to sequencer operations; persona and critic are different files, which for this skill are `epic_writer.md` and `plan_critic.md`; `must_not` present in every agent file; every agent declaring `writes: candidate` or `writes: evidence`, with a `writes: evidence` agent carrying no `Edit` and a `Write` fenced to its run-scoped evidence directory; the SKILL.md Bash grammar is no wider than the five model-callable operations; handoff outcomes cover every status the skill can return, including `could_not_run`.
+For non-Research anatomy skills, DevForgeAI skill-validator additionally checks: all sub-phase kinds present with Gate, Record and Handoff bound to sequencer operations; persona and critic are different files, which for this skill are `epic_writer.md` and `plan_critic.md`; `must_not` present in every agent file; every agent declaring `writes: candidate` or `writes: none`, with a judge carrying no write tool and returning required `findings`; the SKILL.md Bash grammar is no wider than the five model-callable operations; handoff outcomes cover every status the skill can return, including `could_not_run`.
 
 ## 15. Provenance
 

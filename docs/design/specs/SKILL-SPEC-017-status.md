@@ -9,22 +9,22 @@ author: "DevForgeAI spec author (wave 2)"
 date: 2026-09-02
 depends_on:
   - source: docs/design/10-sequencer-and-contracts.md#2-cli-grammar
-    hash: sha256:231b93094676198b131720e581f044d8c66b4f0b8dcd3dcb35e4350100807090
+    hash: sha256:87a07888354112467337a1b7a02b9111d2e2030e49ce8a25f22eb3f441ab87b7
     excerpt: |
       | `devforgeai status` | none | none | nothing | `0` | model |
   - source: docs/design/10-sequencer-and-contracts.md#9-enforcement-block
-    hash: sha256:4aa0d2e9acd265d11271008b3e5e748bbf34c4b2b9e5c624ad8dc8d6d9cebb02
+    hash: sha256:fb2caa96dcd1b9657eb01e5f2e2bdafaf00f92b9303292580d2c71e0af58bf03
     excerpt: "`.devforgeai/work/<run>/run.yaml`, `schemas/devforgeai/v1/run.schema.json`. Written by the sequencer at `devforgeai phase start` and updated at every transition. It outlives the candidate root: promotion and abandonment remove the root, branch, tags and copy-aside, and leave `run.yaml` with the final status so `devforgeai status`, inspection and `NO_CANDIDATE` still resolve."
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:bca72c10668178e0f4da43e03aaafbf24d2a57ec12f71a16b078880dd496677a
+    hash: sha256:3c4c95bbd73b5499e5569e650f84eea84cb68404c0909f5f1819c0f3a5c7b3d4
     excerpt: |
       | 7 | The run-end block and the `devforgeai status` block are the same rendering of the same file. |
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:511733ee35ca74fd5a5c0b59f225d7d975788e7d43d939f44c23b7aa8460cff0
+    hash: sha256:7c1d67f1154e49247e5dc178fcc1512bdbd53af378c360aeafe69bffed1136ab
     excerpt: |
       | status | none | — | none; the command is a thin wrapper over `devforgeai status` |
   - source: docs/design/01-skill-anatomy.md#state-file
-    hash: sha256:cec96cadc465f6269eaf0756ef40ff4299302e0754cd4cd887a2c44e50d4851d
+    hash: sha256:b6afd02f6be66c6d1f475f84e66e384d4613a92706e71e849dc091610de8b25a
     excerpt: "`/status` renders this file. Only the `devforgeai` sequencer writes it, and only at `phase start` (registering the run), at promotion or abandonment, and at `phase fail`; Research state is written only by Research Core."
   - source: docs/design/01-skill-anatomy.md#handoff-template
     hash: sha256:69eaf61097311ab55d3f940d03a4d1694e58658a11da3f41cd12a51d216b762a
@@ -43,7 +43,7 @@ depends_on:
     excerpt: |
       | status | — | `state.yaml`, `handoff.json` | nothing | — |
   - source: docs/design/05-subagent-sets.md#sets-per-skill
-    hash: sha256:9e12f3beb236a025c18d40e741c09ba675bd71d2d87f56e2b205c7556b944bf9
+    hash: sha256:f2957217c9af147e4a7ea03749cbe6efda266bd56d403f39aa25c9a655872609
     excerpt: |
       | status | none; `SKILL.md` is a thin wrapper over `devforgeai status` |
   - source: docs/design/12-post-mvp.md#pm-05

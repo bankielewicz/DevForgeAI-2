@@ -155,7 +155,8 @@ def v2() -> list[str]:
 # V9 ---------------------------------------------------------------------------
 STALE = ["files[]", '"content":', "sha256_before", "read-only worker", "context-curator",
          "context curator", "one extra Slice agent", "--detach", "applies the files",
-         "apply the files", "full file text", "read-only on both providers"]
+         "apply the files", "full file text", "read-only on both providers",
+         "writes: evidence"]
 BRIEF_NAME = "WRITE-MODEL-REVISION.md"
 
 

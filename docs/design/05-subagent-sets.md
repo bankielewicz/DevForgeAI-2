@@ -4,15 +4,16 @@ This document is authoritative for worker names. Where `02-skill-roster.md` name
 
 Every anatomy-governed non-Research skill owns a dedicated set of workers. Research is the explicit exception governed by `framework/skills/research/`; it defines contracts for four bounded worker roles that write nothing and deterministic Research Core as sole canonical writer. Current provider templates do not execute those workers. This document lists the sets and gives `dev-tdd` as the worked example.
 
-Write permission is per role, and every worker header declares it as `writes: candidate | evidence | none`.
+Write permission is per role, there are exactly two roles, and every worker header declares its role as `writes: candidate | none`.
 
 | Role class | Who | `writes` | Tools |
 |---|---|---|---|
 | Producer | red, green, refactor and fix workers; every document writer (story, prd, adr, design, brainstorm, sourcetree, techstack, code_map, skill files, retro, drift, clarification, impact, validate reports) | `candidate` | `Read`, `Grep`, `Glob`, `Edit`, `Write` (Codex: `apply_patch`), and `Bash(devforgeai run *)` for the stack keys the phase granted |
-| Judge | gate resolver, critic, reviewer, smoke and QA verifier, analyze, status | `evidence` | `Read`, `Grep`, `Glob`, `Bash(devforgeai status)`, and `Write` confined to `.devforgeai/work/<run>/evidence/<agent>/` |
-| Neither | a worker that produces nothing but the receipt | `none` | `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` |
+| Judge | gate resolver, critic, reviewer, smoke and QA verifier, analyze, status | `none` | `Read`, `Grep`, `Glob`, `Bash(devforgeai status)`. No `Write`, no `Edit`, no `apply_patch` |
 
-A producer writes inside the run's candidate root and nowhere else; `devforgeai run <key>` executes with cwd = `candidate.root`. A judge writes one findings file under `.devforgeai/work/<run>/evidence/<agent>/` and names it in the receipt's `evidence_refs`; that directory is run-scoped, gitignored and never promoted, so a judge cannot change what the run ships, and `issues[]` stays the bounded summary the primary window reads. No worker of any class holds a git write, a package manager, a network tool, or a raw stack command. The `devforgeai` sequencer owns the root, derives what changed from the checkpoint diff, runs the transition oracle, and advances; canonical `.devforgeai/**` stays the sequencer's alone.
+A producer writes inside the run's candidate root and nowhere else; `devforgeai run <key>` executes with cwd = `candidate.root`. A judge creates no file anywhere: it holds no write tool, and it returns its detailed evidence as the receipt's `findings`, at most 16384 UTF-8 bytes. The sequencer persists that string verbatim to `.devforgeai/work/<run>/evidence/<agent>/findings.md` at ingest — a run-scoped, gitignored path that is never promoted and that the worker neither chooses nor reaches — and the next phase's worker reads it by that path. `issues[]` stays the bounded routing summary. No worker of any class holds a git write, a package manager, a network tool, or a raw stack command.
+
+The `findings` string is returned to the primary window as the subagent's result, so its body does enter the primary context; that is why it is capped. What stays isolated is the judge's transcript, its reads, its tool traffic and its reasoning, and a producer still returns no file body at all. The `devforgeai` sequencer owns the root, derives what changed from the checkpoint diff, runs the transition oracle, and advances; canonical `.devforgeai/**` stays the sequencer's alone.
 
 ## Contract format
 
@@ -21,7 +22,7 @@ Each worker file (`.devforgeai/skills/<skill>/subagents/<role>.md`) has a header
 ```yaml
 name: red-tester
 skill: dev-tdd
-writes: candidate              # candidate | evidence | none
+writes: candidate              # candidate (producer) | none (judge)
 responsibility: Write failing unit tests that encode the story's acceptance criteria. Nothing else.
 inputs:
   - story.md (context bundle + acceptance criteria only)
@@ -39,7 +40,7 @@ isolation: required
 returns: devforgeai.worker-result/v1
 ```
 
-`must_not` is compiled into the agent prompt verbatim. `tools` is compiled into the target's tool allowlist where the target supports it, and matches the role `writes` declares: a `writes: evidence` worker carries Write but never Edit or `devforgeai run`, and its Write is confined to its own evidence directory; a `writes: none` worker carries no write tool at all.
+`must_not` is compiled into the agent prompt verbatim. `tools` is compiled into the target's tool allowlist where the target supports it, and matches the role `writes` declares: a `writes: candidate` worker carries Edit, Write and `devforgeai run` for its granted keys; a `writes: none` worker carries no write tool at all and returns `findings` instead.
 
 The worked example below uses a Python fixture as illustration only. Command, language, package-manager, and test-layout resolution is the `stack.yaml` contract in `10-sequencer-and-contracts.md`; no worker receives a literal command. A producer that needs the tests calls `devforgeai run <key>` for a key its phase granted, and the sequencer re-runs the transition oracle itself at `ingest-result` — the worker's run is for its own feedback, never the reason a phase advances.
 
@@ -54,15 +55,15 @@ flowchart LR
     SQ -.->|criterion fails| GR
 ```
 
-Rows 1-3 are producers and write inside the candidate root; rows 4-5 are judges and write only their own findings file under `work/<run>/evidence/<agent>/`. Each phase builds on the previous phase's checkpoint, so the history is linear: base → red → green → refactor.
+Rows 1-3 are producers and write inside the candidate root; rows 4-5 are judges, write nothing anywhere, and return their evidence as the receipt's `findings`, which the sequencer persists under `work/<run>/evidence/<agent>/findings.md`. Each phase builds on the previous phase's checkpoint, so the history is linear: base → red → green → refactor.
 
 | Order | Worker | `writes` | Sole responsibility | Reads | Writes | Must not |
 |-------|--------|----------|---------------------|-------|--------|----------|
 | 1 | red-tester | candidate | Turn each acceptance criterion into a failing test | story context bundle, testing conventions slice | test files under the phase's test paths, one per `test_plan` row | touch production code; skip a criterion |
 | 2 | green-implementer | candidate | Make the red tests pass with the smallest change | story bundle, red result, test files, code slice named in bundle | production code | edit tests; add behaviour no test demands |
 | 3 | refactorer | candidate | Improve structure with tests staying green | green result, changed files, constitution style slice | production code | change behaviour; edit tests; touch files outside the diff |
-| 4 | smoke-qa | evidence | Check each criterion once against the oracle output the sequencer recorded | story acceptance criteria, `<phase>-result.json` test results | pass/fail per criterion, in a findings file under `work/<run>/evidence/<agent>/` | run any command other than `devforgeai status`; write code or tests |
-| 5 | critic | evidence | Confirm every criterion maps to a test, every test to code, no `ASSUMPTION` left unresolved, diff respects the constitution slice | all four results, checkpoint diff | a verdict, in a findings file under `work/<run>/evidence/<agent>/` | repair anything; write outside that directory |
+| 4 | smoke-qa | none | Check each criterion once against the oracle output the sequencer recorded | story acceptance criteria, `<phase>-result.json` test results | nothing on disk: pass/fail per criterion in the receipt's `findings`, which the sequencer persists | run any command other than `devforgeai status`; write anything at all; write code or tests |
+| 5 | critic | none | Confirm every criterion maps to a test, every test to code, no `ASSUMPTION` left unresolved, diff respects the constitution slice | all four results, checkpoint diff, the persisted `smoke_qa` findings by path | nothing on disk: a verdict in the receipt's `findings`, which the sequencer persists | repair anything; write anything at all |
 
 Loop rules:
 
@@ -86,7 +87,8 @@ Gate, Slice, Record and Handoff dispatch no LLM. They are sequencer operations. 
 
 For anatomy-governed skills, the skill-owned workers listed here fill Work,
 Write, and Review; the primary window dispatches them and reads only their
-receipts (see `01-skill-anatomy.md`). Whether a worker is a producer or a judge
+receipts — including, from a judge, the bounded `findings` body the receipt
+carries (see `01-skill-anatomy.md`). Whether a worker is a producer or a judge
 is its own header's `writes` field, and the tables below name the workers, not
 their write class. The Research row names contracts only and does not authorize
 current provider dispatch.

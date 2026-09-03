@@ -22,9 +22,9 @@ Rules the installer must honour for this tree:
 - Copy verbatim. Contracts are data, never templated or merged.
 - Install before hooks and skills. The hook runtime and the sequencer read `.devforgeai/contracts/error-taxonomy.yaml` at start; a missing file is a `could_not_run` for `phase start`, not a silent default.
 - Pin by digest. Record the file's sha256 in `.devforgeai/state.yaml#contracts` so `devforgeai validate` can detect a hand-edited copy.
-- Version, do not patch. A change ships as a new `taxonomy_version`; an installed project upgrades by reinstalling the tree, never by editing in place.
+- Version, do not patch. Once released, a change ships as a new `taxonomy_version`; an installed project upgrades by reinstalling the tree, never by editing in place. While the file is still an unreleased draft, a code may be added in place at version 1 — `provider_tool_refused` was added that way on 2026-09-03 — and the manifest digest is recomputed.
 - Uninstall removes the tree only when no run is `active` or `ready_to_promote`.
 
 ## Status
 
-`error-taxonomy.yaml` is a draft (`taxonomy_version: 1`, 2026-09-03). Its codes are the ones documents 09 and 10 already use; the new parts are the phase-outcome roll-up and the hook failure classes. Its `open_items` list the divergences to close before version 2. The narrative is `docs/design/13-error-taxonomy.md`, which is not installed and is not normative.
+`error-taxonomy.yaml` is a draft (`taxonomy_version: 1`, 2026-09-03). Its codes are the ones documents 09 and 10 already use; the new parts are the phase-outcome roll-up, the hook failure classes, and the worker reason code `provider_tool_refused` — the provider refused a tool call before any DevForgeAI hook ran, rolling up to `INFRA_FAILURE`, added by `WRITE-MODEL-REVISION.md` D13 while `hook_fault` stays reserved for a hook event that lacked identity and for a malformed receipt. Its `open_items` list the divergences to close before version 2. The narrative is `docs/design/13-error-taxonomy.md`, which is not installed and is not normative.

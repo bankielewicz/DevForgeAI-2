@@ -72,6 +72,11 @@ def main() -> int:
     code, out, err = run(event("PreToolUse", tool_name="Bash", tool_input={"command": "echo x > .claude/settings.json"}), root)
     check("bash redirect into protected path denied", code == 2 and "protected" in err, f"{code} {err!r}")
 
+    # 4a heredoc body containing angle brackets is not a redirect
+    hd = "cat >> notes.md <<'EOF'\nsee .devforgeai/work/<run>/evidence/<agent>/findings.md\nEOF\n"
+    code, out, err = run(event("PreToolUse", tool_name="Bash", tool_input={"command": hd}), root)
+    check("heredoc body with angle brackets is not a redirect", code == 0, f"{code} {err!r}")
+
     # 5 outside-project write denied
     code, out, err = run(event("PreToolUse", tool_name="Write", tool_input={"file_path": str(outside / "x.txt")}), root)
     check("write outside project denied", code == 2 and "outside" in err, f"{code} {err!r}")

@@ -9,7 +9,7 @@ author: "DevForgeAI wave-2 specification author"
 date: 2026-09-02
 depends_on:
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:a6bbaf9af2d69f7ede18d7c40f242c42edb26d79be964ffec3f386d6347014c2
+    hash: sha256:5afb88c46aa635c961564af8e58c799a44f387c6bd877eeac2ec7568f73aba7e
     excerpt: "**The model dispatches, the sequencer decides.** For an anatomy-governed skill, the primary window (provider entry adapter + skill orchestration) does light, trivial work only."
   - source: docs/design/01-skill-anatomy.md#gate-validating-the-incoming-artifact
     hash: sha256:01d7f4e0e09db70d8d4869ab22646d7cea27959c936571db4850b11df4000dc8
@@ -18,25 +18,25 @@ depends_on:
     hash: sha256:7b068feb30e7cc2f66292b512ac179cd217df225fb58517d2aaadd30b25236dc
     excerpt: "A literal placeholder hash (`sha256:fixture...`, `sha256:PENDING`) is reported as `unresolvable-source`."
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:511733ee35ca74fd5a5c0b59f225d7d975788e7d43d939f44c23b7aa8460cff0
+    hash: sha256:7c1d67f1154e49247e5dc178fcc1512bdbd53af378c360aeafe69bffed1136ab
     excerpt: "| clarify | 1 | `find_ambiguity` | `ambiguity_finder` | none | 2 | — | report_only | — |"
   - source: docs/design/10-sequencer-and-contracts.md#3-2-defect-to-action-map-as-implemented
     hash: sha256:700e29f7b7eb3b6883d0895d79e3822bf06c32e633eb10b44155761fe4c5ef28
     excerpt: "A document run carries the fixed map `{unresolvable_source: BLOCK}`, because it has no story to declare a wider one."
   - source: docs/design/10-sequencer-and-contracts.md#5-2-validation-order
-    hash: sha256:9f1bf77b7e84302ff6f3f20260228d57390cc97ab8e8d3f68f52c3ff2658aab8
+    hash: sha256:9cf7115cdfa637023edc22cbdf5f64c106b1eba340598c8dc97b68361cb76b0f
     excerpt: "| 10 | `changed[]` is a subset of `claimed_paths` | refuse, reason `UNCLAIMED_CHANGE`; this **is** a phase attempt, because real bytes were written outside the claim |"
   - source: docs/design/10-sequencer-and-contracts.md#5-4-transition-oracles
-    hash: sha256:ffa41b5d270dc260e28fa9f6bdbc855069a6e922d1148c74b25860dba63484dc
+    hash: sha256:076840ec9db03155bc9edcceb587e2aa1ca8bf3849e7a8b742f788d1a3b2315f
     excerpt: "the phase declared `writes: docs` and `changed[]` is non-empty, unless it is marked conditional, in which case an empty change set needs a non-empty `note`; every changed path exists in the root with the bytes the checkpoint will hold"
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:bca72c10668178e0f4da43e03aaafbf24d2a57ec12f71a16b078880dd496677a
+    hash: sha256:3c4c95bbd73b5499e5569e650f84eea84cb68404c0909f5f1819c0f3a5c7b3d4
     excerpt: "`next` is never empty and is never a description. One exact command."
   - source: docs/design/11-artifact-registry.md#1-template-registry
     hash: sha256:fabb8d2f142dcde1a31bc53768f8a46d01cac3ea4a7f6b73db22479cc89b5553
     excerpt: "| `clarification` | `.devforgeai/skills/clarify/templates/clarification.md` | 1 | `^CLR-[0-9]{3}$` | id, story, template, template_version, date, status | Question, Answer, Authority |"
   - source: docs/design/11-artifact-registry.md#2-artifact-path-patterns
-    hash: sha256:2d2e97afff50edf6b35bf674b1de217c684d5091361e5f1deae12de52b95fb51
+    hash: sha256:858455b885ac6c1ddbe427a433ba715f7266d08b90e105135172877e29ea0ecc
     excerpt: "| `docs/plan/<slug>/stories/STORY-NNN.md#clarifications` | `clarification` | clarify | sequencer |"
   - source: docs/design/11-artifact-registry.md#6-known-divergences
     hash: sha256:8a78656458735ce54ac73010da3b8fc87bbb7017a5a9268f85b210249736b82a
@@ -48,10 +48,10 @@ depends_on:
     hash: sha256:1dac784b4670cc7559f323011dfe304dfe8c0baf349063162f90d76d902c5d3c
     excerpt: "| clarify | resolved | `/dev {story}` |"
   - source: docs/design/05-subagent-sets.md#sets-per-skill
-    hash: sha256:9e12f3beb236a025c18d40e741c09ba675bd71d2d87f56e2b205c7556b944bf9
+    hash: sha256:f2957217c9af147e4a7ea03749cbe6efda266bd56d403f39aa25c9a655872609
     excerpt: "| clarify | ambiguity-finder, question-writer, answer-recorder |"
   - source: docs/design/05-subagent-sets.md#contract-format
-    hash: sha256:23d8c21c51ca70b053f4661b32249b86a330c816e02db1219be72d5a9bc07a4e
+    hash: sha256:2b49e9bf10b0b95694f88e3682ff326a735eebe105e88488d1c5c12b8e0c83de
     excerpt: "`must_not` is compiled into the agent prompt verbatim."
   - source: docs/design/templates/story.md#acceptance-criteria
     hash: sha256:858884c170a1e7036346f1887791672316583bca6f1f4730ceb5961e35a3c166
@@ -170,7 +170,7 @@ Character count: 886 / 1024.
 
 ### UC-1: One undecided value, answered in the same sitting
 - **User says:** "/clarify STORY-007"
-- **Steps:** 1. `devforgeai phase start clarify STORY-007` runs the document gate and opens the run. 2. `ambiguity_finder` reads the story and writes one finding into its run-scoped evidence directory: criterion 3, line 84, span `ASSUMPTION: empty input behaviour is undecided`. 3. `question_writer` edits the story in the candidate root, appending a `### CLR-001` block under `## Clarifications` with `status: open` and an empty `#### Answer`, and returns `pass` claiming that path; the sequencer checkpoints it. 4. `answer_recorder` finds an `open` block with an empty answer and returns `needs_user` claiming nothing, so the sequencer writes a `REQUIRE_HUMAN` handoff naming that block and blocks the run at `record_answers`: status stays `active`, the lease is released, `run.yaml#blocked_at` is set, and the candidate root — which holds the `CLR-001` block — survives (section 9, OI-12). 5. The user writes the answer into `CLR-001`'s `#### Answer` body in the candidate root's copy of the story, the path the handoff names. 6. `/clarify STORY-007 --continue` is `devforgeai phase start clarify STORY-007` on that blocked run, which resumes it at `record_answers` in the same root with attempts reset; `question_writer` normalises the hand-written answer into the block's shape and sets `status: answered`; `answer_recorder` fills `#### Authority`, deletes the `ASSUMPTION:` span from criterion 3 and puts the decided value in its place.
+- **Steps:** 1. `devforgeai phase start clarify STORY-007` runs the document gate and opens the run. 2. `ambiguity_finder` reads the story and returns one finding in its receipt's `findings`, which the sequencer persists to `.devforgeai/work/<run>/evidence/ambiguity_finder/findings.md`: criterion 3, line 84, span `ASSUMPTION: empty input behaviour is undecided`. 3. `question_writer` edits the story in the candidate root, appending a `### CLR-001` block under `## Clarifications` with `status: open` and an empty `#### Answer`, and returns `pass` claiming that path; the sequencer checkpoints it. 4. `answer_recorder` finds an `open` block with an empty answer and returns `needs_user` claiming nothing, so the sequencer writes a `REQUIRE_HUMAN` handoff naming that block and blocks the run at `record_answers`: status stays `active`, the lease is released, `run.yaml#blocked_at` is set, and the candidate root — which holds the `CLR-001` block — survives (section 9, OI-12). 5. The user writes the answer into `CLR-001`'s `#### Answer` body in the candidate root's copy of the story, the path the handoff names. 6. `/clarify STORY-007 --continue` is `devforgeai phase start clarify STORY-007` on that blocked run, which resumes it at `record_answers` in the same root with attempts reset; `question_writer` normalises the hand-written answer into the block's shape and sets `status: answered`; `answer_recorder` fills `#### Authority`, deletes the `ASSUMPTION:` span from criterion 3 and puts the decided value in its place.
 - **Result:** after the second run, `docs/plan/<slug>/stories/STORY-007.md` carries a dated `CLR-001` block, criterion 3 states a value, no `ASSUMPTION:` text remains outside `## Clarifications`, and the handoff's first next step is `/dev STORY-007`. The first run left the question on disk for the human to answer.
 
 ### UC-2: The answer already exists upstream
@@ -236,7 +236,7 @@ bryan, 2026-09-02, in the session that opened run clarify-STORY-007.
 
 ### Return envelope (DevForgeAI-anatomy skills only)
 
-One schema, both providers: `devforgeai.worker-result/v1`, normative in `schemas/devforgeai/v1/worker-result.schema.json`. A worker's final message is exactly this object, with no Markdown fence and no surrounding prose. The two writing phases have already edited the story inside the candidate root when they return; the receipt claims it. `ambiguity_finder` writes only into its own run-scoped evidence directory.
+One schema, both providers: `devforgeai.worker-result/v1`, normative in `schemas/devforgeai/v1/worker-result.schema.json`. A worker's final message is exactly this object, with no Markdown fence and no surrounding prose. The two writing phases have already edited the story inside the candidate root when they return; the receipt claims it. `ambiguity_finder` writes nothing at all: it holds no write tool, and its rows travel in the receipt's `findings`.
 
 ```yaml
 schema: devforgeai.worker-result/v1
@@ -245,13 +245,15 @@ skill: "clarify"
 phase: "questions"
 agent: "question_writer"
 status: pass | fail | needs_user | could_not_run
-reason_code: runner_missing | timeout | network | hook_fault   # required only when status is could_not_run
+reason_code: runner_missing | timeout | network | hook_fault | provider_tool_refused | prerequisite_missing | checkpoint_fault   # required only when status is could_not_run
 candidate: {id: "clarify-STORY-007", input_checkpoint: "find_ambiguity"}
 claimed_paths: ["docs/plan/tinyapp/stories/STORY-007.md"]   # root-relative, at most 64; empty on any non-pass status
 evidence_refs: ["docs/plan/tinyapp/stories/STORY-007.md"]   # at most 16
 note: "1 ambiguity, 1 CLR block appended, awaiting an answer"
 issues: [{id, kind, text}]                                  # at most 10
 ```
+
+The example above is a producer's receipt, so it carries no `findings` key; a producer that returns one has its receipt refused. A judge's receipt carries `findings`, a string of at most 16,384 UTF-8 bytes holding its detailed rows: required when the phase's registry `writes` mode is `none` and the status is `pass` or `fail`, optional on a judge's `needs_user` or `could_not_run` under the same bound. `issues[]` stays the bounded routing summary at ten rows. At the identity-bound `SubagentStop`, after the receipt validates, the sequencer writes the decoded `findings` verbatim to the fixed path `.devforgeai/work/<run>/evidence/<agent>/findings.md`; the worker chooses neither the directory nor the name, and the next phase's producer reads that file by path. The bounded `findings` body does enter the primary context as part of the subagent's result, exactly as the provider model states — a subagent returns its result to the parent, and a hook may validate the final message but cannot suppress it. What stays isolated is the worker's transcript, its file reads, its tool traffic and its intermediate reasoning; producers still return no file bodies, and no receipt carries code.
 
 At `devforgeai ingest-result` the sequencer derives `changed[{path, blob_sha256, kind}]` from the checkpoint diff, refuses when `changed` is not a subset of `claimed_paths` (`UNCLAIMED_CHANGE`) or a path is outside the fence, validates the written story against the `story` version 3 template header, runs the transition oracle inside the root, writes `<phase>-result.json` with `changed` and the checkpoint ref, releases the lease and advances. `next` requires `status: fail` plus a registry `rewind_to`; no clarify phase declares one, so the key is never present. Unknown keys refuse the receipt.
 
@@ -285,13 +287,13 @@ Gate, Record and Handoff dispatch no LLM: they are `devforgeai` sequencer operat
 |---|-----------|--------------|--------|-----------|
 | 0 | Gate | sequencer: `devforgeai phase start clarify <story-id>`, which also opens the candidate root | sequencer | n/a |
 | 1 | Slice | sequencer: a step inside `phase start` that resolves the story's already-hashed bundle into `.devforgeai/work/<run>/context.json`. No worker | sequencer | n/a |
-| 2 | Work: `find_ambiguity` | worker: `ambiguity_finder` | evidence | preferred |
+| 2 | Work: `find_ambiguity` | worker: `ambiguity_finder` | none | preferred |
 | 3 | Write: `questions` | worker: `question_writer` | candidate | required |
 | 4 | Write: `record_answers` | worker: `answer_recorder` | candidate | required |
 | 5 | Record | sequencer: `devforgeai phase next` | sequencer | n/a |
 | 6 | Handoff | sequencer: `devforgeai phase next` marks the run `ready_to_promote` and writes the `REQUIRE_HUMAN` block whose only forward step is `devforgeai promote <run>`; `SKILL.md` runs that command only after the user confirms in the session, and the promotion writes the run's second handoff block | sequencer | n/a |
 
-`clarify` has no Review sub-phase. The registry gives it three phases and no critic (`10-sequencer-and-contracts.md` section 4); the independent check on its output is `check_clarify_edit.py`, which compares the checkpoint's bytes to the previous checkpoint's and needs no model judgement. `ambiguity_finder` is the one judge: its `Write` reaches only `.devforgeai/work/<run>/evidence/ambiguity_finder/`, a gitignored, run-scoped directory outside the candidate root that is never promoted, and its findings file is named in `evidence_refs`.
+`clarify` has no Review sub-phase. The registry gives it three phases and no critic (`10-sequencer-and-contracts.md` section 4); the independent check on its output is `check_clarify_edit.py`, which compares the checkpoint's bytes to the previous checkpoint's and needs no model judgement. `ambiguity_finder` is the one judge: it holds no `Write`, `Edit` or `apply_patch` at all, and its rows come back in the receipt's `findings`, which the sequencer persists to `.devforgeai/work/<run>/evidence/ambiguity_finder/findings.md` — a gitignored, run-scoped path outside the candidate root that is never promoted — and records in `find_ambiguity-result.json`.
 
 For an anatomy-governed skill, `SKILL.md` dispatches each worker through the selected target's provider-native worker mechanism, using the generated target profile, file paths and the `devforgeai status` block. It never pastes or paraphrases artifact content, objectives, or acceptance criteria into the prompt. Its Bash grammar is exactly `devforgeai status | phase start <skill> <arg> | phase fail --reason | validate | promote <run>`; every other sequencer operation is hook-only. The `Isolation` column is the DevForgeAI contract value compiled into the target profile, not Claude's `isolation` frontmatter field; the framework does not use Claude's worktree isolation or `EnterWorktree`, because both fork from HEAD and the run's phases build linearly on one candidate root. Runtime verification of isolation is `12-post-mvp.md#pm-01`.
 
@@ -301,7 +303,7 @@ One row per registry phase, in registry order. `<run>` is `clarify-STORY-NNN`.
 
 | phase | worker | deterministic gate check | gate_policy | evidence file | transition oracle |
 |---|---|---|---|---|---|
-| `find_ambiguity` | `ambiguity_finder` | run-level gate at `devforgeai phase start`: `clarify` is a known skill of kind `document`; no run is already active; the fence pattern `docs/plan/*/stories/<arg>.md` is repository-relative, contains no `..`, and is not sequencer-owned; and no active or `ready_to_promote` run holds that path (`FENCE_OVERLAP`). At ingest: `claimed_paths` is empty, because the registry declares the phase `writes: none` and the worker header `writes: evidence`, and any change inside the candidate root refuses the receipt as `UNCLAIMED_CHANGE`; the dispatcher allows this worker's writes only under `.devforgeai/work/<run>/evidence/ambiguity_finder/` and denies every other path at `PreToolUse` | document run's fixed map `{unresolvable_source: BLOCK}`; every `devforgeai phase start` defect is a refusal whatever a declared value says, and only `test_runner_missing` changes behaviour at transition time, which this phase never reaches because it brokers no command | `.devforgeai/work/<run>/find_ambiguity-result.json`, `.devforgeai/work/<run>/find_ambiguity-report.md` | `report_only`: no file outside the fence changed since the gate snapshot and the whole-tree package and import policy holds |
+| `find_ambiguity` | `ambiguity_finder` | run-level gate at `devforgeai phase start`: `clarify` is a known skill of kind `document`; no run is already active; the fence pattern `docs/plan/*/stories/<arg>.md` is repository-relative, contains no `..`, and is not sequencer-owned; and no active or `ready_to_promote` run holds that path (`FENCE_OVERLAP`). At ingest: `claimed_paths` is empty, because the registry declares the phase `writes: none` and the worker header `writes: none`, and any change inside the candidate root refuses the receipt as `UNCLAIMED_CHANGE`; this worker carries no write tool at all, so `PreToolUse` denies every write path without exception, and its `findings` string — required on a judge pass or fail receipt and optional on its needs_user or could_not_run, at most 16,384 UTF-8 bytes — is what the sequencer persists at `SubagentStop` to `.devforgeai/work/<run>/evidence/ambiguity_finder/findings.md` | document run's fixed map `{unresolvable_source: BLOCK}`; every `devforgeai phase start` defect is a refusal whatever a declared value says, and only `test_runner_missing` changes behaviour at transition time, which this phase never reaches because it brokers no command | `.devforgeai/work/<run>/find_ambiguity-result.json`, `.devforgeai/work/<run>/find_ambiguity-report.md`, `.devforgeai/work/<run>/evidence/ambiguity_finder/findings.md` | `report_only`: no file outside the fence changed since the gate snapshot and the whole-tree package and import policy holds |
 | `questions` | `question_writer` | ingest validation: `changed` derived from the checkpoint diff is a subset of `claimed_paths`, the single changed path canonicalises inside `candidate.root`, is not sequencer-owned, matches the fence pattern, and is allowed by the phase's `writes: docs` mode; then the whole-root package and import rescan before the checkpoint. `scripts/check_clarify_edit.py` compares the phase's checkpoint to its input checkpoint and exits 1 unless every differing line is one of the three sanctioned edit kinds in `references/questions.md`; that import into `devforgeai ingest-result` is designed and not implemented today, so what the sequencer actually enforces at this phase is the validation above and the script runs only when a human runs it (section 9, row 5) | `{unresolvable_source: BLOCK}`; an `UNCLAIMED_CHANGE` refuses the receipt as a protocol error and does not consume an attempt | `.devforgeai/work/<run>/questions-result.json`, `.devforgeai/work/<run>/questions-report.md` | `document`: the phase produced at least one file and every declared output with non-null content exists on disk |
 | `record_answers` | `answer_recorder` | as `questions`, plus `scripts/check_clarify_edit.py --require-resolved`, which exits 1 when a `CLR-NNN` block reads `status: answered` while the `ASSUMPTION:` span its `#### Answer` settles is still present in the body outside `## Clarifications`; that invocation is designed sequencer-side and unimplemented today, so it too is a human-run check (section 9, row 5). A `needs_user` receipt carries an empty `claimed_paths`, so this phase either edits the story and claims it or changes nothing and closes the run | `{unresolvable_source: BLOCK}` | `.devforgeai/work/<run>/record_answers-result.json`, `.devforgeai/work/<run>/record_answers-report.md`, then `.devforgeai/work/<run>/handoff.json` | `document`: as `questions`. On pass this is the last phase: the run is marked done, enforcement is cleared, and the handoff's `next` is filled from the section 7e table. A `needs_user` result writes a `REQUIRE_HUMAN` handoff immediately, without consulting the attempt counter and without reaching this oracle |
 
@@ -319,10 +321,10 @@ Each block becomes `agents/<role>.md` verbatim, wrapped in skill-creator's Role 
 name: ambiguity_finder
 description: Dispatch this worker at the find_ambiguity phase to judge one story and list every undecided value it still carries.
 skill: clarify
-writes: evidence
+writes: none
 model: inherit
-tools: [Read, Grep, Glob, Bash(devforgeai status), Write]
-tools_codex: [Read, Grep, Glob, Bash(devforgeai status), apply_patch]
+tools: [Read, Grep, Glob, Bash(devforgeai status)]
+tools_codex: [Read, Grep, Glob, Bash(devforgeai status)]
 skills: []
 compiled_to: [.claude/agents/clarify-ambiguity_finder.md, .codex/agents/clarify-ambiguity_finder.toml]
 responsibility: List every undecided value in one story, one row per ambiguity, with its line, its criterion number and the exact span that marks it.
@@ -332,20 +334,20 @@ inputs:
   - the story path the run's fence names, read inside the candidate root
   - the --continue flag token, which selects whether existing CLR blocks are read as answered
 outputs:
-  - .devforgeai/work/<run>/evidence/ambiguity_finder/ambiguities.md, one section per finding with its criterion, line, span and kind, plus one row per CLR block already in the story with its id and status, written in its own run-scoped evidence directory and named in evidence_refs
+  - findings: one section per finding with its criterion, line, span and kind, plus one row per CLR block already in the story with its id and status; required on a pass or fail receipt and optional on needs_user or could_not_run, at most 16384 UTF-8 bytes, persisted by the sequencer to .devforgeai/work/<run>/evidence/ambiguity_finder/findings.md
   - issues: one row per finding, bounded at ten
   - note: the counts of ambiguities found and existing CLR blocks read
 must_not:
   - decide the value an ambiguity leaves open
   - read a file the run's fence or the story's own frontmatter does not name
-  - write anywhere but its own run-scoped evidence directory, or run any stack command key
+  - write any file anywhere, or run any stack command key; this worker holds no write tool and its rows travel in findings
 isolation: preferred
 returns: devforgeai.worker-result/v1
 body:
   job: Judge one story for undecided values and name each with the exact span that marks it.
   inputs: The list above, read under the candidate root; nothing outside it is opened.
   rules: references/find_ambiguity.md, what counts as an ambiguity and what does not, and the must_not list.
-  receipt: One devforgeai.worker-result/v1 object; claimed_paths is empty on every status, and evidence_refs names the ambiguities file it wrote under its run-scoped evidence directory.
+  receipt: One devforgeai.worker-result/v1 object; claimed_paths is empty on every status, and findings carries the full row set the sequencer persists. This worker writes nothing.
 ```
 
 ```yaml
@@ -363,7 +365,7 @@ inputs:
   - the devforgeai status block pasted into the dispatch
   - .devforgeai/work/<run>/context.json
   - the story path the run's fence names, read inside the candidate root
-  - .devforgeai/work/<run>/find_ambiguity-result.json and the ambiguities file its evidence_refs names
+  - .devforgeai/work/<run>/find_ambiguity-result.json and .devforgeai/work/<run>/evidence/ambiguity_finder/findings.md, the persisted judge findings that result file names
   - references/questions.md, for the block shape and the three sanctioned edit kinds
   - assets/clarification.md, the block skeleton
 outputs:
@@ -419,7 +421,7 @@ body:
   receipt: One devforgeai.worker-result/v1 object; on pass claimed_paths is exactly the story path, on needs_user it is empty and each open block is one issues row.
 ```
 
-A producer's tools are the read set plus `Edit` and `Write`, which Codex serves as `apply_patch`; the judge's are the read set plus a `Write` the dispatcher confines to `.devforgeai/work/<run>/evidence/<agent>/`, a gitignored, run-scoped directory outside the candidate root that is never promoted. Both include `Bash(devforgeai status)` and nothing else on the Bash surface, because no `clarify` phase grants a stack command key (open item OI-3).
+A producer's tools are the read set plus `Edit` and `Write`, which Codex serves as `apply_patch`; the judge's are the read set and nothing more — it carries no `Write`, no `Edit` and no `apply_patch`, and its findings reach `.devforgeai/work/<run>/evidence/<agent>/findings.md` because the sequencer persists the receipt's `findings` there, not because the worker wrote it. Both include `Bash(devforgeai status)` and nothing else on the Bash surface, because no `clarify` phase grants a stack command key (open item OI-3).
 
 ### 7e. Handoff outcomes
 
@@ -475,10 +477,10 @@ Both scripts are deterministic, non-interactive, print data to stdout and diagno
 
 | File | Content | Load when |
 |------|---------|-----------|
-| `find_ambiguity.md` | What counts as an ambiguity: an `ASSUMPTION:` span; a criterion whose observable result names no value, unit or boundary; a criterion two readers can satisfy with different behaviour. What does not: a criterion that is merely terse, and anything inside `## Clarifications`. The shape of the `ambiguities.md` findings file this worker writes into its run-scoped evidence directory. | dispatching `ambiguity_finder` |
+| `find_ambiguity.md` | What counts as an ambiguity: an `ASSUMPTION:` span; a criterion whose observable result names no value, unit or boundary; a criterion two readers can satisfy with different behaviour. What does not: a criterion that is merely terse, and anything inside `## Clarifications`. The shape of the `findings` string this worker returns, which the sequencer persists as `findings.md` under its run-scoped evidence directory. | dispatching `ambiguity_finder` |
 | `questions.md` | The `CLR-NNN` block shape from section 6, id allocation, `status` values, and the three sanctioned edit kinds `check_clarify_edit.py` accepts: replacing the template's `None.` line on the first append; appending or completing a `### CLR-NNN` block inside `## Clarifications`; replacing one `ASSUMPTION:` span in the body with the value an answered block records. The `--continue` reading rule: normalise a hand-written answer into the block's shape rather than re-asking. | dispatching `question_writer` |
 | `record_answers.md` | The removal rule (a span is removed only when a block whose `#### Answer` settles it reads `status: answered`), the three authority forms (a named person with a date; a source anchor from the story's own `context[]`; the invoking user for a `None required.` block), and why the criterion's wording otherwise stays byte-identical. | dispatching `answer_recorder` |
-| `envelope.md` | The `devforgeai.worker-result/v1` receipt, its bounds (64 `claimed_paths`, 16 `evidence_refs`, 16 KiB note, 10 issues), the closed status set with `reason_code`, the rule that `claimed_paths` is empty on any non-pass status, and the rule that `next` needs a registry `rewind_to` no clarify phase declares. | every dispatch |
+| `envelope.md` | The `devforgeai.worker-result/v1` receipt, its bounds (64 `claimed_paths`, 16 `evidence_refs`, 16 KiB note, 10 issues, 16,384 UTF-8 bytes of `findings`), the closed status set with `reason_code`, the rule that `findings` is required on a judge pass or fail receipt, optional on its needs_user or could_not_run, and forbidden on a producer's, the rule that `claimed_paths` is empty on any non-pass status, and the rule that `next` needs a registry `rewind_to` no clarify phase declares. | every dispatch |
 
 ### assets/
 
@@ -500,7 +502,7 @@ Both scripts are deterministic, non-interactive, print data to stdout and diagno
 |-----------|-----------------|--------------------|
 | OI-1: `01-skill-anatomy.md` and `05-subagent-sets.md` give Slice to a framework worker, but no `clarify` phase dispatches one | A generated skill grows a fourth agent file with no registry phase to run it, and `agent_type` never matches at ingest | Slice is a sequencer step inside `devforgeai phase start`: it resolves the story's already-hashed bundle and writes `.devforgeai/work/<run>/context.json`, which every worker of the run is handed by path. This spec promises no slice phase and ships no slice agent file. |
 | OI-2: `01-skill-anatomy.md` makes provenance conformance part of the gate, while an earlier draft of `10-sequencer-and-contracts.md` said the gate re-resolved `commands.hash` and nothing else | A spec that describes only `commands.hash` under-promises; one that applies story re-resolution to `clarify` over-promises, because `clarify` is not story-anchored | `AUTHOR-BRIEF.md` section 12 supersedes OI-2 and `10-sequencer-and-contracts.md` section 3.4 now carries it: a story gate re-resolves every `provenance[]` and `context[]` entry as well as `commands`, with `stale-hash` never downgradable and `unresolvable-source` downgradable only on a `scope: hotfix` story or under `--lenient` outside `docs/plan/`. That gate does not run for `clarify`: section 4 makes `qa` and `review` the only story-anchored document skills, so `clarify`'s gate checks the fence alone. |
-| OI-3: `05-subagent-sets.md:28` gives workers `tools: [read]` | A generator either gives every worker the same tools or widens the judge's to include an unfenced write | Tools follow the role. A producer carries `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` plus `Edit` and `Write`, which Codex serves as `apply_patch`; every write is denied outside `candidate.root` and outside the run's fence. The judge carries the read set plus a `Write` the dispatcher confines to `.devforgeai/work/<run>/evidence/<agent>/`. `Bash(devforgeai run *)` is granted only where a phase declares run keys, and no `clarify` phase does. |
+| OI-3: `05-subagent-sets.md:28` gives workers `tools: [read]` | A generator either gives every worker the same tools or widens the judge's to include an unfenced write | Tools follow the role. A producer carries `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` plus `Edit` and `Write`, which Codex serves as `apply_patch`; every write is denied outside `candidate.root` and outside the run's fence. The judge carries the read set alone: no `Write`, no `Edit`, no `apply_patch`, with its findings returned in the receipt and persisted by the sequencer. `Bash(devforgeai run *)` is granted only where a phase declares run keys, and no `clarify` phase does. |
 | OI-4: `10-sequencer-and-contracts.md` section 5.4 has no outcome row for `status: fail` with no `next` | A reader assumes a failing phase passes silently | `examples/hooks/devforgeai.py:1017-1018` inserts `"<agent> reported fail"` as a transition problem row, so the phase retries to `max_attempts: 2` and then blocks `REQUIRE_HUMAN`. The section 7e table's `fail at max_attempts` row is that path. |
 | OI-5: `02-skill-roster.md` gives `--continue`, and an earlier draft of `10-sequencer-and-contracts.md` closed the run on `needs_user` | A user expects `--continue` to resume and, under the closed-run reading, phase 1 would run again over a root that no longer existed | Settled: `10-sequencer-and-contracts.md` section 3.1 blocks the run instead of closing it, and section 2's `phase start` row resumes a blocked run when the skill and argument match. `--continue` is that resume — same run, same candidate root, resumed at `run.yaml#blocked_at` with `attempts` reset — and the flag changes only what `question_writer` reads. Section 7a says so. |
 | OI-6: `adr` at a producer-exception path | Not reachable from `clarify` | `.devforgeai/provenance/adr/**` is declared for `architect`/`adr` and `amend`/`adr` and is not in `clarify`'s fence. `clarify` has no `adr` phase and writes nothing under `.devforgeai/provenance/`. Recorded so the open item is closed for this skill rather than silently inherited. |
@@ -522,7 +524,8 @@ Both scripts are deterministic, non-interactive, print data to stdout and diagno
 | The story's immutability comment and its Acceptance Criteria paragraph disagree | `templates/story.md:11-13` says only `status` and `## Clarifications` may change; `templates/story.md#acceptance-criteria` requires `/clarify` to remove the tag from the body | The Acceptance Criteria paragraph governs, because the dev gate's `unresolved_assumption` class is defined by the tag's presence in the body. `answer_recorder` makes exactly two body-affecting changes — the block append and the span replacement — and `check_clarify_edit.py` is what makes that checkable rather than promised. |
 | Two stories in different plan slugs share a story id | The fence stays a pattern rather than a resolved path: `matches()` in `examples/hooks/policy.py` is an `fnmatch` over `docs/plan/*/stories/STORY-NNN.md`, so both files are inside the fence, both live in the candidate root, and an edit to the wrong slug is checkpointed and promoted without complaint | Each worker edits the path it actually read and claims that exact path, so the checkpoint diff and the phase report both name it. Nothing in the current gate rejects a duplicate id across slugs, so a project that reuses story ids must renumber before running `/clarify`. Recorded rather than papered over: this is a real gap, not a checked constraint. |
 | The candidate root and the primary window | A worker cannot resolve `candidate.root` from the canonical tree, and pasting a criterion into a dispatch is the restatement the anti-ceremony rules forbid | Every anatomy run gets one candidate root, opened by `phase start` and owned by the sequencer until promotion or abandonment; the primary window stays in the canonical checkout. The one thing a dispatch carries beyond the story path, the run id and the `--continue` token is the `devforgeai status` block, which names `run`, `candidate.root`, `phase`, `fence` and `granted_keys`. It is generated, not composed, and it is the only sanctioned paste. Claude's own worktree isolation setting and `EnterWorktree` are not used: they fork from HEAD and would split the run's linear history |
-| The receipt no longer carries an `evidence` object | Earlier drafts gave the phases `evidence.ambiguities`, `evidence.existing_clarifications`, `evidence.blocks` and `evidence.resolved`. The receipt schema in the write-model revision removes `evidence` and adds `claimed_paths` and `evidence_refs`, which are paths, not rows | The two writing phases' rows have a home in the story itself: each `CLR-NNN` block carries its id, criterion and status, and a settled span is visibly gone from the body. `ambiguity_finder` is a judge and writes its findings file into `.devforgeai/work/<run>/evidence/ambiguity_finder/`, which `evidence_refs` names and `question_writer` reads by path. `issues[]` stays the bounded summary, at ten rows |
+| The receipt no longer carries an `evidence` object | Earlier drafts gave the phases `evidence.ambiguities`, `evidence.existing_clarifications`, `evidence.blocks` and `evidence.resolved`. The receipt schema in the write-model revision removes `evidence` and adds `claimed_paths` and `evidence_refs`, which are paths, not rows | The two writing phases' rows have a home in the story itself: each `CLR-NNN` block carries its id, criterion and status, and a settled span is visibly gone from the body. `ambiguity_finder` is a judge and returns its full row set in the receipt's `findings`, which the sequencer persists to `.devforgeai/work/<run>/evidence/ambiguity_finder/findings.md` and `question_writer` reads by path. `issues[]` stays the bounded routing summary, at ten rows |
+| D13 (2026-09-03): the judge had an evidence-directory `Write` | Claude Code 2.1.259 refuses a subagent's `Write` of a report-like Markdown file before any hook runs, so `ambiguity_finder` could not have written `ambiguities.md` at all: the phase would have failed on a provider refusal the design did not model, and the `--continue` round-trip would have had no findings to normalise | `WRITE-MODEL-REVISION.md` D13 applied here: `ambiguity_finder` declares `writes: none` (section 7b row 2, section 7d header) and carries `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` with no `Write`, `Edit` or `apply_patch`; its rows travel in the receipt's `findings` string, required on a pass or fail and optional otherwise, at most 16,384 UTF-8 bytes, which the sequencer persists verbatim at `SubagentStop` to the fixed path `.devforgeai/work/<run>/evidence/ambiguity_finder/findings.md`. `question_writer` reads that path (section 7d inputs), section 7c names it in the evidence-file column, and section 14's anatomy rule now reads `writes: candidate` or `writes: none`. The bounded `findings` body does enter the primary context as part of the subagent's result (D13 item 4); what stays isolated is the worker's transcript, reads and tool traffic. Earlier revisions of `10-sequencer-and-contracts.md` and `09-hook-dispatcher.md` carried the superseded evidence-writing branch; D13 is now applied in those documents and here. |
 | Section 9, row 5 (scripts have no implemented runner) | Both scripts are honest deterministic checks with no sequencer that imports them yet, so an author could describe them as enforced | `10-sequencer-and-contracts.md` section 3.3 shows the implemented document gate checking fence entries only, and section 5.2 shows result validation stopping at path, hash and package policy. Both scripts run today only when a human runs them. The evidence table names them as designed sequencer-side checks and section 7c says they are unimplemented; no criterion in section 10 gates on them. |
 
 ## 10. Success criteria and test cases
@@ -610,7 +613,7 @@ Quick-mode results are generation feedback only: one enabled run per eval and no
 
 | Kind | Value |
 |------|-------|
-| Tools | SKILL.md: `Read`, `Agent`, and a Bash grammar no wider than the five model-callable operations `devforgeai status \| phase start <skill> <arg> \| phase fail --reason \| validate \| promote <run>`. Document writers (`question_writer`, `answer_recorder`): `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` plus `Edit` and `Write`, which Codex serves as `apply_patch`, denied outside `candidate.root` and outside the run's fence. Judge (`ambiguity_finder`): the same read set plus `Write` confined to `.devforgeai/work/<run>/evidence/<agent>/`. No `clarify` phase grants a stack command key, so no worker carries `Bash(devforgeai run *)`. |
+| Tools | SKILL.md: `Read`, `Agent`, and a Bash grammar no wider than the five model-callable operations `devforgeai status \| phase start <skill> <arg> \| phase fail --reason \| validate \| promote <run>`. Document writers (`question_writer`, `answer_recorder`): `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` plus `Edit` and `Write`, which Codex serves as `apply_patch`, denied outside `candidate.root` and outside the run's fence. Judge (`ambiguity_finder`): the same read set and no write tool of any kind, its findings returned in the receipt and persisted by the sequencer. No `clarify` phase grants a stack command key, so no worker carries `Bash(devforgeai run *)`. |
 | MCP servers | none |
 | Runtime | Python 3.11+ for both bundled scripts; PyYAML 6+, which `find_assumptions.py` and `check_clarify_edit.py` import to parse story frontmatter and the fenced block inside each `CLR-NNN` entry. Worktree mode additionally requires `git` with at least one commit on the project; without it the run falls back to copy mode |
 | Project commands | none. `clarify` declares no `run_keys` in any phase, so the run brokers no `stack.yaml` command and the run file carries `granted_keys: []` for this document run. The story's own `commands.source` anchor is re-resolved by the gate and is not otherwise used. |
@@ -640,7 +643,7 @@ The generator produces one provider-neutral semantic package and a separate adap
 
 | Target | Install path | Invocation | Subagents | Notes |
 |--------|--------------|------------|-----------|-------|
-| claude | `.claude/skills/clarify/` | `/clarify` with a story id, and `--continue` on the answer round-trip | `.claude/agents/clarify-<role>.md`: two document writers with `Edit` and `Write` confined to the candidate root, one judge whose `Write` reaches only its run-scoped evidence directory | Provider-specific frontmatter keys (`argument-hint`, `disable-model-invocation`) are compiled into this target's SKILL.md only. `hooks`, `memory`, `background`, `permissionMode` and Claude's own `isolation` are omitted from every profile. |
+| claude | `.claude/skills/clarify/` | `/clarify` with a story id, and `--continue` on the answer round-trip | `.claude/agents/clarify-<role>.md`: two document writers with `Edit` and `Write` confined to the candidate root, one judge with no write tool at all, returning its findings in the receipt | Provider-specific frontmatter keys (`argument-hint`, `disable-model-invocation`) are compiled into this target's SKILL.md only. `hooks`, `memory`, `background`, `permissionMode` and Claude's own `isolation` are omitted from every profile. |
 | codex | `.agents/skills/clarify/` plus `.codex/agents/` profiles | `$clarify` with a story id, and `--continue` on the answer round-trip | `.codex/agents/clarify-<role>.toml`: the same three names, with `apply_patch` in place of `Edit` and `Write` | Portable six-field frontmatter only; policy goes in target-side configuration. |
 | both | separate `.claude/skills/clarify/` and `.agents/skills/clarify/` adapters | as above | as above | Share only provider-neutral resources; validate each adapter independently. |
 
@@ -696,7 +699,7 @@ Then the wave-4 battery over this specification:
 python3 docs/design/specs/verify.py --only v1,v2,v4
 ```
 
-For non-Research anatomy skills, DevForgeAI skill-validator additionally checks: all sub-phase kinds present with Gate, Record and Handoff bound to sequencer operations; `must_not` present in every agent file; every agent declaring `writes: candidate` or `writes: evidence`, with a `writes: evidence` agent carrying no `Edit` and a `Write` fenced to its run-scoped evidence directory; the SKILL.md Bash grammar is no wider than the five model-callable operations; handoff outcomes cover every status the skill can return, including `could_not_run`. `clarify` has no critic phase, so skill-validator's persona-versus-critic check does not apply to it; section 7b names `check_clarify_edit.py` as the independent check in its place.
+For non-Research anatomy skills, DevForgeAI skill-validator additionally checks: all sub-phase kinds present with Gate, Record and Handoff bound to sequencer operations; `must_not` present in every agent file; every agent declaring `writes: candidate` or `writes: none`, with a `writes: none` agent carrying no `Edit`, no `Write` and no `apply_patch` and returning its findings in the receipt; the SKILL.md Bash grammar is no wider than the five model-callable operations; handoff outcomes cover every status the skill can return, including `could_not_run`. `clarify` has no critic phase, so skill-validator's persona-versus-critic check does not apply to it; section 7b names `check_clarify_edit.py` as the independent check in its place.
 
 ## 15. Provenance
 

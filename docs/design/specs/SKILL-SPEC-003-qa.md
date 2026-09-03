@@ -9,13 +9,13 @@ author: "DevForgeAI plan skill"
 date: 2026-09-02
 depends_on:
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:a6bbaf9af2d69f7ede18d7c40f242c42edb26d79be964ffec3f386d6347014c2
+    hash: sha256:5afb88c46aa635c961564af8e58c799a44f387c6bd877eeac2ec7568f73aba7e
     excerpt: "For an anatomy-governed skill, the primary window (provider entry adapter + skill orchestration) does light, trivial work only. It dispatches workers and calls the sequencer. It never writes state, never advances a phase, and never decides that a phase passed."
   - source: docs/design/01-skill-anatomy.md#evidence-home
-    hash: sha256:d4ad2626d2dc993f9879247429ce4a15a9dcee31c9b4b20da8178ffe8bac8dc9
-    excerpt: "There is one home for a run's evidence. The sequencer writes every file below except the judge findings under `evidence/<agent>/`:"
+    hash: sha256:15bc1303729e997b8eeeefab8f9a406f5c8568e4f0932a28da3f02c14199a469
+    excerpt: "There is one home for a run's evidence, and the sequencer writes every file in it:"
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:511733ee35ca74fd5a5c0b59f225d7d975788e7d43d939f44c23b7aa8460cff0
+    hash: sha256:7c1d67f1154e49247e5dc178fcc1512bdbd53af378c360aeafe69bffed1136ab
     excerpt: "| qa | 1 | `run_tests` | `test_runner` | none | 2 | `test` | green | — |"
   - source: docs/design/10-sequencer-and-contracts.md#3-2-defect-to-action-map-as-implemented
     hash: sha256:700e29f7b7eb3b6883d0895d79e3822bf06c32e633eb10b44155761fe4c5ef28
@@ -24,10 +24,10 @@ depends_on:
     hash: sha256:722dadc1737749e30d244f222aaa1d8b845bc93f4a573b16f662719e58b49bcd
     excerpt: "The story gate re-resolves every `provenance[]` and `context[]` entry as well as `commands`."
   - source: docs/design/10-sequencer-and-contracts.md#5-4-transition-oracles
-    hash: sha256:ffa41b5d270dc260e28fa9f6bdbc855069a6e922d1148c74b25860dba63484dc
+    hash: sha256:076840ec9db03155bc9edcceb587e2aa1ca8bf3849e7a8b742f788d1a3b2315f
     excerpt: "`green` | every `test_paths` hash equals `red_hashes`; build when compiled; broker `test`; every `test_plan` name is `passed` | the tests that were red are green and were not edited to get there"
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:bca72c10668178e0f4da43e03aaafbf24d2a57ec12f71a16b078880dd496677a
+    hash: sha256:3c4c95bbd73b5499e5569e650f84eea84cb68404c0909f5f1819c0f3a5c7b3d4
     excerpt: "| `qa`, promoted, `verdict: findings` or `fail` | `/dev <arg> --fix` |"
   - source: docs/design/10-sequencer-and-contracts.md#7-stack-yaml
     hash: sha256:f51716b6cfb1f4a48f4efbcff03947b3adab879dac1b6de7720564c85c87c43c
@@ -42,7 +42,7 @@ depends_on:
     hash: sha256:1dac784b4670cc7559f323011dfe304dfe8c0baf349063162f90d76d902c5d3c
     excerpt: "| qa | pass (`verdict: pass`), more stories in sprint | `/dev {next_story}` |"
   - source: docs/design/05-subagent-sets.md#sets-per-skill
-    hash: sha256:9e12f3beb236a025c18d40e741c09ba675bd71d2d87f56e2b205c7556b944bf9
+    hash: sha256:f2957217c9af147e4a7ea03749cbe6efda266bd56d403f39aa25c9a655872609
     excerpt: "| qa | test-runner (names `commands.use` keys and reads the oracle output the sequencer recorded in `<phase>-result.json`; it runs nothing itself), criteria-checker, evidence-collector, qa-writer |"
 ---
 
@@ -52,9 +52,9 @@ A stranger with no conversation history must be able to build this skill from th
 
 `qa` opens a story-anchored document run. Its argument is a story id, the same story gate that `dev` runs re-runs here, and the story's `commands`, `test_plan` and `gate_policy` map are copied into the enforcement block so the `run_tests` transition can broker the `test` key. Its fence is the report path, so its workers cannot touch code or tests.
 
-The run gets its own candidate root, created by the sequencer at `devforgeai phase start` from canonical HEAD, exactly as every other run does. It does not attach to the story's `dev` root. The order per story is `dev` → `devforgeai promote <run>` → `review` → `qa`, and `STORY_IN_FLIGHT` enforces it: `devforgeai phase start qa <story>` is refused while any run naming that story — its `dev` run, and its `review` run too — is `active` or `ready_to_promote`. So by the time this run opens, the story's code and tests are in the canonical tree, and the fresh root holds them at the `base` checkpoint. Three of the four workers judge: they change nothing in the root and each writes its findings file into its own run-scoped scratch at `.devforgeai/work/<run>/evidence/<agent>/`, which is gitignored and never promoted. `qa_writer` is the run's one producer, writing the report inside the root under the run's fence; that report reaches the canonical checkout only when the user runs `devforgeai promote <run>`. The `test` key is granted to the `run_tests` phase, not to its worker: the sequencer runs every oracle at ingest, in this run's own root, and `test_runner` reads what it recorded. Running the suite against promoted code in a clean root is the MVP form of the clean verification worktree; the detached read-only variant that decision D8 moves into `12-post-mvp.md` stays deferred.
+The run gets its own candidate root, created by the sequencer at `devforgeai phase start` from canonical HEAD, exactly as every other run does. It does not attach to the story's `dev` root. The order per story is `dev` → `devforgeai promote <run>` → `review` → `qa`, and `STORY_IN_FLIGHT` enforces it: `devforgeai phase start qa <story>` is refused while any run naming that story — its `dev` run, and its `review` run too — is `active` or `ready_to_promote`. So by the time this run opens, the story's code and tests are in the canonical tree, and the fresh root holds them at the `base` checkpoint. Three of the four workers judge: each declares `writes: none`, carries no write tool, changes nothing anywhere, and returns its detailed evidence in the receipt's `findings` string, which the sequencer persists verbatim to `.devforgeai/work/<run>/evidence/<agent>/findings.md` — a run-scoped path the worker cannot choose, gitignored and never promoted — where `qa_writer` reads it. `qa_writer` is the run's one producer, writing the report inside the root under the run's fence; that report reaches the canonical checkout only when the user runs `devforgeai promote <run>`. The `test` key is granted to the `run_tests` phase, not to its worker: the sequencer runs every oracle at ingest, in this run's own root, and `test_runner` reads what it recorded. Running the suite against promoted code in a clean root is the MVP form of the clean verification worktree; the detached read-only variant that decision D8 moves into `12-post-mvp.md` stays deferred.
 
-Two `writes` vocabularies meet here and mean different things. The registry phase's mode — `none` for the first three phases, `docs` for the report — says what a phase may change inside the candidate root. The worker header's `writes` — `candidate`, `evidence` or `none` — says where that agent's tools may write at all. A judging worker is `writes: none` against the root and `writes: evidence` in its header, because its findings file lives outside the root.
+Two `writes` vocabularies meet here and mean different things. The registry phase's mode — `none` for the first three phases, `docs` for the report — says what a phase may change inside the candidate root. The worker header's `writes` — `candidate` or `none` — says whether that agent is given a write tool at all. A judging worker is `writes: none` in both vocabularies: it changes nothing inside the root, and it carries no `Write`, `Edit` or `apply_patch` anywhere. Its evidence reaches disk only through the `findings` string the sequencer persists for it.
 
 ## 0. Generator instructions
 
@@ -103,7 +103,7 @@ Follow its section 0 exactly. Output directory: ./out. Eval mode: quick.
 | R1 | explicit | Take one story id and produce `docs/reports/qa-<story>.md` against the `qa-report` template, with one row per numbered acceptance criterion. Source: `11-artifact-registry.md` section 1 and section 2. |
 | R2 | explicit | Decide each criterion from the brokered suite's recorded outcome, not from a worker's assertion. Source: `10-sequencer-and-contracts.md` section 1 consequence 3. |
 | R3 | explicit | Run after `review`, and cite the review report, so a story that failed review is not passed on test results alone. Source: `11-artifact-registry.md` section 3, `qa-report` row. |
-| R4 | implicit | Change no code and no test: three of the four workers change nothing in the candidate root and write only into their own evidence scratch, the run's fence is the report path only, and a change anywhere else in the candidate root fails the phase at ingest. Source: write-model decisions D1 and D4. |
+| R4 | implicit | Change no code and no test: three of the four workers write nothing at all, the run's fence is the report path only, and a change anywhere else in the candidate root fails the phase at ingest. Source: write-model decisions D4 and D13. |
 | R5 | implicit | Re-gate the story on entry rather than trusting that `dev` gated it. Source: `01-skill-anatomy.md` gate section. |
 | R6 | implicit | Check the story's `## Unchanged Behaviour` lines as the regression surface, and report any line no test covers. Source: `08-story-specification.md`, Unchanged Behaviour row. |
 | R7 | discovered | A missing or timing-out test runner is `could_not_run` with a `reason_code`, routed by `gate_policy.test_runner_missing`, whose default is `REQUIRE_HUMAN`. It is never a failed criterion and it consumes no attempt. Source: `10-sequencer-and-contracts.md` section 3.2. |
@@ -111,7 +111,7 @@ Follow its section 0 exactly. Output directory: ./out. Eval mode: quick.
 | R9 | discovered | `qa` brokers the `test` key because the run is story-anchored and copies the story's `commands`. A plain document run carries `commands: {}` and could not. The grant is the phase's, and the sequencer is what spends it at the transition; no `qa` worker runs a stack key. Source: `policy.py` `anchor: story` on `qa`, `devforgeai.py` `cmd_phase_start`, and write-model decision D8a. |
 | R10 | discovered | The report is written in the candidate root and reaches the canonical checkout only when the user runs `devforgeai promote <run>` on a run the last passing transition marked `ready_to_promote`; that command fast-forwards under the sequencer's lock and is refused with `STALE_BASE` or `DIRTY_TARGET` rather than merging. Promotion is never automatic and is never part of Handoff. Source: write-model decisions D2 and D7 as amended. |
 | R11 | discovered | `qa_writer` holds the run's lease while it writes; the three judging workers hold none and may read the checkpoint concurrently. Source: write-model decisions D3 and D6. |
-| R12 | discovered | Each judging worker records its findings as a file under `.devforgeai/work/<run>/evidence/<agent>/` and names it in the receipt's `evidence_refs`; `issues[]` stays the bounded summary `qa_writer` and the handoff quote. That scratch is gitignored, is outside the candidate root and the fence, and is never promoted. Source: write-model decisions D1, D6 and D8a as amended. |
+| R12 | discovered | Each judging worker writes nothing. It returns its detailed evidence in the receipt's `findings` string, at most 16,384 UTF-8 bytes, and the sequencer persists that string verbatim to `.devforgeai/work/<run>/evidence/<agent>/findings.md` at the identity-bound `SubagentStop`; `issues[]` stays the bounded routing summary `qa_writer` and the handoff quote. The worker chooses neither the path nor the name, and the persisted file is gitignored, outside the candidate root and the fence, and never promoted; `qa_writer` reads it by path. Source: write-model decision D13. |
 | R13 | discovered | The run opens its own candidate root from canonical HEAD and never attaches to the story's `dev` root; `STORY_IN_FLIGHT` refuses `devforgeai phase start qa <story>` while any run naming that story — `dev` or `review` — is `active` or `ready_to_promote`, so the suite runs against promoted code. A failing criterion routes to a new `/dev {story} --fix` run, never to an edit in this run's root. Source: write-model decision D12. |
 
 ## 3. Description
@@ -259,14 +259,21 @@ skill: "qa"
 phase: "run_tests | criteria | evidence | report"
 agent: "test_runner | criteria_checker | evidence_collector | qa_writer"
 status: pass | fail | needs_user | could_not_run
-reason_code: runner_missing | timeout | network | hook_fault   # required only when status is could_not_run
+reason_code: runner_missing | timeout | network | hook_fault | provider_tool_refused | prerequisite_missing | checkpoint_fault   # required only when status is could_not_run
 candidate: {id: "qa-STORY-001", input_checkpoint: "refactor | run_tests | criteria | evidence"}
 claimed_paths: ["docs/reports/qa-STORY-001.md"]   # report phase only; empty everywhere else
 evidence_refs: [".devforgeai/work/qa-STORY-001/run_tests-report.md"]   # at most 16
 note: "at most three lines"
 issues: [{id, kind, text}]              # at most 10
+findings: "the judging worker's detailed evidence"  # judges only, at most 16384 UTF-8 bytes: required on pass or fail, optional on needs_user or could_not_run
 next: ""                                # refused: no qa phase declares rewind_to
 ```
+
+The `reason_code` set separates infrastructure failures that look alike from the primary window. `provider_tool_refused` is the provider declining a tool call before any DevForgeAI hook ran — the case that made this specification's judging workers `writes: none`. `prerequisite_missing` is a worktree-mode prerequisite the `SessionStart` self-test found absent. `checkpoint_fault` is a checkpoint the sequencer could not create, read or reset. `hook_fault` stays reserved for a missing worker identity on the stop event or a malformed receipt. All of them roll up to `INFRA_FAILURE`.
+
+A judging phase returns `findings` and writes nothing. `findings` is required when a judge returns `pass` or `fail`, because those are the statuses whose working `qa_writer` reads, and optional when it returns `needs_user` or `could_not_run`; the same 16,384-byte bound applies either way. `qa_writer` never carries it on any status. At the identity-bound `SubagentStop`, after the receipt validates, the sequencer writes the decoded string verbatim to `.devforgeai/work/<run>/evidence/<agent>/findings.md` — a fixed path the worker cannot choose or name — and `qa_writer`, the handoff and `<phase>-result.json` reach it by that path. That is persistence of a returned result, not a merge into the tree. A `findings` string over 16,384 UTF-8 bytes is refused like any other receipt defect and is never truncated; a `findings` key on `qa_writer`'s receipt is refused as an unknown key would be.
+
+The `findings` body reaches the primary window as part of the subagent's result, exactly as any subagent result does: a hook can validate a final message but cannot suppress it. What stays isolated is the worker's transcript, its file reads, its tool traffic and its intermediate reasoning. The receipt still carries no report body and no code.
 
 `gate_policy` (`BLOCK | REQUIRE_HUMAN | WARN | OFF`) is a defect-to-action map declared in the consumed story, never a status returned here. An unknown key is refused. The report's own frontmatter carries `verdict`, and the sequencer reads it from the file `evidence_refs` names: it selects the handoff row and therefore `next`, while the run's `status` and the handoff's `outcome` stay `pass`, because reporting a failing criterion is a passing run.
 
@@ -315,14 +322,14 @@ One row per registry phase, in phase order. `<run>` is `qa-<story>`, the `<skill
 
 | phase | worker | deterministic gate check | gate_policy | evidence file | transition oracle |
 |---|---|---|---|---|---|
-| `run_tests` | `test_runner` | document fence gate: `docs/reports/qa-<story>.md` is declared, repository-relative, free of `..`, and not sequencer-owned; no run that is `active` or `ready_to_promote` names this story (`STORY_IN_FLIGHT`), which is what makes the story's `dev` work — and its `review` report — promoted before this run opens; story gate, because the skill is story-anchored: template v3, `status: ready`, no `ASSUMPTION:` before `## Clarifications`, `blocked_by` chain done, every `provenance[]` and `context[]` entry re-resolved to its recorded digest, `write_fence`, `test_plan` and `commands` present, every `test_plan` row carrying criterion, file and name with its file inside the fence, `commands.hash` equal to the current `stack.yaml` digest, the anchored section satisfying the `stack.yaml` contract and defining every key the story authorises; at ingest, `writes: none` against the root requires an empty `claimed_paths` and a candidate root unchanged since the `base` checkpoint the run opened at, while the worker's own write under `.devforgeai/work/qa-<story>/evidence/test_runner/` is admitted and is not part of `changed` | the story's map, copied into the enforcement block: `unresolved_assumption: BLOCK`, `stale_hash: BLOCK`, `unresolvable_source: BLOCK` (downgraded to a recorded warning only by `--lenient` on a story outside `docs/plan/`, or by `WARN`/`OFF` on a `scope: hotfix` story), `criterion_without_test: BLOCK`, `test_runner_missing: REQUIRE_HUMAN` | `.devforgeai/work/qa-<story>/run_tests-result.json`, `.devforgeai/work/qa-<story>/run_tests-report.md` | `green`: fence held, stack policy held, `build` first when the section is compiled, `test` run by the sequencer in the candidate root from the story's anchored section, classification neither `NO_TESTS` nor `COLLECTION_ERROR` nor `TEST_FAILURE`, and every `test_plan` row `passed` in the JUnit results at `junit_path`. `INFRA_FAILURE` or `TIMEOUT` is `could_not_run` routed by `gate_policy.test_runner_missing`, never a failed criterion |
-| `criteria` | `criteria_checker` | `writes: none` against the root: `claimed_paths` is empty and nothing changed in the root; the worker holds no lease, so a write tool call inside the root is denied at `PreToolUse`, while its own scratch at `.devforgeai/work/qa-<story>/evidence/criteria_checker/` is admitted; the receipt's `agent` resolves to `criteria_checker` and matches the stop event's `agent_type` | `write_fence_violation: BLOCK` | `.devforgeai/work/qa-<story>/criteria-result.json`, `.devforgeai/work/qa-<story>/criteria-report.md` | `report_only`: no file outside the fence changed since the gate snapshot and the whole-tree package and import policy holds |
-| `evidence` | `evidence_collector` | as `criteria`, with its own scratch at `.devforgeai/work/qa-<story>/evidence/evidence_collector/`; the phase grants no command key, so `devforgeai run` is refused for this worker on the key as well as on the lease | `write_fence_violation: BLOCK` | `.devforgeai/work/qa-<story>/evidence-result.json`, `.devforgeai/work/qa-<story>/evidence-report.md` | `report_only`: as `criteria` |
+| `run_tests` | `test_runner` | document fence gate: `docs/reports/qa-<story>.md` is declared, repository-relative, free of `..`, and not sequencer-owned; no run that is `active` or `ready_to_promote` names this story (`STORY_IN_FLIGHT`), which is what makes the story's `dev` work — and its `review` report — promoted before this run opens; story gate, because the skill is story-anchored: template v3, `status: ready`, no `ASSUMPTION:` before `## Clarifications`, `blocked_by` chain done, every `provenance[]` and `context[]` entry re-resolved to its recorded digest, `write_fence`, `test_plan` and `commands` present, every `test_plan` row carrying criterion, file and name with its file inside the fence, `commands.hash` equal to the current `stack.yaml` digest, the anchored section satisfying the `stack.yaml` contract and defining every key the story authorises; at ingest, `writes: none` requires an empty `claimed_paths` and a candidate root unchanged since the `base` checkpoint the run opened at, which the worker cannot violate because it carries no write tool; its receipt carries a `findings` string — required on `pass` or `fail`, optional on `needs_user` or `could_not_run` — which the sequencer persists to `.devforgeai/work/qa-<story>/evidence/test_runner/findings.md` after the receipt validates | the story's map, copied into the enforcement block: `unresolved_assumption: BLOCK`, `stale_hash: BLOCK`, `unresolvable_source: BLOCK` (downgraded to a recorded warning only by `--lenient` on a story outside `docs/plan/`, or by `WARN`/`OFF` on a `scope: hotfix` story), `criterion_without_test: BLOCK`, `test_runner_missing: REQUIRE_HUMAN` | `.devforgeai/work/qa-<story>/run_tests-result.json`, `.devforgeai/work/qa-<story>/run_tests-report.md` | `green`: fence held, stack policy held, `build` first when the section is compiled, `test` run by the sequencer in the candidate root from the story's anchored section, classification neither `NO_TESTS` nor `COLLECTION_ERROR` nor `TEST_FAILURE`, and every `test_plan` row `passed` in the JUnit results at `junit_path`. `INFRA_FAILURE` or `TIMEOUT` is `could_not_run` routed by `gate_policy.test_runner_missing`, never a failed criterion |
+| `criteria` | `criteria_checker` | `writes: none`: the worker carries no write tool at all, `claimed_paths` is empty and nothing changed in the root; its `findings` string is persisted by the sequencer to `.devforgeai/work/qa-<story>/evidence/criteria_checker/findings.md`; the receipt's `agent` resolves to `criteria_checker` and matches the stop event's `agent_type` | `write_fence_violation: BLOCK` | `.devforgeai/work/qa-<story>/criteria-result.json`, `.devforgeai/work/qa-<story>/criteria-report.md` | `report_only`: no file outside the fence changed since the gate snapshot and the whole-tree package and import policy holds |
+| `evidence` | `evidence_collector` | as `criteria`, with its `findings` persisted to `.devforgeai/work/qa-<story>/evidence/evidence_collector/findings.md`; the phase grants no command key, so `devforgeai run` is refused for this worker on the key as well as on the lease | `write_fence_violation: BLOCK` | `.devforgeai/work/qa-<story>/evidence-result.json`, `.devforgeai/work/qa-<story>/evidence-report.md` | `report_only`: as `criteria` |
 | `report` | `qa_writer` | `writes: docs`: the lease named in the run file is the dispatched agent's (`LEASE_HELD`), and `changed`, derived from the checkpoint diff, is a subset of `claimed_paths` (`UNCLAIMED_CHANGE`) and holds nothing but the run's fence path, `docs/reports/qa-<story>.md`; the whole-tree package and import policy scan over the root finds no violation | `write_fence_violation: BLOCK` | `.devforgeai/work/qa-<story>/report-result.json`, `.devforgeai/work/qa-<story>/report-report.md`, then `.devforgeai/work/qa-<story>/handoff.json` | `document`: the phase produced at least one file and every declared output with non-null content exists on disk. On pass this is the last phase: the run is marked `ready_to_promote`, enforcement is cleared, and the first handoff block names `devforgeai promote <run>`; the second block is written by that command once the user asks for it |
 
 Attempt budgets are 2 for every phase. No phase declares `rewind_to`, so a `next` value in any receipt is refused; a failure retries the same phase and then closes the run `REQUIRE_HUMAN`. Only `run_tests` grants a command key, and only `test`; the grant belongs to the phase and the sequencer spends it in the transition oracle, so no worker of this skill carries a `devforgeai run` surface.
 
-The four phases build linearly on this run's own candidate root from its `base` checkpoint, which is canonical HEAD at `devforgeai phase start`. Only `report` writes, and only it holds the lease: the sequencer grants the lease at dispatch, the hook layer binds it at `SubagentStart`, and `ingest-result` releases it. The three judging workers hold none and may read the checkpoint concurrently; their own writes land in a per-agent scratch outside the root.
+The four phases build linearly on this run's own candidate root from its `base` checkpoint, which is canonical HEAD at `devforgeai phase start`. Only `report` writes, and only it holds the lease: the sequencer grants the lease at dispatch, the hook layer binds it at `SubagentStart`, and `ingest-result` releases it. The three judging workers hold none and may read the checkpoint concurrently; each returns detailed evidence in `findings`, which the sequencer persists in the worker's fixed per-agent evidence path.
 
 Two honest limits bind every row. Every `devforgeai phase start` defect is a refusal whatever the story's declared value says, with the single downgrade in `10-sequencer-and-contracts.md` section 3.4; and `test_runner_missing` is the one class that changes behaviour at transition time, where `WARN` or `OFF` relabels the handoff outcome without continuing the run.
 
@@ -332,21 +339,21 @@ One subsection per registry phase. Each becomes `references/<phase>.md` verbatim
 
 #### references/run_tests.md
 
-The `run_tests` phase does not run the tests. You judge; you change nothing in the candidate root, and the one file you write is your findings file at `.devforgeai/work/qa-<story>/evidence/test_runner/findings.md`, which you name in the receipt's `evidence_refs`. The sequencer runs the story's `test` key at the transition, in the candidate root, reads per-test outcomes from the section's `junit_path`, and requires every `test_plan` row to be `passed`. This phase's job is to state, before that happens, exactly what the transition will assert and to catch the mismatches a suite run would only report as a confusing failure.
+The `run_tests` phase does not run the tests. You judge and change nothing anywhere. Return the criterion-to-test map as the receipt's required `findings`; after validating the receipt, the sequencer persists it to `.devforgeai/work/qa-<story>/evidence/test_runner/findings.md`. The sequencer runs the story's `test` key at the transition, in the candidate root, reads per-test outcomes from the section's `junit_path`, and requires every `test_plan` row to be `passed`. This phase's job is to state, before that happens, exactly what the transition will assert and to catch the mismatches a suite run would only report as a confusing failure.
 
 - The authority for what the transition asserts is the story's `test_plan` rows and its `commands.use` keys, which the gate copied verbatim into the enforcement block after re-resolving `commands.hash`. Read them from the story; they are identical to the block by construction, and the story is what the gate validated.
 - Check three things the oracle would otherwise report as a bare failure, reading the `refactor` checkpoint of the candidate root: every `test_plan` file exists there; every `test_plan` name appears in that file; and `commands.use` names the `test` key. Report each miss as an issue naming the row, because a planned test that is absent from the tree is a story-level defect that routes to `plan` or `dev`, not a test failure that routes to a code fix.
-- Record the criterion-to-test map you checked in the findings file, one row per `test_plan` entry, so the later phases and the report read one map rather than three derivations of it; keep `issues` to the bounded summary of what is missing.
-- Change nothing in the candidate root. The phase is `writes: none` against it, its `claimed_paths` is empty, and the worker holds no lease, so a write inside the root is denied before it reaches disk; your findings file is the one write you make, and it lands outside the root.
-- Name no literal command anywhere. The story authorises keys; the sequencer resolves each key from the hash-pinned `stack.yaml` section and runs it in the root. A worker that writes a literal command into its findings file has invented a fact the run does not use, and this phase's grant is the sequencer's to spend, not yours.
+- Record the criterion-to-test map in `findings`, one row per `test_plan` entry, so the later phases and the report read one map rather than three derivations of it; keep `issues` to the bounded summary of what is missing.
+- Change nothing anywhere. The phase and worker are `writes: none`, `claimed_paths` is empty, and the worker holds no lease or write tool. The sequencer alone persists the validated `findings` string.
+- Name no literal command anywhere. The story authorises keys; the sequencer resolves each key from the hash-pinned `stack.yaml` section and runs it in the root. A worker that writes a literal command into `findings` has invented a fact the run does not use, and this phase's grant is the sequencer's to spend, not yours.
 - Return `pass` when the checks completed, whatever they found, so the transition can broker the suite and decide. Return `needs_user` when the story authorises no `test` key at all: the effective key set is the intersection of the phase's grant and the run's `commands.use`, so an empty intersection means the story cannot be verified as written, and that is a decision for the story's owner rather than a retry or a missing runner.
 
 #### references/criteria.md
 
-The `criteria` phase maps every numbered acceptance criterion to the outcome the transition recorded. You judge; you change nothing in the candidate root, and the one file you write is your findings file at `.devforgeai/work/qa-<story>/evidence/criteria_checker/findings.md`, which you name in the receipt's `evidence_refs`.
+The `criteria` phase maps every numbered acceptance criterion to the outcome the transition recorded. You judge and change nothing anywhere. Return the complete map in `findings`; after validation the sequencer persists it to `.devforgeai/work/qa-<story>/evidence/criteria_checker/findings.md`.
 
 - The evidence is `.devforgeai/work/qa-<story>/run_tests-report.md`, the sequencer's rendering of the accepted `run_tests` result together with the oracle's problem rows and the brokered command's classification. Read it rather than re-deriving anything: the suite already ran, and a second opinion about what it printed is not evidence.
-- One row per numbered criterion in the story's `## Acceptance Criteria`, in the findings file, in order, each carrying the criterion text verbatim, its `test_plan` test, the recorded outcome, and the report line that proves it; `issues` carries the failing and uncovered rows alone. Quoting the criterion verbatim matters because the report is read later by someone without the story open.
+- Put one row per numbered criterion in the story's `## Acceptance Criteria` into `findings`, in order, each carrying the criterion text verbatim, its `test_plan` test, the recorded outcome, and the report line that proves it; `issues` carries the failing and uncovered rows alone. Quoting the criterion verbatim matters because the report is read later by someone without the story open.
 - A criterion whose `test_plan` row exists but whose test did not appear in the results is `uncovered`, not `failed`. The two route differently: uncovered is a gap the plan owns, failed is a defect the code owns.
 - Read the story's `## Unchanged Behaviour` section and produce one regression row per statement, with the test that covers it or the word `uncovered`. For a `scope: feature` story that section may legitimately read `None.`; record that as a single row rather than as an omission.
 - Do not judge a criterion by reading the implementation. If no test covers it, the honest answer is uncovered; a criterion decided by inspection is exactly the claim this skill exists to replace.
@@ -354,20 +361,20 @@ The `criteria` phase maps every numbered acceptance criterion to the outcome the
 
 #### references/evidence.md
 
-The `evidence` phase collects the citations the report's Evidence section carries, so the verdict can be re-derived by someone who was not in the session. You judge; you change nothing in the candidate root, and the one file you write is your findings file at `.devforgeai/work/qa-<story>/evidence/evidence_collector/findings.md`, which you name in the receipt's `evidence_refs`.
+The `evidence` phase collects the citations the report's Evidence section carries, so the verdict can be re-derived by someone who was not in the session. You judge and change nothing anywhere. Return the citations in `findings`; after validation the sequencer persists them to `.devforgeai/work/qa-<story>/evidence/evidence_collector/findings.md`.
 
 - Collect four kinds of citation: the brokered command's key, classification and exit code as the `run_tests` transition recorded them; the phase report paths each criterion row was read from; the `dev` run's evidence under `.devforgeai/work/<story>/` when it exists; and `docs/reports/review-<story>.md` with its `verdict` when `review` has run.
 - Resolve the review report's digest with the hash rule the gate uses, so the qa report's `depends_on` entry can be re-resolved later and a report written against a superseded review is detectable.
 - Cite paths, not contents. An excerpt copied into the report is a second copy that will drift from the file it came from; a path plus a digest stays true.
 - Where `review` has not run, say so as a citation of absence rather than omitting the row. A qa report that silently omits the review edge cannot be distinguished from one written before `review` existed.
-- Add no judgement: this phase gathers, the `criteria` phase decided, and the `report` phase renders. The citations go in the findings file, one per line.
+- Add no judgement: this phase gathers, the `criteria` phase decided, and the `report` phase renders. Put the citations in `findings`, one per line.
 - Return `pass` when the collection completed. A missing optional citation is a recorded absence, not a failure.
 
 #### references/report.md
 
 The `report` phase renders the criterion map, the evidence and the regression rows into the one artifact `dev` and `retro` cite. You write that report inside the candidate root the status block names, at the run's fence path, using `Edit` and `Write`; you run no command; you finish with the receipt.
 
-- Read `.devforgeai/work/qa-<story>/criteria-report.md` and `evidence-report.md`, and the findings file each judging worker left under `.devforgeai/work/qa-<story>/evidence/<agent>/`. The reports are the sequencer's rendering of the accepted receipts; the findings files hold the criterion rows and citations behind them. Both are evidence rather than a claim.
+- Read `.devforgeai/work/qa-<story>/criteria-report.md` and `evidence-report.md`, and the `findings.md` the sequencer persisted for each judging worker under `.devforgeai/work/qa-<story>/evidence/<agent>/`. The reports are the sequencer's rendering of the accepted receipts; the persisted findings hold the criterion rows and citations behind them, written by the sequencer from the string each worker returned. Both are evidence rather than a claim.
 - Fill `assets/qa-report.md`. Every frontmatter key the `qa-report` template header requires is present: `story`, `template`, `template_version`, `status`, `verdict` and `depends_on`. Every required section is present: Criteria, Evidence, Regressions, Fix Guidance.
 - Number criterion rows `CRIT-001` upward in the story's own criterion order, so a row id is stable enough to quote in a `dev` run and in a retro.
 - Set `verdict: pass` only when every criterion row is `passed` and no regression row reads `uncovered`. Any other combination is `fail`, because a report that grades its own threshold is a report nobody can act on mechanically.
@@ -381,7 +388,7 @@ The `report` phase renders the criterion map, the evidence and the regression ro
 
 One block per worker. `must_not` is compiled into the agent prompt verbatim.
 
-`writes` is the header D1 requires of every worker: `evidence` for the three judging workers, `candidate` for `qa_writer`, which is this skill's only producer. A judge's `tools` carry `Write`, admitted only under `.devforgeai/work/<run>/evidence/<agent>/`, plus `Bash(devforgeai status)` and nothing else that reaches a shell; a write anywhere else, the candidate root included, is denied at `PreToolUse`. The writer's carry `Edit` and `Write` — `apply_patch` on the Codex target — admitted under the candidate root. No worker carries a `devforgeai run` surface: the `test` key is granted to the `run_tests` phase and spent by the sequencer's oracle at ingest (D8a). Section 7g compiles these blocks into provider-native subagent files.
+`writes` is the header D1 requires of every worker: `none` for the three judging workers, `candidate` for `qa_writer`, which is this skill's only producer. A judge carries no `Write`, `Edit` or `apply_patch`; its detailed evidence is the receipt's required `findings` string. The writer carries `Edit` and `Write` — `apply_patch` on the Codex target — admitted under the candidate root. No worker carries a `devforgeai run` surface: the `test` key is granted to the `run_tests` phase and spent by the sequencer's oracle at ingest (D8a). Section 7g compiles these blocks into provider-native subagent files.
 
 ```yaml
 name: test_runner
@@ -392,15 +399,14 @@ inputs:
   - the story's test_plan rows and commands.use keys, which the gate copied into the enforcement block
   - the test files those rows name, at the base checkpoint of candidate.root, which is canonical HEAD after the story's dev run was promoted
 outputs:
-  - a findings file at .devforgeai/work/qa-<story>/evidence/test_runner/findings.md, one row per test_plan entry with its criterion, file, test name and whether both were found
-  - a receipt whose issues carry one bounded row per missing file, missing test name or unauthorised test key, and whose evidence_refs name that findings file
+  - a receipt whose findings string, required on pass or fail, has one row per test_plan entry with its criterion, file, test name and whether both were found, and whose issues carry one bounded row per missing file, missing test name or unauthorised test key
 must_not:
-  - write a literal build, test, lint or format command into its findings file, its note or its issues
+  - put a literal build, test, lint or format command into findings, note or issues
   - assert a test outcome; the sequencer runs the suite at the transition and records the outcomes
-  - write anywhere but .devforgeai/work/qa-<story>/evidence/test_runner/, or run any build, test, lint or format command
-tools: [Read, Grep, Glob, Write, Bash(devforgeai status)]
+  - write any file, or run any build, test, lint or format command
+tools: [Read, Grep, Glob, Bash(devforgeai status)]
 granted_keys: []
-writes: evidence
+writes: none
 returns: devforgeai.worker-result/v1
 ```
 
@@ -415,15 +421,14 @@ inputs:
   - the story's Acceptance Criteria and Unchanged Behaviour sections and its test_plan rows
   - .devforgeai/work/qa-<story>/run_tests-report.md
 outputs:
-  - a findings file at .devforgeai/work/qa-<story>/evidence/criteria_checker/findings.md, one row per criterion with its verbatim text, its test, its outcome and the report line that proves it, plus one regression row per unchanged-behaviour statement
-  - a receipt whose issues carry one bounded row per failed or uncovered criterion, and whose evidence_refs name that findings file
+  - a receipt whose findings string, required on pass or fail, has one row per criterion with its verbatim text, its test, its outcome and the report line that proves it, plus one regression row per unchanged-behaviour statement, and whose issues carry one bounded row per failed or uncovered criterion
 must_not:
   - decide a criterion by reading the implementation instead of a recorded outcome
   - report a criterion with no covering test as failed rather than uncovered
-  - write anywhere but .devforgeai/work/qa-<story>/evidence/criteria_checker/, or run any build, test, lint or format command
-tools: [Read, Grep, Glob, Write, Bash(devforgeai status)]
+  - write any file, or run any build, test, lint or format command
+tools: [Read, Grep, Glob, Bash(devforgeai status)]
 granted_keys: []
-writes: evidence
+writes: none
 returns: devforgeai.worker-result/v1
 ```
 
@@ -437,16 +442,15 @@ inputs:
   - .devforgeai/work/<story>/ phase reports from the dev run, when they exist
   - docs/reports/review-<story>.md at the base checkpoint of candidate.root, when a promoted review run wrote it
 outputs:
-  - a findings file at .devforgeai/work/qa-<story>/evidence/evidence_collector/findings.md, one citation per line, each a path plus the digest or recorded value that fixes it
-  - a receipt whose evidence_refs name that findings file and the reports read
+  - a receipt whose findings string, required on pass or fail, has one citation per line, each a path plus the digest or recorded value that fixes it, and whose evidence_refs name only the reports read
 must_not:
   - copy file contents into the citations instead of citing a path and a digest
   - omit a missing optional citation instead of recording its absence
   - add a verdict or a criterion judgement
-  - write anywhere but .devforgeai/work/qa-<story>/evidence/evidence_collector/, or run any build, test, lint or format command
-tools: [Read, Grep, Glob, Write, Bash(devforgeai status)]
+  - write any file, or run any build, test, lint or format command
+tools: [Read, Grep, Glob, Bash(devforgeai status)]
 granted_keys: []
-writes: evidence
+writes: none
 returns: devforgeai.worker-result/v1
 ```
 
@@ -456,7 +460,7 @@ skill: qa
 responsibility: Write docs/reports/qa-<story>.md inside the candidate root, rendering the criterion map, the citations and the regression rows against the qa-report template and adding no judgement of its own.
 inputs:
   - the devforgeai status block, which names run, candidate.root, phase and fence
-  - .devforgeai/work/qa-<story>/criteria-report.md and evidence-report.md, and the findings file each judging worker left under .devforgeai/work/qa-<story>/evidence/
+  - .devforgeai/work/qa-<story>/criteria-report.md and evidence-report.md, and the findings.md the sequencer persisted for each judging worker under .devforgeai/work/qa-<story>/evidence/
   - the story id and the paths and digests the evidence phase resolved
   - assets/qa-report.md
 outputs:
@@ -491,7 +495,11 @@ The `handoff.outcomes` block this skill declares in `skill.yaml`, taken from `02
 | `needs_user` at any phase (`REQUIRE_HUMAN`, no retry), answerable without changing the story | `/qa {story}` — the same resume, once the human has acted | sequencer |
 | `needs_user` at any phase whose answer changes the story | `devforgeai phase fail --reason <text>`, then `/clarify {story}`, then `/qa {story}` | sequencer renders the `phase fail` step, then `/clarify {story}` |
 | `could_not_run`, `reason_code: runner_missing` or `timeout` (`test_runner_missing` default `REQUIRE_HUMAN`) | install or repair the test runner named in the report, then `/qa {story}` | sequencer |
-| `could_not_run`, `reason_code: hook_fault` (no worker identity on the stop event) | install or repair the hook dispatcher, then `/qa {story}` | sequencer, through the same missing-runner route |
+| `could_not_run`, `reason_code: network` (the brokered suite needed the network and could not reach it) | restore connectivity or make the suite offline-capable, then `/qa {story}` | sequencer, through the same missing-runner route |
+| `could_not_run`, `reason_code: provider_tool_refused` (the provider declined a worker's tool call before any DevForgeAI hook ran) | report the refused call to the spec author, then `/qa {story}` — a worker asking for a tool its role does not carry is a specification defect, not a project fault | sequencer, through the same missing-runner route |
+| `could_not_run`, `reason_code: prerequisite_missing` (a worktree-mode prerequisite the `SessionStart` self-test names) | install or repair the named prerequisite, then `/qa {story}` | sequencer, through the same missing-runner route |
+| `could_not_run`, `reason_code: checkpoint_fault` (the sequencer could not create, read or reset a checkpoint) | inspect the candidate root, then `devforgeai phase fail --reason <text>` and `/qa {story}` | sequencer, through the same missing-runner route |
+| `could_not_run`, `reason_code: hook_fault` (no worker identity on the stop event, or a malformed receipt) | install or repair the hook dispatcher, then `/qa {story}` | sequencer, through the same missing-runner route |
 | `WARN` or `OFF` on `test_runner_missing` | `/qa {story} --fix` | sequencer |
 | `devforgeai phase fail --reason` recorded a block (`BLOCK`) | `/qa {story} --fix` | sequencer |
 | gate: unresolved ASSUMPTION in the story | `/clarify {story}`, then `/qa {story}` | adapter, from the refusal on stderr |
@@ -511,34 +519,34 @@ Each section 7e contract compiles to one provider-native subagent file per targe
 
 | Worker | name | tools | model | writes | Claude file | Codex file |
 |---|---|---|---|---|---|---|
-| `test_runner` | `test_runner` | `Read, Grep, Glob, Write, Bash(devforgeai status)` | `inherit` | evidence | `.claude/agents/qa-test_runner.md` | `.codex/agents/qa-test_runner.toml` |
-| `criteria_checker` | `criteria_checker` | `Read, Grep, Glob, Write, Bash(devforgeai status)` | `inherit` | evidence | `.claude/agents/qa-criteria_checker.md` | `.codex/agents/qa-criteria_checker.toml` |
-| `evidence_collector` | `evidence_collector` | `Read, Grep, Glob, Write, Bash(devforgeai status)` | `inherit` | evidence | `.claude/agents/qa-evidence_collector.md` | `.codex/agents/qa-evidence_collector.toml` |
+| `test_runner` | `test_runner` | `Read, Grep, Glob, Bash(devforgeai status)` | `inherit` | none | `.claude/agents/qa-test_runner.md` | `.codex/agents/qa-test_runner.toml` |
+| `criteria_checker` | `criteria_checker` | `Read, Grep, Glob, Bash(devforgeai status)` | `inherit` | none | `.claude/agents/qa-criteria_checker.md` | `.codex/agents/qa-criteria_checker.toml` |
+| `evidence_collector` | `evidence_collector` | `Read, Grep, Glob, Bash(devforgeai status)` | `inherit` | none | `.claude/agents/qa-evidence_collector.md` | `.codex/agents/qa-evidence_collector.toml` |
 | `qa_writer` | `qa_writer` | `Read, Grep, Glob, Edit, Write, Bash(devforgeai status)` | `inherit` | candidate | `.claude/agents/qa-qa_writer.md` | `.codex/agents/qa-qa_writer.toml` |
 
 `description` is one sentence naming when the primary dispatches the worker, because that is the field the provider matches a dispatch against:
 
 | Worker | description |
 |---|---|
-| `test_runner` | Dispatch when `devforgeai status` names phase `run_tests` of a `qa` run; it states the criterion-to-test map the transition will assert and flags every planned test the tree does not hold, running nothing and writing only its findings file in the run's evidence scratch. |
-| `criteria_checker` | Dispatch when `devforgeai status` names phase `criteria` of a `qa` run; it maps each acceptance criterion and each unchanged-behaviour statement to the outcome the transition recorded, writing only its findings file in the run's evidence scratch. |
-| `evidence_collector` | Dispatch when `devforgeai status` names phase `evidence` of a `qa` run; it collects the paths and digests that let the verdict be re-derived later, writing only its findings file in the run's evidence scratch. |
+| `test_runner` | Dispatch when `devforgeai status` names phase `run_tests` of a `qa` run; it states the criterion-to-test map the transition will assert and flags every planned test the tree does not hold, running nothing and writing nothing, returning its working in the receipt's findings string. |
+| `criteria_checker` | Dispatch when `devforgeai status` names phase `criteria` of a `qa` run; it maps each acceptance criterion and each unchanged-behaviour statement to the outcome the transition recorded, writing nothing and returning its working in the receipt's findings string. |
+| `evidence_collector` | Dispatch when `devforgeai status` names phase `evidence` of a `qa` run; it collects the paths and digests that let the verdict be re-derived later, writing nothing and returning its working in the receipt's findings string. |
 | `qa_writer` | Dispatch when `devforgeai status` names phase `report` of a `qa` run; it writes the qa report in the candidate root from the criterion map and the citations, adding no judgement of its own. |
 
 The body of each file is the four-part outline `templates/agent-md.md` fixes, filled from the worker's section 7e contract and its `references/<phase>.md`:
 
-1. **Job** — the `responsibility` sentence, expanded to what a good result looks like and what it leaves to the next worker. `qa_writer`'s body opens with the work: "You write the qa report inside the candidate root the status block names, using Edit and Write; finish with the receipt." Each judging worker's opens with "You judge …; you change nothing in the candidate root, and the one file you write is your findings file under the run's evidence scratch; finish with the receipt."
+1. **Job** — the `responsibility` sentence, expanded to what a good result looks like and what it leaves to the next worker. `qa_writer`'s body opens with the work: "You write the qa report inside the candidate root the status block names, using Edit and Write; finish with the receipt." Each judging worker's opens with the template's own `writes: none` sentence: "You judge …. You write nothing. Finish with the receipt."
 2. **Inputs** — one line per `inputs:` entry, and nothing outside that list is opened. The first entry is always the `devforgeai status` block the primary pasted, which is where the run id, the candidate root, the phase, the fence and the granted keys come from.
 3. **Rules** — the `must_not` lines verbatim, each with the mechanism that catches it: the fence check and the claimed-path check at ingest, the phase's `writes` mode against the root, the header's `writes` scope for the agent's own tools, the lease, the `green` oracle at `run_tests` and the `document` oracle at `report`.
-4. **Receipt** — the `devforgeai.worker-result/v1` object from section 6, the statuses this worker may return, and the rule that the final message is exactly that object with no fence and no prose. `qa_writer`'s adds that the report's frontmatter `verdict` is what the sequencer reads through `evidence_refs`.
+4. **Receipt** — the `devforgeai.worker-result/v1` object from section 6, the statuses this worker may return, and the rule that the final message is exactly that object with no fence and no prose. `qa_writer`'s adds that the report's frontmatter `verdict` is what the sequencer reads through `evidence_refs`, and that `findings` is forbidden on its receipt. Each judging worker's adds that `findings` is required on `pass` and `fail` and optional on `needs_user` and `could_not_run`, is capped at 16,384 UTF-8 bytes either way, is where the detailed working goes, and is persisted by the sequencer to a fixed path the worker does not choose.
 
 Provider differences, stated rather than assumed:
 
 - Claude-only frontmatter keys — `hooks`, `memory`, `background`, `permissionMode`, `maxTurns`, `effort`, `disallowedTools`, `mcpServers`, `color` and the git-worktree isolation key — are omitted from every compiled file. The framework's own isolation is one subagent per phase and the candidate root the sequencer owns; forking a worktree from the default branch would take this run away from the checkpoint whose tests it exists to run.
 - `skills:` preloads nothing for any of the four. The phase guidance a worker needs is `references/<phase>.md`, which its body links, and preloading the `qa` skill would put the primary's dispatch loop inside a worker.
 - `model` is `inherit` for all four: no source in this specification's `depends_on` set assigns a per-worker model, and inheriting keeps a run's four phases on one model.
-- The Codex file carries `name`, `description`, `sandbox_mode`, `approval_policy` and `developer_instructions`. Every one of the four runs in the writable-workspace mode, because each writes something; the difference between a judge and the writer is the path each may write, which the hook dispatcher enforces on both providers. `apply_patch` is the write tool in place of `Edit` and `Write`.
-- Neither provider carries the lease, the fence or the granted keys in the agent file. They live in `.devforgeai/work/<run>/run.yaml` and are enforced by the hook dispatcher, so a stale agent file cannot hand a judge the `test` key its phase grants the sequencer, and a judge's `Write` is admitted by path — its own `.devforgeai/work/<run>/evidence/<agent>/` — not by the tool list alone.
+- The Codex file carries `name`, `description`, `sandbox_mode`, `approval_policy` and `developer_instructions`. `sandbox_mode` is the writable-workspace mode for `qa_writer` and the read-only mode for the three judging workers, which is Codex's equivalent of the `tools` split; `apply_patch` is the write tool `qa_writer` uses in place of `Edit` and `Write`, and the three judges carry no write tool on either target. The provider itself was observed refusing a report-shaped file write from a subagent on Claude, undocumented and relied on in neither direction, so the design does not depend on a hook catching it: a judge has no write tool to be caught with, and its evidence reaches disk only as the `findings` string the sequencer persists.
+- Neither provider carries the lease, the fence or the granted keys in the agent file. They live in `.devforgeai/work/<run>/run.yaml` and are enforced by the hook dispatcher, so a stale agent file cannot hand a judge the `test` key its phase grants the sequencer. `qa_writer`'s write is admitted by path — under the candidate root and inside the fence — not by the tool list alone; the three judging workers carry no write tool, so there is nothing to admit.
 
 ## 8. Bundled resources
 
@@ -592,9 +600,9 @@ One file per worker in section 7e. No file for Gate, Record or Handoff.
 
 | File | Worker (from section 7) | writes | Compiled to |
 |------|-------------------------|--------|-------------|
-| `test_runner.md` | `test_runner` | evidence | `.claude/agents/qa-test_runner.md`, `.codex/agents/qa-test_runner.toml` |
-| `criteria_checker.md` | `criteria_checker` | evidence | `.claude/agents/qa-criteria_checker.md`, `.codex/agents/qa-criteria_checker.toml` |
-| `evidence_collector.md` | `evidence_collector` | evidence | `.claude/agents/qa-evidence_collector.md`, `.codex/agents/qa-evidence_collector.toml` |
+| `test_runner.md` | `test_runner` | none | `.claude/agents/qa-test_runner.md`, `.codex/agents/qa-test_runner.toml` |
+| `criteria_checker.md` | `criteria_checker` | none | `.claude/agents/qa-criteria_checker.md`, `.codex/agents/qa-criteria_checker.toml` |
+| `evidence_collector.md` | `evidence_collector` | none | `.claude/agents/qa-evidence_collector.md`, `.codex/agents/qa-evidence_collector.toml` |
 | `qa_writer.md` | `qa_writer` | candidate | `.claude/agents/qa-qa_writer.md`, `.codex/agents/qa-qa_writer.toml` |
 
 ## 9. Gotchas and edge cases
@@ -625,8 +633,11 @@ Each row is a real behaviour of the current implementation or a resolved contrad
 | An author expects the report to appear in the working tree as soon as `qa_writer` finishes | Nothing is in the canonical checkout until the user promotes | The report is written in the candidate root and reaches canonical only when the user runs `devforgeai promote <run>` on a run the last passing transition marked `ready_to_promote`; that command fast-forwards under the lock and is refused as `STALE_BASE` or `DIRTY_TARGET` rather than merging. A run that ends `REQUIRE_HUMAN` before its last phase — which for this skill includes every red-suite run — stays `active`, is not promotable, and keeps its root for inspection. **Decision (D2, D7 as amended):** the primary session stays in the canonical checkout, and promotion is never automatic. |
 | `qa` needs a tree to test, and an earlier draft attached the run to the story's `dev` root at the `refactor` checkpoint | The suite runs against an unpromoted root, so a green acceptance run can be recorded for code that never reaches canonical, and the attachment contradicts `STORY_IN_FLIGHT`, which refuses `phase start qa <story>` for exactly that story | `qa` opens its own candidate root from canonical HEAD, like every other run, and the sequencer brokers the `test` key there. The order per story is `dev` → `devforgeai promote <run>` → `review` → `qa`, and `STORY_IN_FLIGHT` refuses this run while any run naming the story — `dev` or `review` — is `active` or `ready_to_promote`, so the `base` checkpoint the suite runs against already contains the promoted work. A failing criterion routes to a new `/dev {story} --fix` run, never to an edit inside this root. **Decision (D12):** testing promoted code in a clean root is the MVP form of the clean verification worktree; the detached read-only variant D8 moves into `12-post-mvp.md` stays deferred, and nothing here gates on it. |
 | Two agents write into the root at once | The checkpoint diff cannot attribute a change, so `changed` matches no single receipt | The run file records the lease; the hook layer binds it at `SubagentStart` to the provider's agent identity, and a write from any other agent is denied at `PreToolUse` (`LEASE_HELD`). On Codex, where the pre-write event carries no identity, the root itself is the fence and the check is path-under-root. **Decision (D3, D6):** only `qa_writer` ever holds this skill's lease. |
-| `AUTHOR-BRIEF.md` section 3 says every worker is read-only and section 6 requires every `must_not` block to end with "write any file, or run any build, test, lint or format command" | `qa_writer` compiled from that trailer is told not to do the job D1 gives it | `WRITE-MODEL-REVISION.md` is the decision register for this wave and supersedes the brief's write model wherever they differ. **Decision (D1, D9, as amended):** `qa_writer`'s trailer ends "write outside the candidate root, or run any command other than `devforgeai status`"; each judge's ends "write anywhere but `.devforgeai/work/<run>/evidence/<agent>/`, or run any build, test, lint or format command". Both lead with the job. |
-| A judge is given no way to record its working | The criterion table has to fit in `issues`, which is bounded at ten rows, so a story with many criteria loses its evidence | Each judging worker writes one findings file under its own `.devforgeai/work/<run>/evidence/<agent>/` and names it in `evidence_refs`; `issues` stays the bounded summary, and `qa_writer` reads both. **Decision (D1, D6, D8a, as amended):** that scratch is run-scoped, gitignored, outside the candidate root and outside the fence, so it is never part of `changed` and is never promoted. |
+| `AUTHOR-BRIEF.md` section 3 says every worker is read-only and section 6 requires every `must_not` block to end with "write any file, or run any build, test, lint or format command" | `qa_writer` compiled from that trailer is told not to do the job D1 gives it | `WRITE-MODEL-REVISION.md` is the decision register for this wave and supersedes the brief's write model wherever they differ. **Decision (D1, D9, D13):** `qa_writer`'s trailer ends "write outside the candidate root, or run any command other than `devforgeai status`"; each judge uses the brief's no-write trailer. Both lead with the job. |
+| A judge is given no way to record its working | The criterion table has to fit in `issues`, which is bounded at ten rows, so a story with many criteria loses its evidence | Each judging worker returns detailed evidence in the receipt's required `findings` string; after validation the sequencer persists it at the worker's fixed `.devforgeai/work/<run>/evidence/<agent>/findings.md` path. `issues` stays the bounded summary, and `qa_writer` reads the persisted files. **Decision (D13 items 1-3):** judges change nothing anywhere and choose neither the evidence path nor its filename, because Claude Code 2.1.259 was observed refusing a subagent's write of a report-shaped Markdown file before any hook ran, with an undocumented heuristic that may not be relied on in either direction. |
+| A judge, denied a write, works around it | It writes `findings.json` or `notes.txt` in the same directory, which the observed provider heuristic happens to allow, or it redirects a Bash command into a file, and the design's guarantee that a judge changes nothing becomes an accident of one provider's undocumented filter | There is no workaround, because there is nothing to work around. The judge carries no `Write`, no `Edit` and no `apply_patch`, and its Bash surface is `devforgeai status` alone, which the single-argv rule forbids compounding with a redirect. **Decision (D13 item 5):** a judge that is refused a write has no write to make; its evidence goes in `findings`. |
+| A worker's tool call is refused by the provider before any DevForgeAI hook runs | The refusal looks like a hook failure, and an author routes it to "repair the hook dispatcher", which repairs nothing | It is `could_not_run` with `reason_code: provider_tool_refused`, rolling up to `INFRA_FAILURE`, and its section 7f row says a worker asking for a tool its role does not carry is a specification defect. `hook_fault` stays reserved for a missing worker identity on the stop event or a malformed receipt. **Decision (D13 item 6):** the taxonomy version stays 1 with the code added, and every place this specification enumerated `reason_code` carries it. |
+| An author reads the isolation guarantee as covering a judge's findings | The claim that no worker output body reaches the primary window is false on both providers — a subagent returns its result to the parent, and a hook can validate a final message but cannot suppress it — so the design rests on something the runtime does not do | The bounded `findings` body does enter the primary window, as part of the subagent's result, exactly as any subagent result does. What stays isolated is the worker's transcript, its file reads, its tool traffic and its intermediate reasoning. **Decision (D13 item 4):** the guarantee this specification makes is that the primary window opens no artifact file and that no receipt carries a report body or code; `qa_writer` returns no `findings` at all. |
 | The compiled agent file is expected to carry the fence, the lease or the granted keys | An installed file drifts from the run file, and a judge appears to hold the phase's `test` key | The agent file carries `name`, `description`, `tools`, `model` and the body; the fence, the lease and the granted keys live in `.devforgeai/work/<run>/run.yaml` and are enforced by the hook dispatcher. **Decision (section 7g):** every Claude-only key — hooks, memory, background, `permissionMode`, `maxTurns`, `effort`, `disallowedTools`, `mcpServers`, colour and the git-worktree isolation key — is omitted, and `skills:` preloads nothing. |
 | The eval workspaces are copies with no `.git` | An author writes worktree mode as the only materialisation and the run cannot open | The sequencer probes for a git repository at the project root and records `candidate.mode`: worktree mode when one exists with at least one commit, copy mode otherwise. The section 10 workspaces are copy mode, where a checkpoint is a tree-hash manifest plus a copy-aside and promotion copies the changed path's bytes under the lock. **Decision (D2):** one contract, two materialisations. |
 | An earlier draft of section 7b said promotion is part of Handoff and that the sequencer promotes the report on a passing run | An author compiles a `SKILL.md` that never asks the user, and the report lands in the canonical checkout without a human decision | Promotion is never automatic. The last passing transition sets `runs.<run>.status: ready_to_promote` and writes a `REQUIRE_HUMAN` handoff whose only forward step is `devforgeai promote <run>`; the compiled `SKILL.md` runs that command only after the user confirms in the session, and that command writes the second handoff block, whose `next` is `/dev {next_story}`, `/retro {sprint}` or `/dev {story} --fix` by the report's `verdict`. Every run ends in two blocks. `STALE_BASE`, `DIRTY_TARGET` and `MERGE_CONFLICT` are refusals of `devforgeai promote <run>`, never of `devforgeai phase next`, and a run blocked before its last phase stays `active` and is not promotable at all. **Decision (D7, as amended; `10-sequencer-and-contracts.md` sections 5.4, 6 and 12.4):** the sequencer may not close a run onto the canonical tree on its own. |
@@ -641,8 +652,8 @@ Each row is a real behaviour of the current implementation or a resolved contrad
 - Triggers on the nine section 4 positives and on none of the nine near-misses.
 - `SKILL.md` is under 500 lines and contains identity, the four-row phase list, the dispatch loop and the handoff table, and no phase guidance.
 - `agents/` holds exactly four files, named for the four canonical workers; `references/` holds exactly five.
-- Every `must_not` block ends with its role's closing line: the evidence-scratch line for the three judges, the candidate-root line for `qa_writer`. No judge's `tools` value exceeds `Read`, `Grep`, `Glob`, `Write` and `Bash(devforgeai status)`; `qa_writer`'s adds `Edit`. No agent file carries a `devforgeai run` surface.
-- A judge's run leaves the candidate root byte-identical and writes exactly one file, under `.devforgeai/work/<run>/evidence/<agent>/`.
+- Every `must_not` block ends with its role's closing line: the no-write line for the three judges, the candidate-root line for `qa_writer`. No judge's `tools` value exceeds `Read`, `Grep`, `Glob` and `Bash(devforgeai status)`; `qa_writer` adds `Edit` and `Write`. No agent file carries a `devforgeai run` surface.
+- A judge's run leaves both candidate and canonical tracked bytes unchanged; on `pass` or `fail` the sequencer persists exactly one validated findings file under `.devforgeai/work/<run>/evidence/<agent>/`.
 - Every agent file declares `writes`, and its value matches the phase's row in section 7c.
 - The `SKILL.md` Bash grammar is no wider than `devforgeai status`, `devforgeai phase start qa <story> [--lenient]`, `devforgeai phase fail --reason <text>`, `devforgeai validate` and `devforgeai promote <run>`.
 - No literal build, test, lint or format command appears in `SKILL.md`, in any reference file, or in any agent file.
@@ -721,9 +732,9 @@ Quick-mode results are generation feedback only: one enabled run per eval and no
 
 | Kind | Value |
 |------|-------|
-| Tools | `SKILL.md`: `Read`, `Agent`, and a Bash grammar no wider than `devforgeai status \| phase start qa <story> [--lenient] \| phase fail --reason \| validate \| promote <run>`. Judges (`test_runner`, `criteria_checker`, `evidence_collector`): `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` and `Write`, admitted only under `.devforgeai/work/<run>/evidence/<agent>/`. Producer (`qa_writer`): those plus `Edit`, with writes admitted under the candidate root. No worker carries a `devforgeai run` surface; the `test` key is the `run_tests` phase's and the sequencer spends it. |
+| Tools | `SKILL.md`: `Read`, `Agent`, and a Bash grammar no wider than `devforgeai status \| phase start qa <story> [--lenient] \| phase fail --reason \| validate \| promote <run>`. Judges (`test_runner`, `criteria_checker`, `evidence_collector`): `Read`, `Grep`, `Glob` and `Bash(devforgeai status)`, and no write tool of any kind on either target. Producer (`qa_writer`): those plus `Edit` and `Write`, with writes admitted under the candidate root. No worker carries a `devforgeai run` surface; the `test` key is the `run_tests` phase's and the sequencer spends it. |
 | MCP servers | none |
-| Runtime | Python 3.11+ and PyYAML 6+ for the sequencer and the hook dispatcher. Worktree mode additionally needs `git` with a repository at the project root, at least one commit, `.devforgeai/work/` ignored, and both the provider's settings file and `.devforgeai/stack.yaml` tracked; the `SessionStart` self-test checks all five and fails `phase start` with `could_not_run: hook_fault` rather than falling back to copy mode. The project under test supplies the runner behind its `test` key, which must write JUnit XML to the section's `junit_path`, because the oracle reads per-test outcomes from that file rather than from stdout. For the fixture's `python` section that runner is `pytest`. |
+| Runtime | Python 3.11+ and PyYAML 6+ for the sequencer and the hook dispatcher. Worktree mode additionally needs `git` with a repository at the project root, at least one commit, `.devforgeai/work/` ignored, and both the provider's settings file and `.devforgeai/stack.yaml` tracked; the `SessionStart` self-test checks all five and fails `phase start` with `could_not_run: prerequisite_missing` rather than falling back to copy mode. The project under test supplies the runner behind its `test` key, which must write JUnit XML to the section's `junit_path`, because the oracle reads per-test outcomes from that file rather than from stdout. For the fixture's `python` section that runner is `pytest`. |
 | Project commands | `.devforgeai/stack.yaml#<anchor>`, resolved from the story's `commands.source` and pinned by `commands.hash`. Keys granted: `test` at `run_tests`, and `build` when the anchored section has `compiled: true`, because the `green` oracle runs the build before the suite; none at `criteria`, `evidence` or `report`. The sequencer spends both in the transition oracle, inside the candidate root. Keys are named, never literal commands. Contract: `10-sequencer-and-contracts.md` section 7. |
 | DevForgeAI/Core compatibility | Requires the sequencer grammar, the story-anchored document run, and the `devforgeai.worker-result/v1` schema of `10-sequencer-and-contracts.md`, 2026-09-02. `NOT_APPLICABLE` for Research Core: `qa` is an anatomy-governed skill, not a Research adapter. |
 | Other skills | Consumes `story` from `plan`, `dev-notes` from `dev`, `review-report` from `review`, and `techstack` and `stack` from `architect` or `onboard`. Produces `qa-report` for `dev` and `retro`. Invokes none of them: every edge is a handoff row. |
@@ -753,7 +764,7 @@ The generator produces one provider-neutral semantic package and a separate adap
 
 | Target | Install path | Invocation | Subagents | Notes |
 |--------|--------------|------------|-----------|-------|
-| claude | `.claude/skills/qa/` plus `.claude/agents/` worker profiles | `/qa STORY-NNN [--lenient]` | one provider-native subagent per canonical worker name: three judges that write only their findings file in the run's evidence scratch, one writer that writes the report in the candidate root | Provider-specific frontmatter keys (`argument-hint`, `disable-model-invocation`) are compiled into this target's `SKILL.md` only. |
+| claude | `.claude/skills/qa/` plus `.claude/agents/` worker profiles | `/qa STORY-NNN [--lenient]` | one provider-native subagent per canonical worker name: three judges that carry no write tool and return their evidence in the receipt's `findings` string, one writer that writes the report in the candidate root | Provider-specific frontmatter keys (`argument-hint`, `disable-model-invocation`) are compiled into this target's `SKILL.md` only. |
 | codex | `.agents/skills/qa/` plus `.codex/agents/` profiles | `$qa STORY-NNN [--lenient]` | the same four, compiled per section 7g; the writer uses `apply_patch` and the writable-workspace sandbox mode | Portable six-field frontmatter only; policy goes in target-side configuration. |
 | both | separate `.claude/skills/qa/` and `.agents/skills/qa/` adapters | as above | as above | Share only provider-neutral resources; validate each adapter independently. |
 
@@ -796,7 +807,9 @@ wc -l <output-dir>/qa/SKILL.md                            # must be < 500
 # every worker in section 7 has a prompt file, and no extra
 ls <output-dir>/qa/agents/                                # test_runner.md criteria_checker.md evidence_collector.md qa_writer.md
 # every agent file declares its role's write mode, and no worker holds a run key
-grep -l 'writes: evidence' <output-dir>/qa/agents/*.md    # test_runner.md criteria_checker.md evidence_collector.md
+grep -l 'writes: none' <output-dir>/qa/agents/*.md        # test_runner.md criteria_checker.md evidence_collector.md
+# no judge carries a write tool
+grep -LE 'Write|Edit|apply_patch' <output-dir>/qa/agents/test_runner.md <output-dir>/qa/agents/criteria_checker.md <output-dir>/qa/agents/evidence_collector.md
 grep -L 'devforgeai run' <output-dir>/qa/agents/*.md      # all four
 # one reference file per phase, plus envelope.md
 ls <output-dir>/qa/references/                            # run_tests.md criteria.md evidence.md report.md envelope.md
@@ -806,7 +819,7 @@ grep -rnE 'T[O]DO|T[B]D|\{\{' <output-dir>/qa || echo clean
 python3 docs/design/specs/verify.py --only v1,v2,v4
 ```
 
-For non-Research anatomy skills, DevForgeAI skill-validator additionally checks: all sub-phase kinds present with Gate, Record and Handoff bound to sequencer operations; the inspection workers and the writer are different files; `must_not` and `writes` present in every agent file, `writes` in `candidate | evidence | none`, no judge's `tools` exceed `Read`, `Grep`, `Glob`, `Write` and `Bash(devforgeai status)`, and the writer's exceed those only by `Edit`; the `SKILL.md` Bash grammar is no wider than the five model-callable operations; handoff outcomes cover every status the skill can return, including `could_not_run`.
+For non-Research anatomy skills, DevForgeAI skill-validator additionally checks: all sub-phase kinds present with Gate, Record and Handoff bound to sequencer operations; the inspection workers and the writer are different files; `must_not` and `writes` present in every agent file, `writes` in `candidate | none`, no judge's `tools` exceed `Read`, `Grep`, `Glob` and `Bash(devforgeai status)`, and the writer adds only its required edit tools; the `SKILL.md` Bash grammar is no wider than the five model-callable operations; handoff outcomes cover every status the skill can return, including `could_not_run` with every `reason_code` the skill can return.
 
 ## 15. Provenance
 

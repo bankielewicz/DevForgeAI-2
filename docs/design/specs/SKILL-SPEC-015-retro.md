@@ -9,25 +9,25 @@ author: "DevForgeAI plan skill (wave 2 spec authoring)"
 date: 2026-09-02
 depends_on:
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:a6bbaf9af2d69f7ede18d7c40f242c42edb26d79be964ffec3f386d6347014c2
+    hash: sha256:5afb88c46aa635c961564af8e58c799a44f387c6bd877eeac2ec7568f73aba7e
     excerpt: "**The model dispatches, the sequencer decides.** For an anatomy-governed skill, the primary window (provider entry adapter + skill orchestration) does light, trivial work only."
   - source: docs/design/01-skill-anatomy.md#evidence-home
-    hash: sha256:d4ad2626d2dc993f9879247429ce4a15a9dcee31c9b4b20da8178ffe8bac8dc9
-    excerpt: "There is one home for a run's evidence. The sequencer writes every file below except the judge findings under `evidence/<agent>/`:"
+    hash: sha256:15bc1303729e997b8eeeefab8f9a406f5c8568e4f0932a28da3f02c14199a469
+    excerpt: "There is one home for a run's evidence, and the sequencer writes every file in it:"
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:511733ee35ca74fd5a5c0b59f225d7d975788e7d43d939f44c23b7aa8460cff0
+    hash: sha256:7c1d67f1154e49247e5dc178fcc1512bdbd53af378c360aeafe69bffed1136ab
     excerpt: "| retro | document | `docs/reports/retro-<arg>.md` | 4 |"
   - source: docs/design/10-sequencer-and-contracts.md#5-worker-result
-    hash: sha256:8f6ea846d243f9c319728b01fef7c5617fb8652b2c4165e761d493cde7fb381d
+    hash: sha256:cd95bd6c0db2bda7a573665b73582c813c0c6cb01b7f3e9f7ed52a9d1afafe0c
     excerpt: "One schema, both providers, every skill. The worker's final message is exactly this object, with no Markdown fence and no surrounding prose."
   - source: docs/design/10-sequencer-and-contracts.md#3-status-vocabulary-and-gate-policy
-    hash: sha256:620b4cfcd770a5c653047f88fb4a09afb53a59ece78948c18e970bc9beaec5e6
+    hash: sha256:1706823f7848f5cb6b23e68dfd783885fad3fdfa5d98fb6df0b90270a818fc20
     excerpt: "A document run carries the fixed map `{unresolvable_source: BLOCK}`, because it has no story to declare a wider one."
   - source: docs/design/10-sequencer-and-contracts.md#10-evidence-files
-    hash: sha256:4eebadd862a3dfd90bc0afff8342a1b18a76b2a4fe1ec5bafa23cea390f48984
+    hash: sha256:b15253fbdd40635f95f116d473af2336ef37b76b960d909d0153a12ca7e04b1f
     excerpt: "| `docs/reports/<skill>-<run>-<phase>.md` | Markdown | sequencer at a passing transition | the human, `retro` `collect`, `review` |"
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:bca72c10668178e0f4da43e03aaafbf24d2a57ec12f71a16b078880dd496677a
+    hash: sha256:3c4c95bbd73b5499e5569e650f84eea84cb68404c0909f5f1819c0f3a5c7b3d4
     excerpt: "| document run, promoted, no verdict or `verdict: pass` | `/status` |"
   - source: docs/design/11-artifact-registry.md#1-template-registry
     hash: sha256:fabb8d2f142dcde1a31bc53768f8a46d01cac3ea4a7f6b73db22479cc89b5553
@@ -36,7 +36,7 @@ depends_on:
     hash: sha256:f2a88c7bda36610205f8044bbc8314c9c65c0f72339ba2445ccb6eba3675e17e
     excerpt: "- Collects QA reports, review findings, and dev notes for the sprint."
   - source: docs/design/05-subagent-sets.md#sets-per-skill
-    hash: sha256:9e12f3beb236a025c18d40e741c09ba675bd71d2d87f56e2b205c7556b944bf9
+    hash: sha256:f2957217c9af147e4a7ea03749cbe6efda266bd56d403f39aa25c9a655872609
     excerpt: "| retro | report-collector, lesson-extractor, amendment-proposer, archiver |"
 ---
 
@@ -96,7 +96,7 @@ Follow its section 0 exactly. Output directory: ./out. Eval mode: quick.
 | R5 | implicit | A lesson without an evidence path is not written. The critic pattern in `01-skill-anatomy.md` exists because a persona reviewing its own output is the primary hallucination vector; here the substitute is the rule that every lesson row carries a file path an unrelated reader can open. |
 | R6 | implicit | The primary window opens the run, dispatches, and prints the rendered handoff. It reads no report and writes nothing (`01-skill-anatomy.md#primary-window-contract`). |
 | R7 | implicit | Every worker returns exactly one `devforgeai.worker-result/v1` receipt. The one producer writes its file inside the candidate root and names it in `claimed_paths`; the sequencer derives what actually changed from the checkpoint diff and refuses anything unclaimed (`10-sequencer-and-contracts.md` section 5). |
-| R8 | discovered | Only the fourth phase writes inside the candidate root. `collect`, `lessons` and `amendments` declare `writes: evidence`, so their one write reaches `.devforgeai/work/<run>/evidence/<agent>/` and any change in the root's checkpoint diff refuses the result as `UNCLAIMED_CHANGE`; their findings file is named in `evidence_refs` and summarised in `issues` and `note`. |
+| R8 | discovered | Only the fourth phase writes anything at all. `collect`, `lessons` and `amendments` declare `writes: none` and hold no write tool, so any change in the root's checkpoint diff refuses the result as `UNCLAIMED_CHANGE`; their rows come back in the receipt's `findings`, which the sequencer persists to `.devforgeai/work/<run>/evidence/<agent>/findings.md`, and are summarised in `issues` and `note`. |
 | R9 | discovered | The run's fence is exactly `docs/reports/retro-<sprint>.md`. The sprint folder cannot be moved by any worker, so archiving is a recorded action, not a file operation; section 9 records the consequence. |
 | R10 | discovered | `retro` invokes no other skill: `devforgeai phase start` refuses while a run is active, so the `/amend` edge is a handoff row and a report row. |
 
@@ -238,7 +238,7 @@ depends_on:
 
 ### Return envelope (DevForgeAI-anatomy skills only)
 
-One schema, both providers: `devforgeai.worker-result/v1`, normative in `schemas/devforgeai/v1/worker-result.schema.json`. Three of the four phases are judges: they write only their findings file under `.devforgeai/work/<run>/evidence/<agent>/` — run-scoped scratch, gitignored, outside the candidate root and never promoted — name it in `evidence_refs`, and claim nothing. `archive` is a producer: it writes the report inside the candidate root with Edit and Write (Codex: `apply_patch`) and names it. At `devforgeai ingest-result` the sequencer derives `changed[{path, blob_sha256, kind}]` from the candidate root's checkpoint diff, refuses the result when `changed` is not a subset of `claimed_paths` (`UNCLAIMED_CHANGE`) or when any changed path is outside the fence, runs the transition oracle inside the root, writes `<phase>-result.json` with `changed` and the checkpoint ref, creates the next checkpoint and releases the lease.
+One schema, both providers: `devforgeai.worker-result/v1`, normative in `schemas/devforgeai/v1/worker-result.schema.json`. Three of the four phases are judges: they hold no write tool at all, claim nothing, and return their full row sets in the receipt's `findings`, a string required on a judge pass or fail receipt, optional on its needs_user or could_not_run, and forbidden on a producer's, and bounded at 16,384 UTF-8 bytes. At the identity-bound `SubagentStop`, after the receipt validates, the sequencer writes that string verbatim to the fixed path `.devforgeai/work/<run>/evidence/<agent>/findings.md` — run-scoped scratch, gitignored, outside the candidate root and never promoted — and records the path in `<phase>-result.json` for `archiver` to read; the worker chooses neither the directory nor the name. The bounded `findings` body does enter the primary context as part of the subagent's result, exactly as the provider model states, while the worker's transcript, reads and tool traffic stay isolated. `archive` is a producer: it writes the report inside the candidate root with Edit and Write (Codex: `apply_patch`) and names it. At `devforgeai ingest-result` the sequencer derives `changed[{path, blob_sha256, kind}]` from the candidate root's checkpoint diff, refuses the result when `changed` is not a subset of `claimed_paths` (`UNCLAIMED_CHANGE`) or when any changed path is outside the fence, runs the transition oracle inside the root, writes `<phase>-result.json` with `changed` and the checkpoint ref, creates the next checkpoint and releases the lease.
 
 ```yaml
 schema: devforgeai.worker-result/v1
@@ -247,7 +247,7 @@ skill: "retro"
 phase: "collect"
 agent: "report_collector"
 status: pass | fail | needs_user | could_not_run
-reason_code: runner_missing | timeout | network | hook_fault   # required only when status is could_not_run
+reason_code: runner_missing | timeout | network | hook_fault | provider_tool_refused | prerequisite_missing | checkpoint_fault   # required only when status is could_not_run
 candidate:
   id: "retro-sprint-002"
   input_checkpoint: "base"
@@ -258,7 +258,7 @@ issues: [{id, kind, text}] # at most 10
 next: ""                   # omitted: no retro phase declares rewind_to
 ```
 
-Unknown keys are refused. `issues[]` is the bounded summary a reader sees in the handoff; a judge's full row set lives in its findings file, which the next phase and `archiver` read.
+Unknown keys are refused. `issues[]` is the bounded routing summary a reader sees in the handoff; a judge's full row set travels in `findings`, which the sequencer persists as `.devforgeai/work/<run>/evidence/<agent>/findings.md` and the next phase and `archiver` read by path.
 
 `gate_policy` (`BLOCK | REQUIRE_HUMAN | WARN | OFF`) is a defect-to-action map declared in the consumed artifact, never a status returned here. A document run carries the fixed map `{unresolvable_source: BLOCK}`.
 
@@ -294,7 +294,7 @@ Gate, Record, Slice and Handoff dispatch no LLM: they are `devforgeai` sequencer
 
 `retro` has no Review sub-phase: the registry gives it four phases and none of them is a critic. `lesson_extractor` and `amendment_proposer` are deliberately separate workers so the worker that names a rule change is not the worker that decided the lesson was real.
 
-Every phase of one run works inside the same candidate root — `.devforgeai/work/<run>/wt`, created by `devforgeai phase start` and named to each worker as `candidate.root` in the status block the primary window pastes into the dispatch prompt alongside `run`, `phase`, `fence` and `granted_keys`. The first three phases are judges and write nothing in the root; their findings files go to `.devforgeai/work/<run>/evidence/<agent>/`, which is outside it. `archive` writes one file in the root. The sequencer checkpoints the root at each transition, so the phases build linearly with no merge between them, and the one producer holds the run's lease from dispatch to `devforgeai ingest-result`. Promotion is never automatic and is no part of Handoff: the last passing `devforgeai phase next` marks the run `ready_to_promote` and writes a `REQUIRE_HUMAN` handoff whose only forward step is `devforgeai promote <run>`, and `SKILL.md` runs that command only after the user confirms in the session. That command, not the transition, is what merges the candidate root into the canonical checkout under `.devforgeai/lock`, and it is what refuses with `STALE_BASE` when canonical HEAD has moved past the run's recorded `base_ref`, with `DIRTY_TARGET` when the canonical report path is dirty, and with `MERGE_CONFLICT` when a rebase inside the root conflicted; a refused promotion leaves the run `ready_to_promote` with its candidate root intact for a retry.
+Every phase of one run works inside the same candidate root — `.devforgeai/work/<run>/wt`, created by `devforgeai phase start` and named to each worker as `candidate.root` in the status block the primary window pastes into the dispatch prompt alongside `run`, `phase`, `fence` and `granted_keys`. The first three phases are judges: they hold no write tool and write nothing anywhere, and the sequencer persists each one's returned `findings` to `.devforgeai/work/<run>/evidence/<agent>/findings.md`, which is outside the root. `archive` writes one file in the root. The sequencer checkpoints the root at each transition, so the phases build linearly with no merge between them, and the one producer holds the run's lease from dispatch to `devforgeai ingest-result`. Promotion is never automatic and is no part of Handoff: the last passing `devforgeai phase next` marks the run `ready_to_promote` and writes a `REQUIRE_HUMAN` handoff whose only forward step is `devforgeai promote <run>`, and `SKILL.md` runs that command only after the user confirms in the session. That command, not the transition, is what merges the candidate root into the canonical checkout under `.devforgeai/lock`, and it is what refuses with `STALE_BASE` when canonical HEAD has moved past the run's recorded `base_ref`, with `DIRTY_TARGET` when the canonical report path is dirty, and with `MERGE_CONFLICT` when a rebase inside the root conflicted; a refused promotion leaves the run `ready_to_promote` with its candidate root intact for a retry.
 
 ### 7c. Evidence and gate table
 
@@ -302,23 +302,23 @@ Every phase of one run works inside the same candidate root — `.devforgeai/wor
 
 | phase | worker | deterministic gate check | gate_policy | evidence file | transition oracle |
 |---|---|---|---|---|---|
-| `collect` | `report_collector` | run gate: skill known, no run already active, no active or `ready_to_promote` run whose fence overlaps this one (`FENCE_OVERLAP`), and the fence entry `docs/reports/retro-<sprint>.md` is repository-relative, free of `..`, and not sequencer-owned; `candidate open` creates the root and pins `base_ref`. At `ingest-result`: `writes: evidence`, so the checkpoint diff of the root is empty: the `PreToolUse` check admits this worker's `Write` only under `.devforgeai/work/<run>/evidence/<agent>/`, which lies outside the root, and a non-empty root diff is `UNCLAIMED_CHANGE`. `issues` at most 10 rows, `evidence_refs` at most 16 paths, `note` at most 16384 bytes | document run's fixed map `{unresolvable_source: BLOCK}`; an oversize or malformed envelope is a protocol refusal that does not consume an attempt | `.devforgeai/work/retro-<sprint>/collect-result.json`, `collect-report.md` | `report_only`: no file outside the fence changed since the gate snapshot and the whole-tree package and import policy holds |
-| `lessons` | `lesson_extractor` | as `collect`: `writes: evidence`, an empty root checkpoint diff, and the receipt bounds enforced before anything is recorded | as above | `.devforgeai/work/retro-<sprint>/lessons-result.json`, `lessons-report.md` | `report_only`: as `collect` |
-| `amendments` | `amendment_proposer` | as `collect`; the phase grants no stack command key, so a `devforgeai run` call from this worker is refused for a missing hook marker | as above | `.devforgeai/work/retro-<sprint>/amendments-result.json`, `amendments-report.md` | `report_only`: as `collect` |
+| `collect` | `report_collector` | run gate: skill known, no run already active, no active or `ready_to_promote` run whose fence overlaps this one (`FENCE_OVERLAP`), and the fence entry `docs/reports/retro-<sprint>.md` is repository-relative, free of `..`, and not sequencer-owned; `candidate open` creates the root and pins `base_ref`. At `ingest-result`: `writes: none`, so the checkpoint diff of the root is empty: this worker holds no write tool at all, `PreToolUse` denies every write path without exception, and a non-empty root diff is `UNCLAIMED_CHANGE`. `issues` at most 10 rows, `evidence_refs` at most 16 paths, `note` at most 16384 bytes, `findings` required on a pass or fail receipt, optional on needs_user or could_not_run, and at most 16384 UTF-8 bytes, which the sequencer persists at `SubagentStop` to `.devforgeai/work/retro-<sprint>/evidence/report_collector/findings.md` | document run's fixed map `{unresolvable_source: BLOCK}`; an oversize or malformed envelope is a protocol refusal that does not consume an attempt | `.devforgeai/work/retro-<sprint>/collect-result.json`, `collect-report.md`, `.devforgeai/work/retro-<sprint>/evidence/report_collector/findings.md` | `report_only`: no file outside the fence changed since the gate snapshot and the whole-tree package and import policy holds |
+| `lessons` | `lesson_extractor` | as `collect`: `writes: none`, an empty root checkpoint diff, and the receipt bounds — `findings` included — enforced before anything is recorded | as above | `.devforgeai/work/retro-<sprint>/lessons-result.json`, `lessons-report.md`, `.devforgeai/work/retro-<sprint>/evidence/lesson_extractor/findings.md` | `report_only`: as `collect` |
+| `amendments` | `amendment_proposer` | as `collect`; the phase grants no stack command key, so a `devforgeai run` call from this worker is refused for a missing hook marker | as above | `.devforgeai/work/retro-<sprint>/amendments-result.json`, `amendments-report.md`, `.devforgeai/work/retro-<sprint>/evidence/amendment_proposer/findings.md` | `report_only`: as `collect` |
 | `archive` | `archiver` | at `ingest-result`: `changed` derived from the checkpoint diff is exactly one path, `docs/reports/retro-<sprint>.md`, it is a subset of `claimed_paths` (`UNCLAIMED_CHANGE` otherwise), it canonicalises inside the candidate root, it equals the fence entry, it is allowed by `writes: docs`, and it is at most 1 MiB; then the whole-tree package and import rescan | as above; a change under `docs/plan/**` is `write_fence_violation`, which refuses the result with no `gate_policy` consulted | `.devforgeai/work/retro-<sprint>/archive-result.json`, `archive-report.md` | `document`: `docs/reports/retro-<sprint>.md` exists on disk in the root. On pass this is the last phase: the run becomes `ready_to_promote` and the handoff's `next` is `devforgeai promote <run>`; `/status` is the `next` of the second handoff, written when that promotion succeeds. A promotion refused with `STALE_BASE` or `DIRTY_TARGET` leaves the run `ready_to_promote` for `devforgeai promote <run>` |
 
 Two limits from `10-sequencer-and-contracts.md` section 3.2 apply to every row: every `devforgeai phase start` defect is a refusal whatever a declared policy value says, and at transition time only `test_runner_missing` changes behaviour. `retro` brokers no stack command key, so that class reaches it only through a synthesised `could_not_run`.
 
 ### 7d. Worker contracts
 
-Each block below is a compilable subagent definition and the body of `agents/<role>.md`. `name` is the canonical registry worker name, because the stop event's `agent_type` is compared against it. `description` is the sentence the primary window matches when it decides to dispatch. `writes` is `evidence` for a judge — its one write goes to `.devforgeai/work/<run>/evidence/<agent>/` and never into the candidate root — and `candidate` for a producer, following the registry's `writes` column: three phases declare `none` there and one declares `docs`, so three judges and one producer. `compiled_to` names the two provider-native files `skill-generator` emits from the block; each body follows `templates/agent-md.md` in four parts — job, inputs, rules, receipt — and the producer's job sentence leads with what it writes.
+Each block below is a compilable subagent definition and the body of `agents/<role>.md`. `name` is the canonical registry worker name, because the stop event's `agent_type` is compared against it. `description` is the sentence the primary window matches when it decides to dispatch. `writes` is `none` for a judge — it carries no `Write`, no `Edit` and no `apply_patch`, and the sequencer persists its returned `findings` to `.devforgeai/work/<run>/evidence/<agent>/findings.md`, never into the candidate root — and `candidate` for a producer, following the registry's `writes` column: three phases declare `none` there and one declares `docs`, so three judges and one producer. `compiled_to` names the two provider-native files `skill-generator` emits from the block; each body follows `templates/agent-md.md` in four parts — job, inputs, rules, receipt — and the producer's job sentence leads with what it writes.
 
 ```yaml
 name: report_collector
 skill: retro
 description: Dispatch this worker first in a retro run to resolve the sprint's story list and gather every recorded report and result path for it, before any lesson is drawn.
-writes: evidence
-tools: [Read, Grep, Glob, Write, Bash(devforgeai status)]
+writes: none
+tools: [Read, Grep, Glob, Bash(devforgeai status)]
 model: inherit
 skills: []
 responsibility: Resolve the sprint's story list and return one evidence row per story naming every recorded report and result file for it.
@@ -330,12 +330,12 @@ inputs:
   - .devforgeai/work/STORY-NNN/<phase>-result.json for each listed story
   - .devforgeai/provenance/log.jsonl, filtered to the run ids of the listed stories, for the transition.pass, transition.fail and rewind lines that carry the attempt history
 outputs:
-  - .devforgeai/work/<run>/evidence/report_collector/stories.json, one row per story with its sprint path, qa report, review report, rendered dev notes, result files, recorded verdicts and attempt count
+  - findings: one row per story with its sprint path, qa report, review report, rendered dev notes, result files, recorded verdicts and attempt count; required on a pass or fail receipt and optional on needs_user or could_not_run, at most 16384 UTF-8 bytes, persisted by the sequencer to .devforgeai/work/<run>/evidence/report_collector/findings.md
   - issues[]: at most 10 rows, one per story whose sprint entry has no report or result file at all
   - note: the story count, the report count and the result count the file carries
-  - evidence_refs[]: the stories file above, then the sprint file and the report and result paths the rows name
+  - evidence_refs[]: the sprint file and the report and result paths the rows name; never its own findings path, which does not exist until the sequencer has persisted it
 must_not:
-  - write or claim any path inside the candidate root; this phase's one write is its findings file under .devforgeai/work/<run>/evidence/report_collector/
+  - write any file anywhere; this worker holds no write tool and its rows travel in findings
   - resolve a sprint id to more than one file: when the glob matches several, keep the one whose frontmatter slug equals state.yaml's slug, and return needs_user naming every remaining path only when that still leaves more than one
   - infer a verdict a report does not state
   - summarise a report's prose; record its path, its recorded verdict and its counted rows
@@ -351,21 +351,21 @@ body: job, inputs, rules, receipt
 name: lesson_extractor
 skill: retro
 description: Dispatch this worker after collect to turn the gathered evidence into lessons, each tied to the files that support it, when a reader wants to know what the sprint taught.
-writes: evidence
-tools: [Read, Grep, Glob, Write, Bash(devforgeai status)]
+writes: none
+tools: [Read, Grep, Glob, Bash(devforgeai status)]
 model: inherit
 skills: []
 responsibility: Turn the collected evidence into lessons, each tied to the files that support it.
 inputs:
-  - .devforgeai/work/retro-<sprint>/collect-result.json
+  - .devforgeai/work/retro-<sprint>/collect-result.json and .devforgeai/work/retro-<sprint>/evidence/report_collector/findings.md, the persisted judge findings that result file names
   - the report and result paths that file names, read directly for the rows a lesson cites
 outputs:
-  - .devforgeai/work/<run>/evidence/lesson_extractor/lessons.json, every lesson with an id matching LESS-NNN, a kind of recurring-defect, process, estimate or observation, and the paths that support it
+  - findings: every lesson with an id matching LESS-NNN, a kind of recurring-defect, process, estimate or observation, and the paths that support it; required on a pass or fail receipt and optional on needs_user or could_not_run, at most 16384 UTF-8 bytes, persisted by the sequencer to .devforgeai/work/<run>/evidence/lesson_extractor/findings.md
   - issues[]: at most 10 rows drawn from that file, the lessons a reader should see first
   - note: the count of lessons by kind, and which of them rest on a single story and are therefore not yet a pattern
-  - evidence_refs[]: the lessons file above, then the report and result paths every lesson cites
+  - evidence_refs[]: the report and result paths every lesson cites; never its own findings path, which does not exist until the sequencer has persisted it
 must_not:
-  - write or claim any path inside the candidate root; this phase's one write is its findings file under .devforgeai/work/<run>/evidence/lesson_extractor/
+  - write any file anywhere; this worker holds no write tool and its rows travel in findings
   - record a lesson with no supporting path
   - name a document change; that is the next phase's job and a separate worker
   - read a story's source code or diff; this phase works from recorded verdicts
@@ -381,22 +381,22 @@ body: job, inputs, rules, receipt
 name: amendment_proposer
 skill: retro
 description: Dispatch this worker after lessons to turn each lesson that needs a rule change into one exact amend command against a named architecture document.
-writes: evidence
-tools: [Read, Grep, Glob, Write, Bash(devforgeai status)]
+writes: none
+tools: [Read, Grep, Glob, Bash(devforgeai status)]
 model: inherit
 skills: []
 responsibility: Turn each lesson that needs a rule change into one exact amend command against a named architecture document.
 inputs:
-  - .devforgeai/work/retro-<sprint>/lessons-result.json
+  - .devforgeai/work/retro-<sprint>/lessons-result.json and .devforgeai/work/retro-<sprint>/evidence/lesson_extractor/findings.md, the persisted judge findings that result file names
   - docs/architecture/constitution.md, sourcetree.md, techstack.md, architecture.md, headings only, to name the document a change belongs to
   - .devforgeai/provenance/adr/*.md, to avoid proposing a change a live decision already made
 outputs:
-  - .devforgeai/work/<run>/evidence/amendment_proposer/proposals.json, every proposal with its lesson id, document basename, single-line amend command and rationale
+  - findings: every proposal with its lesson id, document basename, single-line amend command and rationale; required on a pass or fail receipt and optional on needs_user or could_not_run, at most 16384 UTF-8 bytes, persisted by the sequencer to .devforgeai/work/<run>/evidence/amendment_proposer/findings.md
   - issues[]: at most 10 rows drawn from that file, so the handoff prints them as open items
   - note: the count of proposals and the documents they name
-  - evidence_refs[]: the proposals file above, then the lessons result and the architecture documents whose headings were read
+  - evidence_refs[]: the lessons result and the architecture documents whose headings were read; never its own findings path, which does not exist until the sequencer has persisted it
 must_not:
-  - write or claim any path inside the candidate root; this phase's one write is its findings file under .devforgeai/work/<run>/evidence/amendment_proposer/
+  - write any file anywhere; this worker holds no write tool and its rows travel in findings
   - name a change to a document that does not exist under docs/architecture/
   - name more than one command per lesson
   - apply a change or write an ADR; amend owns both
@@ -418,14 +418,15 @@ model: inherit
 skills: []
 responsibility: Write the retro report inside the candidate root and record the archival actions the run cannot perform itself.
 inputs:
-  - .devforgeai/work/retro-<sprint>/collect-result.json, lessons-result.json and amendments-result.json, and the three findings files their evidence_refs name under .devforgeai/work/<run>/evidence/
+  - .devforgeai/work/retro-<sprint>/collect-result.json, lessons-result.json and amendments-result.json, and the three persisted judge findings those result files name: evidence/report_collector/findings.md, evidence/lesson_extractor/findings.md and evidence/amendment_proposer/findings.md
   - assets/retro-report.md, the retro-report skeleton
 outputs:
   - docs/reports/retro-<sprint>.md, written under the candidate root with Edit or Write and named in claimed_paths, with Outcomes, Lessons, Proposed Amendments and Archive filled and depends_on listing the sprint file and every report it cites
-  - evidence_refs[]: the three preceding result paths and the three findings files the rows were rendered from
+  - evidence_refs[]: the three preceding result paths and the three persisted judge findings the rows were rendered from
 must_not:
   - write or claim any path under docs/plan/, which plan owns and which is outside this run's fence
-  - add a lesson, an outcome row or a proposal that the three findings files do not carry
+  - add a lesson, an outcome row or a proposal that the three persisted judge findings do not carry
+  - return a findings key; findings is a judge field and a producer receipt carrying it is refused
   - describe the sprint folder as moved; the Archive table records the action and its owner
   - write or claim any path other than docs/reports/retro-<sprint>.md
 isolation: required
@@ -436,7 +437,7 @@ compiled_to:
 body: job, inputs, rules, receipt
 ```
 
-The three judges hold `Read`, `Grep`, `Glob`, `Write` and `Bash(devforgeai status)`, with `Write` admitted only under `.devforgeai/work/<run>/evidence/<agent>/`, so each can record a row set larger than the receipt without being able to touch the reports it reads. `archiver` is the one producer and holds `Edit` and `Write` inside the candidate root, scoped by the `PreToolUse` check and compiled to `apply_patch` on the Codex target. No `retro` phase grants a stack key, so no worker carries `Bash(devforgeai run *)`, and no worker holds a git write, a package manager, a network tool or a raw stack command. `isolation` above is the framework's `required | preferred` declaration, not Claude's subagent `isolation` key, which the framework never sets. `hooks`, `memory`, `background` and `permissionMode` are Claude-only keys this skill leaves unset.
+The three judges hold `Read`, `Grep`, `Glob` and `Bash(devforgeai status)` and no write tool of any kind, so none can touch the reports it reads, and each row set comes back in the receipt's `findings` for the sequencer to persist. `archiver` is the one producer and holds `Edit` and `Write` inside the candidate root, scoped by the `PreToolUse` check and compiled to `apply_patch` on the Codex target. No `retro` phase grants a stack key, so no worker carries `Bash(devforgeai run *)`, and no worker holds a git write, a package manager, a network tool or a raw stack command. `isolation` above is the framework's `required | preferred` declaration, not Claude's subagent `isolation` key, which the framework never sets. `hooks`, `memory`, `background` and `permissionMode` are Claude-only keys this skill leaves unset.
 
 Each worker's envelope must carry `run`, `skill` and `phase` equal to the enforcement block. The primary window forwards those three ids in the dispatch line; a worker may also read them from `devforgeai status`, which is the one sequencer operation a phase worker may call.
 
@@ -491,7 +492,7 @@ The script prints JSON to stdout and every diagnostic to stderr, never prompts, 
 | `lessons.md` | the four lesson kinds, the rule that a lesson without an evidence path is not written, how attempt counts and rewinds are read out of a result file, and how to tell a one-story incident from a pattern | before dispatching `lesson_extractor` |
 | `amendments.md` | how a lesson maps to one architecture document, the exact single-line `/amend` form, and the rule that a live ADR already covering the change makes the proposal unnecessary | before dispatching `amendment_proposer` |
 | `archive.md` | the `retro-report` template's four sections, the shared `LESS-NNN` numbering, how `depends_on` is filled from the collected paths, and what the Archive table may record given the fence | before dispatching `archiver` |
-| `envelope.md` | the `devforgeai.worker-result/v1` schema, its field bounds, and the rule that the final message is exactly one such object with no Markdown fence | every dispatch |
+| `envelope.md` | the `devforgeai.worker-result/v1` schema, its field bounds — `findings` included, at 16,384 UTF-8 bytes, required on a judge pass or fail receipt, optional on its needs_user or could_not_run, and forbidden on a producer's — the fixed path the sequencer persists `findings` to, and the rule that the final message is exactly one such object with no Markdown fence | every dispatch |
 
 ### assets/
 | File | Used for |
@@ -501,9 +502,9 @@ The script prints JSON to stdout and every diagnostic to stderr, never prompts, 
 ### agents/
 | File | Worker (from section 7d) | writes | tools | compiled to |
 |------|-------------------------|--------|-------|-------------|
-| `report_collector.md` | `report_collector` | evidence | Read, Grep, Glob, Write, Bash(devforgeai status) | `.claude/agents/retro-report_collector.md`, `.codex/agents/retro-report_collector.toml` |
-| `lesson_extractor.md` | `lesson_extractor` | evidence | Read, Grep, Glob, Write, Bash(devforgeai status) | `.claude/agents/retro-lesson_extractor.md`, `.codex/agents/retro-lesson_extractor.toml` |
-| `amendment_proposer.md` | `amendment_proposer` | evidence | Read, Grep, Glob, Write, Bash(devforgeai status) | `.claude/agents/retro-amendment_proposer.md`, `.codex/agents/retro-amendment_proposer.toml` |
+| `report_collector.md` | `report_collector` | none | Read, Grep, Glob, Bash(devforgeai status) | `.claude/agents/retro-report_collector.md`, `.codex/agents/retro-report_collector.toml` |
+| `lesson_extractor.md` | `lesson_extractor` | none | Read, Grep, Glob, Bash(devforgeai status) | `.claude/agents/retro-lesson_extractor.md`, `.codex/agents/retro-lesson_extractor.toml` |
+| `amendment_proposer.md` | `amendment_proposer` | none | Read, Grep, Glob, Bash(devforgeai status) | `.claude/agents/retro-amendment_proposer.md`, `.codex/agents/retro-amendment_proposer.toml` |
 | `archiver.md` | `archiver` | candidate | Read, Grep, Glob, Edit, Write, Bash(devforgeai status) | `.claude/agents/retro-archiver.md`, `.codex/agents/retro-archiver.toml` |
 
 ## 9. Gotchas and edge cases
@@ -513,7 +514,7 @@ The script prints JSON to stdout and every diagnostic to stderr, never prompts, 
 | The phase is called `archive` but the fence is one report file | `docs/plan/<slug>/sprints/` is outside the run's fence, so no worker may move, rename or delete a sprint folder; a proposal that tried would be refused as a fence violation, and the phase would then fail its `document` oracle. | The `archive` phase writes `docs/reports/retro-<sprint>.md`, and its Archive table records each archival action with the owner who performs it. The report is the archive record, not a file operation. |
 | OI-1: which component performs Slice | A spec promising a slice worker would describe an agent file with no registry phase to run it. | Slice is a sequencer step inside `devforgeai phase start`: it writes `.devforgeai/work/<run>/context.json`, whose path every worker of the run is handed. No framework worker performs it and this package ships no agent file for it. |
 | OI-2 and section 3.4: which digests a gate re-resolves | A retro report's `depends_on` entries look like they are checked when the report is read. | The story gate re-resolves `provenance[]` and `context[]` on a story run. Nothing re-resolves a report's `depends_on` today, so the digests `archiver` records are evidence for a human and for `/analyze`, not a gate the framework runs on this artifact. |
-| OI-3: worker tools | A generator that gives every worker one list either leaves `archiver` with no way to write the report, or gives a judge a write tool over the reports it was asked to read. | Tools are per role. The three judges hold `Read`, `Grep`, `Glob`, `Write` and `Bash(devforgeai status)`, with `Write` admitted only under `.devforgeai/work/<run>/evidence/<agent>/`. `archiver` holds `Edit` and `Write` inside the candidate root, scoped by the `PreToolUse` check. No retro phase grants a stack command key, so no worker carries `Bash(devforgeai run *)`. |
+| OI-3: worker tools | A generator that gives every worker one list either leaves `archiver` with no way to write the report, or gives a judge a write tool over the reports it was asked to read. | Tools are per role. The three judges hold `Read`, `Grep`, `Glob` and `Bash(devforgeai status)` and no write tool at all, their rows returned in the receipt's `findings`. `archiver` holds `Edit` and `Write` inside the candidate root, scoped by the `PreToolUse` check. No retro phase grants a stack command key, so no worker carries `Bash(devforgeai run *)`. |
 | OI-4: a worker returns `fail` with no rewind target | Nothing in section 5.4 lists that row, so it looks like a silent pass. | `examples/hooks/devforgeai.py:1017-1018` inserts the reported failure as a transition problem, so the phase retries to its limit of 2 and then blocks `REQUIRE_HUMAN`. No retro phase declares `rewind_to`, so a retro result carrying `next` is refused at `ingest-result`. |
 | OI-5: `--fix` and `--retry` look like resume flags | An earlier draft closed the run on `needs_user` and at an exhausted attempt budget, so no flag could resume anything. | Settled: `10-sequencer-and-contracts.md` sections 2 and 3.1 leave such a run `active` with its lease released, its candidate root kept and `run.yaml#blocked_at` naming the phase, and `devforgeai phase start retro <sprint>` — same skill, same argument — resumes it there with attempts reset. Resuming is the command, not a flag: `/retro {sprint}` does it. With no blocked run to resume, the same call opens a fresh run from phase 1; every flag only changes what the workers read. |
 | OI-7: `02-skill-roster.md` says retro calls amend | `devforgeai phase start` refuses while a run is active, so a nested run is impossible. | The amend edge is a handoff row and a Proposed Amendments row. A human runs each command; the retro run never does. |
@@ -521,11 +522,12 @@ The script prints JSON to stdout and every diagnostic to stderr, never prompts, 
 | The document gate checks the fence, not the sprint | `devforgeai phase start retro sprint-999` opens a run for a sprint that does not exist. | `report_collector` returns `fail` with an issue naming the glob it searched; two attempts later the run blocks with `REQUIRE_HUMAN`. Nothing is written, because a non-`pass` status may carry no files. |
 | The same sprint id exists under two project slugs | A collector that picked one silently would produce a retrospective for the wrong project. | The `sprint` template's `required_frontmatter` includes `slug` (`11-artifact-registry.md` section 1), so `report_collector` keeps the file whose `slug` equals `state.yaml`'s. `needs_user` is returned only when that leaves more than one, and it never retries: it is recorded, written into a `REQUIRE_HUMAN` handoff, and the run closes on the first ask. The repair is a frontmatter correction on disk. |
 | The run id is `retro-<sprint>` | Re-running the retro for the same sprint reuses the run directory, so the second run overwrites `.devforgeai/work/retro-<sprint>/*-result.json`. | The durable record is `docs/reports/retro-<sprint>.md` plus one `provenance/log.jsonl` line per run. Read those when reconstructing history. |
-| Where a judge's rows live | The receipt has no bounded `evidence` object, and a long sprint has more collected rows than `issues[]` can carry | Each judge writes its full row set to `.devforgeai/work/<run>/evidence/<agent>/` and names that file in `evidence_refs`; `issues[]` is the bounded summary the handoff prints, and `archiver` renders the report from the findings files. |
-| The attempt count is not in a result file | `<phase>-result.json` holds the receipt plus `agent`, `agent_id`, `session_id`, `captured_at`, the derived `changed` list and the checkpoint ref, and the judge's own findings file sits beside it under `evidence/<agent>/`; `enforcement.attempts` is cleared when the run closes, so a collector reading only those files would have to invent the number. | Attempts and rewinds are counted from `provenance/log.jsonl`, whose `transition.pass`, `transition.fail` and `rewind` lines carry them. `10-sequencer-and-contracts.md` section 10 already names `retro` as a consumer of that file. |
+| Where a judge's rows live | The receipt has no bounded `evidence` object, and a long sprint has more collected rows than `issues[]` can carry | Each judge returns its full row set in the receipt's `findings`, which the sequencer persists to `.devforgeai/work/<run>/evidence/<agent>/findings.md` and records in `<phase>-result.json`; `issues[]` is the bounded routing summary the handoff prints, and `archiver` reads the three persisted files by path. `findings` is capped at 16,384 UTF-8 bytes and an oversize receipt is refused, so a sprint whose row set does not fit is a real limit of this skill and not a checked constraint: the rows that fit are returned, recurring-defect lessons first, and `note` states the count returned against the count found. `WRITE-MODEL-REVISION.md` D13 item 5 forbids a side-channel file and item 9 defers the structured evidence broker to `12-post-mvp.md`. |
+| The attempt count is not in a result file | `<phase>-result.json` holds the receipt plus `agent`, `agent_id`, `session_id`, `captured_at`, the derived `changed` list and the checkpoint ref, and the sequencer's persisted copy of the judge's `findings` sits beside it under `evidence/<agent>/findings.md`; `enforcement.attempts` is cleared when the run closes, so a collector reading only those files would have to invent the number. | Attempts and rewinds are counted from `provenance/log.jsonl`, whose `transition.pass`, `transition.fail` and `rewind` lines carry them. `10-sequencer-and-contracts.md` section 10 already names `retro` as a consumer of that file. |
 | A story in the sprint never ran | There is no qa report, no review report and no result directory, so an extractor could read the absence as a passing story. | `report_collector` records the row with empty verdicts and adds an `issues[]` row; `lesson_extractor` may cite that absence as a `process` lesson, and `archiver` shows it in Outcomes with blank verdict cells. |
 | A qa report exists for a story the sprint file does not list | The report belongs to another sprint or to an out-of-band run. | The sprint file's `stories` list is the only membership rule. A report outside it is not collected, and no lesson may cite it. |
-| Which worker may write, and where | A generator that treated the four workers alike would let a judge edit the qa and review reports it was asked to read, and the retro would then describe a sprint nobody ran | Roles follow the registry's `writes` column: `collect`, `lessons` and `amendments` compile to judges declaring `writes: evidence`, whose one write reaches `.devforgeai/work/<run>/evidence/<agent>/` and nothing else; `archive` declares `docs` and compiles to a producer holding `Edit` and `Write`. Its one write lands inside the candidate root and is named in `claimed_paths`; the sequencer derives what actually changed from the checkpoint diff and refuses anything unclaimed as `UNCLAIMED_CHANGE`. |
+| Which worker may write, and where | A generator that treated the four workers alike would let a judge edit the qa and review reports it was asked to read, and the retro would then describe a sprint nobody ran | Roles follow the registry's `writes` column: `collect`, `lessons` and `amendments` compile to judges declaring `writes: none`, which hold no write tool at all and return their rows in the receipt's `findings`; `archive` declares `docs` and compiles to a producer holding `Edit` and `Write`. Its one write lands inside the candidate root and is named in `claimed_paths`; the sequencer derives what actually changed from the checkpoint diff and refuses anything unclaimed as `UNCLAIMED_CHANGE`. |
+| D13 (2026-09-03): the three judges had an evidence-directory `Write` | Claude Code 2.1.259 refuses a subagent's `Write` of a report-like Markdown file before any hook runs, so a judge could not be relied on to write `stories.json`, `lessons.json` or `proposals.json`, and `lesson_extractor`, `amendment_proposer` and `archiver` would each read a file that may not exist | `WRITE-MODEL-REVISION.md` D13 applied here: `report_collector`, `lesson_extractor` and `amendment_proposer` declare `writes: none` (R8, section 7c rows, section 7d headers, the section 8 `agents/` table, the section 12 Tools and target rows, section 14's anatomy check) and carry `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` with no `Write`, `Edit` or `apply_patch`. Each returns its rows in the receipt's `findings` string, required on a pass or fail and optional otherwise, at most 16,384 UTF-8 bytes, which the sequencer persists verbatim at `SubagentStop` to `.devforgeai/work/<run>/evidence/<agent>/findings.md`; `stories.json`, `lessons.json` and `proposals.json` are gone. The next phase and `archiver` read the persisted paths (section 7d inputs), section 7c names them in the evidence-file column, and no judge names its own findings path in `evidence_refs`, because that file does not exist when the receipt is validated. The bounded `findings` body does enter the primary context as part of the subagent's result (D13 item 4); what stays isolated is the worker's transcript, reads and tool traffic. The `depends_on` excerpt now quotes the D13-correct `01-skill-anatomy.md#evidence-home` sentence, and the sequencer and hook-dispatcher documents apply the same contract. |
 | Where the retro report ends up | A reader expects `docs/reports/retro-<sprint>.md` in the working tree the moment `archive` passes | The write lands in the candidate root `.devforgeai/work/<run>/wt`, which is gitignored. The report reaches the canonical checkout only at `devforgeai promote <run>`, never at Handoff: the last passing `devforgeai phase next` marks the run `ready_to_promote` and writes a `REQUIRE_HUMAN` handoff whose only forward step is that command, and `SKILL.md` runs it only after the user confirms in the session. A promotion refused with `STALE_BASE`, `DIRTY_TARGET` or `MERGE_CONFLICT` — all three refuse the promote command, not the transition — leaves the run `ready_to_promote` with its candidate root intact, and `devforgeai promote <run>` retries it once the user has resolved the reason. |
 | A `REQUIRE_HUMAN` run treated as closed, with `/status` as its next step | `needs_user` and an exhausted attempt budget were described as closing the run, so the section 7e rows sent the user to `/status` and the OI-5 row said no flag could resume anything. A closed run has no candidate root, so the work the phases had already done appeared to be lost | Settled in `10-sequencer-and-contracts.md` (section 2's `phase start` row, section 3.1, section 5.4's `needs_user` row, section 6's `REQUIRE_HUMAN`, blocked-run row): such a run stays `active` with its lease released, keeps its candidate root and every checkpoint, and records `run.yaml#blocked_at`. `devforgeai phase start retro <arg>` — the same skill and argument — resumes it at `blocked_at` with `attempts` reset. The two section 7e `REQUIRE_HUMAN` rows, section 7a step 6, OI-5 and the section 10 eval expectation that asserted `/status` as step 1 now name `/retro {sprint}` as the forward step, with `devforgeai phase fail --reason <text>` then `/status` as the abandon route; any other skill on the same story needs that `phase fail` first. |
 | Promotion read as part of Handoff | "The report reaches the canonical checkout at Handoff, when the sequencer promotes the run" made `devforgeai phase next` move canonical bytes on its own, with no point at which the user consents | Section 7b's candidate-root paragraph ("At Handoff the sequencer promotes the run"), section 7b row 7 and the row above now carry the two-block model of `WRITE-MODEL-REVISION.md` D7 and `10-sequencer-and-contracts.md` sections 5.4, 6 and 12.4: `phase next` marks the run `ready_to_promote` and writes a `REQUIRE_HUMAN` block whose only forward step is `devforgeai promote <run>`; `SKILL.md` runs that command only after the user confirms; the promotion writes the second block. |
@@ -542,7 +544,7 @@ The script prints JSON to stdout and every diagnostic to stderr, never prompts, 
 - Triggers on the section 4 positives and on none of the near-misses.
 - The transcript contains exactly one `devforgeai phase start retro <sprint>` and no other `devforgeai` operation except `devforgeai status` and, when the user abandons, `devforgeai phase fail --reason`.
 - Four worker dispatches at most, in registry order, one per phase.
-- The run's checkpoint diff holds exactly one path, `docs/reports/retro-<sprint>.md`, and it is the `archive` receipt's only `claimed_paths` entry; the three judge phases leave an empty diff and write only under `.devforgeai/work/<run>/evidence/<agent>/`, which no checkpoint records and no promotion carries.
+- The run's checkpoint diff holds exactly one path, `docs/reports/retro-<sprint>.md`, and it is the `archive` receipt's only `claimed_paths` entry; the three judge phases write nothing at all, and the sequencer's persisted `findings.md` files sit under `.devforgeai/work/<run>/evidence/<agent>/`, which no checkpoint records and no promotion carries.
 - Every Lessons row carries at least one evidence path that exists in the fixture.
 - Every Proposed Amendments row names a document that exists under `docs/architecture/` and a single-line `/amend` command.
 - `SKILL.md` is under 500 lines; `agents/` holds exactly the four files in section 8.
@@ -623,7 +625,7 @@ Quick-mode results are generation feedback only: one enabled run per eval and no
 
 | Kind | Value |
 |------|-------|
-| Tools | `SKILL.md`: `Read`, `Agent`, and a Bash grammar no wider than `devforgeai status`, `devforgeai phase start retro <sprint>`, `devforgeai phase fail --reason <text>`, `devforgeai validate`, plus `devforgeai promote <run>`, which the last passing transition's `REQUIRE_HUMAN` block names as its only forward step and which `SKILL.md` calls only after the user asks for it. Judges: `Read`, `Grep`, `Glob`, `Bash(devforgeai status)` and `Write` scoped to `.devforgeai/work/<run>/evidence/<agent>/`. The one producer: the same read set plus `Edit` and `Write` (Codex `apply_patch`) inside the candidate root. No phase grants a stack key, so no worker carries `Bash(devforgeai run *)`. |
+| Tools | `SKILL.md`: `Read`, `Agent`, and a Bash grammar no wider than `devforgeai status`, `devforgeai phase start retro <sprint>`, `devforgeai phase fail --reason <text>`, `devforgeai validate`, plus `devforgeai promote <run>`, which the last passing transition's `REQUIRE_HUMAN` block names as its only forward step and which `SKILL.md` calls only after the user asks for it. Judges: `Read`, `Grep`, `Glob` and `Bash(devforgeai status)`, with no `Write`, no `Edit` and no `apply_patch`; their rows are returned in the receipt's `findings` and persisted by the sequencer. The one producer: the same read set plus `Edit` and `Write` (Codex `apply_patch`) inside the candidate root. No phase grants a stack key, so no worker carries `Bash(devforgeai run *)`. |
 | MCP servers | none |
 | Runtime | Python 3.11+ for `scripts/sprint_evidence.py`; standard library only, no third-party import |
 | Project commands | none. No retro phase declares a run key, so this skill resolves no `.devforgeai/stack.yaml` anchor and brokers no command. Its oracles are `report_only` and `document`, neither of which runs a command. |
@@ -651,7 +653,7 @@ The generator produces one provider-neutral semantic package and a separate adap
 
 | Target | Install path | Invocation | Subagents | Notes |
 |--------|--------------|------------|-----------|-------|
-| claude | `.claude/skills/retro/` | `/retro <sprint>` | provider-native workers: judges `report_collector`, `lesson_extractor` and `amendment_proposer` (`writes: evidence`), producer `archiver` (`writes: candidate`) | Provider-specific frontmatter keys (`argument-hint`, `disable-model-invocation`) are compiled into this target's SKILL.md only. |
+| claude | `.claude/skills/retro/` | `/retro <sprint>` | provider-native workers: judges `report_collector`, `lesson_extractor` and `amendment_proposer` (`writes: none`), producer `archiver` (`writes: candidate`) | Provider-specific frontmatter keys (`argument-hint`, `disable-model-invocation`) are compiled into this target's SKILL.md only. |
 | codex | `.agents/skills/retro/` plus `.codex/agents/` profiles | `$retro <sprint>` | the same four names; Codex custom-agent `name` equals the Claude agent frontmatter `name`, so `agent_type` needs no translation | Portable six-field frontmatter only; policy goes in target-side configuration. |
 | both | separate `.claude/skills/retro/` and `.agents/skills/retro/` adapters | as above | as above | Share only provider-neutral resources; validate each adapter independently. |
 
@@ -701,7 +703,7 @@ grep -rnE 'T[O]DO|T[B]D|[{][{]' ./out/retro || echo clean
 python3 docs/design/specs/verify.py --only v1,v2,v4
 ```
 
-For non-Research anatomy skills, DevForgeAI skill-validator additionally checks: all sub-phase kinds present with Gate, Record and Handoff bound to sequencer operations; `must_not` and a `writes` declaration of `candidate`, `evidence` or `none` present in every agent file, with no tool wider than that declaration allows; the SKILL.md Bash grammar is no wider than the model-callable operations; handoff outcomes cover every status the skill can return, including `could_not_run`.
+For non-Research anatomy skills, DevForgeAI skill-validator additionally checks: all sub-phase kinds present with Gate, Record and Handoff bound to sequencer operations; `must_not` and a `writes` declaration of `candidate` or `none` present in every agent file, with no tool wider than that declaration allows and no write tool at all on a `writes: none` file; the SKILL.md Bash grammar is no wider than the model-callable operations; handoff outcomes cover every status the skill can return, including `could_not_run`.
 
 ## 15. Provenance
 

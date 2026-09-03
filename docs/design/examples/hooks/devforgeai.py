@@ -5,7 +5,7 @@ Closed CLI grammar (D7).
 
 Model-callable (in the provider Bash allowlist, no hook env required):
     devforgeai status                        print the run block
-    devforgeai phase start <skill> <arg> [--lenient]
+    devforgeai phase start <skill> <arg> [--fix] [--lenient]
                                              gate, open the candidate root, enter phase 1
     devforgeai phase fail --reason TEXT      record a blocker and hand off
     devforgeai validate                      check fence/stack invariants without advancing
@@ -57,8 +57,11 @@ from policy import (
     MAX_EVIDENCE_REFS,
     REASON_CODES,
     RECEIPT_KEYS,
+    MAX_FINDINGS_BYTES,
+    FIX_REPORT_SOURCES,
     RECEIPT_REQUIRED,
     REPORT_VERDICTS,
+    STORY_IN_FLIGHT_EXEMPT,
     RESULT_SCHEMA,
     RUN_MARKER,
     SKILL_VARIANTS,
@@ -72,14 +75,18 @@ from policy import (
     canonical_agent,
     document_fence,
     effective_fence,
-    evidence_prefix,
     fence_overlap,
+    findings_path,
+    handoff_kind,
+    handoff_next,
+    is_judge,
     matches,
     phase_fields,
     phase_names,
     phase_run_keys,
     phase_spec,
     project_relative,
+    refused_tool,
     run_id,
     skill_key,
     skill_produces,
@@ -444,8 +451,9 @@ def candidate_open(e: dict, ignore_dirs) -> dict:
         problems = worktree_prerequisites(ROOT)
         if problems:
             sys.stderr.write(
-                "devforgeai: could_not_run reason_code=hook_fault: worktree mode is "
-                "unavailable and copy mode is not a substitute in a git repository:\n  "
+                "devforgeai: could_not_run reason_code=prerequisite_missing: worktree "
+                "mode is unavailable and copy mode is not a substitute in a git "
+                "repository:\n  "
                 + "\n  ".join(problems) + "\n"
             )
             raise SystemExit(COULD_NOT_RUN)
@@ -1269,6 +1277,7 @@ def parse_receipt(raw: str, e: dict, event_agent: str, agent_id: str) -> dict:
     note = data.get("note", "")
     if not isinstance(note, str) or len(note.encode()) > 16_384:
         raise Refuse("worker receipt note must be a string of at most 16384 bytes", REFUSED)
+    findings = validate_findings(e, data)
     issues = data.get("issues", [])
     if not isinstance(issues, list) or len(issues) > MAX_ISSUES:
         raise Refuse(f"issues must be a list of at most {MAX_ISSUES} entries", REFUSED)
@@ -1296,6 +1305,7 @@ def parse_receipt(raw: str, e: dict, event_agent: str, agent_id: str) -> dict:
         "candidate": {"id": e["run"], "input_checkpoint": expected_checkpoint},
         "claimed_paths": sorted(normalized),
         "evidence_refs": refs,
+        "findings": findings,
         "note": note,
         "issues": issues,
         "next": nxt,
@@ -1303,9 +1313,96 @@ def parse_receipt(raw: str, e: dict, event_agent: str, agent_id: str) -> dict:
     }
 
 
+def validate_findings(e: dict, data: dict) -> str | None:
+    """The `findings` rule (D13 item 2), refused by name in each direction.
+
+    A judge phase returns its detailed evidence here because the provider
+    refuses a subagent's report-file write before any hook runs. A producer
+    returns none: its evidence is the change set the sequencer derives from the
+    checkpoint. Nothing is truncated — an oversize body is a receipt defect.
+    """
+    judge = is_judge(e["skill"], e["phase"])
+    present = "findings" in data
+    # A judge that reached a verdict must show its work; a judge that could not
+    # run, or that needs a human before it can judge, has no verdict to evidence
+    # and may leave the field out. `note` still carries why.
+    owed = judge and data.get("status") in ("pass", "fail")
+    if owed and not present:
+        raise Refuse(
+            f"MISSING_FINDINGS: phase {e['phase']} is a judge phase and returned "
+            f"{data.get('status')!r}; its receipt carries `findings`, the evidence body the "
+            f"sequencer persists at {findings_path(e)}. Only `needs_user` and "
+            "`could_not_run` may omit it",
+            REFUSED,
+        )
+    if not judge and present:
+        raise Refuse(
+            f"UNEXPECTED_FINDINGS: phase {e['phase']} writes in the candidate root; its "
+            "evidence is the change set, not a `findings` body. Only a judge phase carries "
+            "`findings`",
+            REFUSED,
+        )
+    if not present:
+        return None
+    findings = data["findings"]
+    if not isinstance(findings, str) or not findings.strip():
+        raise Refuse(
+            f"EMPTY_FINDINGS: phase {e['phase']} must return a non-empty `findings` string",
+            REFUSED,
+        )
+    size = len(findings.encode("utf-8"))
+    if size > MAX_FINDINGS_BYTES:
+        raise Refuse(
+            f"OVERSIZE_FINDINGS: `findings` is {size} UTF-8 bytes, over the "
+            f"{MAX_FINDINGS_BYTES}-byte limit; the sequencer truncates nothing. Shorten the "
+            "body and return the receipt again",
+            REFUSED,
+        )
+    return findings
+
+
+def persist_findings(e: dict, result: dict) -> str | None:
+    """Write a judge's returned `findings` verbatim to its fixed path (D13 item 3).
+
+    Persistence of a returned result, not a merge into the tree: the path lives
+    under the run's gitignored work directory in the canonical project, the
+    worker cannot choose it, and nothing about the candidate root changes.
+    """
+    findings = result.get("findings")
+    if not findings:
+        return None
+    relative = findings_path(e)
+    target = ROOT / relative
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(findings, encoding="utf-8")
+    log("findings.persisted", session_id=e.get("session_id"), run=e["run"],
+        phase=e["phase"], path=relative, bytes=len(findings.encode("utf-8")))
+    return relative
+
+
+def persisted_findings(e: dict) -> list[str]:
+    """Every findings file this run has persisted, in phase order.
+
+    Derived from the phase results the sequencer already wrote, so the run
+    record carries no second copy that could drift from them.
+    """
+    rows: list[str] = []
+    for phase in phase_names(e["skill"]):
+        path = work(e["run"]) / f"{phase}-result.json"
+        if not path.exists():
+            continue
+        try:
+            reference = (json.loads(path.read_text()) or {}).get("findings_path")
+        except (OSError, ValueError):
+            continue
+        if reference and reference not in rows:
+            rows.append(str(reference))
+    return rows
+
+
 def lease_problems(e: dict, result: dict) -> list[str]:
     """A producer's receipt is accepted only from the worker holding the lease."""
-    if (phase_spec(e["skill"], e["phase"]) or {}).get("writes", "none") in ("none", "evidence"):
+    if (phase_spec(e["skill"], e["phase"]) or {}).get("writes", "none") == "none":
         return []
     lease = e.get("lease") or {}
     if not lease:
@@ -1442,6 +1539,9 @@ def write_phase_report(e: dict, result: dict, problems: list[str] | None = None)
     if result.get("changed"):
         lines += ["## Changed in the candidate", ""]
         lines += [f"- {row['kind']}: {row['path']}" for row in result["changed"]] + [""]
+    if result.get("findings_path"):
+        lines += ["## Findings", "",
+                  f"- persisted verbatim at {result['findings_path']}", ""]
     if result.get("evidence_refs"):
         lines += ["## Evidence", ""] + [f"- {ref}" for ref in result["evidence_refs"]] + [""]
     if problems:
@@ -2164,7 +2264,8 @@ def context_rows(fm: dict) -> list[dict]:
     return rows
 
 
-def write_context(e: dict, fm: dict | None, source: str | None) -> Path:
+def write_context(e: dict, fm: dict | None, source: str | None,
+                  lenient: bool = False) -> Path:
     """Sub-phase 1, Slice, performed by the sequencer at `phase start`.
 
     No registry phase dispatches a curator. The incoming artifact of a story run
@@ -2178,7 +2279,8 @@ def write_context(e: dict, fm: dict | None, source: str | None) -> Path:
     if fm is None:
         doc = {
             "run": e["run"], "skill": e["skill"], "arg": e["arg"], "phase": e["phase"],
-            "slice": "none", "incoming": None, "entries": [],
+            "slice": "none", "incoming": None, "incoming_sha256": None,
+            "lenient": bool(lenient), "entries": [],
             "note": "the document gate identifies no incoming artifact, so this run has "
                     "no context bundle to resolve; each phase worker reads the paths its "
                     "own phase names",
@@ -2189,7 +2291,15 @@ def write_context(e: dict, fm: dict | None, source: str | None) -> Path:
         downgraded = [r for r in rows if r["verdict"] != "ok"]
         doc = {
             "run": e["run"], "skill": e["skill"], "arg": e["arg"], "phase": e["phase"],
-            "slice": "bundle", "incoming": source, "entries": rows,
+            "slice": "bundle", "incoming": source,
+            # The bytes the workers were given, so a resume can tell whether the
+            # story moved under this run (a `/clarify` between the two).
+            "incoming_sha256": sha(ROOT / source) if source and (ROOT / source).is_file()
+            else None,
+            # The gate that produced this slice: a resume repeats it rather than
+            # refusing work the original `phase start` was allowed to open.
+            "lenient": bool(lenient),
+            "entries": rows,
             "note": f"{len(rows)} context entries re-resolved at the gate; "
                     f"{len(downgraded)} did not resolve to their recorded digest",
             "resolved_at": now(),
@@ -2233,6 +2343,94 @@ def fence_conflicts(state: dict, run: str, skill: str, fence: list[str]) -> list
     return conflicts
 
 
+def resolve_fix_report(kind: str, arg: str, wants_fix: bool) -> str | None:
+    """`--fix` names the report that routed this run here (D14 item 2).
+
+    A story run started with `--fix` was sent back by `qa` or `review`, and the
+    worker needs the report by path. The sequencer resolves it at the gate — the
+    newest of the two declared paths, by mtime, `review` winning an exact tie —
+    and refuses the run if neither exists, because `--fix` with nothing to fix
+    is a caller mistake, not a run. Every other kind records `null`.
+    """
+    if not wants_fix or kind != "story":
+        return None
+    rows = []
+    for pattern in FIX_REPORT_SOURCES:
+        relative = pattern.format(arg=arg)
+        path = ROOT / relative
+        if path.is_file():
+            rows.append((path.stat().st_mtime, relative))
+    if not rows:
+        raise Refuse(
+            "NO_FIX_REPORT: --fix names the qa or review report that sent this story back, "
+            "and neither " + " nor ".join(p.format(arg=arg) for p in FIX_REPORT_SOURCES)
+            + " exists. Run /qa or /review first, or start the run without --fix.",
+            REFUSED,
+        )
+    return max(rows)[1]
+
+
+def story_source_digest(arg: str) -> str | None:
+    """The current digest of a story document, or None when it cannot be read."""
+    try:
+        return sha(locate_story(arg))
+    except SystemExit:
+        return None
+
+
+def slice_doc(e: dict) -> dict:
+    """This run's `context.json`, or an empty mapping when it cannot be read."""
+    try:
+        doc = json.loads((work(e["run"]) / "context.json").read_text())
+    except (OSError, ValueError):
+        return {}
+    return doc if isinstance(doc, dict) else {}
+
+
+def story_changed_since_slice(e: dict) -> bool:
+    """Has the story moved since this run's `context.json` was written?
+
+    The digest lives in the slice the gate wrote, not in the run record, so the
+    comparison is against exactly the bytes the workers were given. An
+    unreadable or digest-free slice re-gates: re-resolving is cheap and being
+    wrong the other way would silently re-enter a phase on a stale story.
+    """
+    recorded = slice_doc(e).get("incoming_sha256")
+    if not recorded:
+        return True
+    return story_source_digest(e["arg"]) != recorded
+
+
+def regate_on_resume(state: dict, e: dict, args) -> list[str]:
+    """Re-run the story gate and re-slice before re-entering `blocked_at`.
+
+    `/clarify <story>` is the documented answer to a `needs_user` block, and it
+    rewrites the story. Resuming without re-reading it would re-dispatch the
+    phase against the bundle the old story produced. So: re-gate, and on a clean
+    gate refresh the story-derived fields and rewrite `context.json`. A gate that
+    now refuses leaves the run blocked exactly as it was, with its reasons.
+    """
+    # The original gate's leniency is part of what opened this run; a resume
+    # repeats it, so answering a block does not need the flag typed again.
+    lenient = bool(getattr(args, "lenient", False)) or bool(slice_doc(e).get("lenient"))
+    fm, problems, warnings = story_gate(state, e["arg"], lenient)
+    if problems:
+        return problems
+    commands = fm.get("commands") or {}
+    e.update({
+        "write_fence": fm["write_fence"],
+        "test_paths": sorted({r["file"] for r in fm["test_plan"]}),
+        "test_plan": fm["test_plan"],
+        "commands": {"source": commands["source"], "use": commands["use"]},
+        "gate_policy": fm.get("gate_policy", {}),
+    })
+    if warnings:
+        e["gate_warnings"] = warnings
+    write_context(e, fm, relative_or_raw(locate_story(e["arg"])), lenient=lenient)
+    log("run.reslice", session_id=e.get("session_id"), run=e["run"], arg=e["arg"])
+    return []
+
+
 def resume_run(state: dict, e: dict, args) -> None:
     """Re-enter a blocked run at `blocked_at`, with the attempt budget reset.
 
@@ -2241,6 +2439,25 @@ def resume_run(state: dict, e: dict, args) -> None:
     resuming is re-dispatching the phase that stopped, not opening a new run.
     """
     phase = e["blocked_at"]
+    resliced = False
+    if e.get("kind") == "story" and story_changed_since_slice(e):
+        problems = regate_on_resume(state, e, args)
+        if problems:
+            # The story moved and the gate now refuses it. The run keeps its
+            # candidate root, its checkpoints and its block; the handoff carries
+            # the gate's reasons and the row they select.
+            rows = [f"gate failed on resume: {problem}" for problem in problems]
+            block(state, e, rows, "REQUIRE_HUMAN")
+            raise Refuse(
+                f"{e['run']} stays blocked at {phase}; the story changed and the gate now "
+                "refuses it:\n  " + "\n  ".join(problems),
+                REFUSED,
+            )
+        resliced = True
+    if getattr(args, "fix", False):
+        # A resume that repeats `--fix` re-resolves the report; a resume without
+        # it keeps whatever the run already recorded.
+        e["fix_report"] = resolve_fix_report(e.get("kind", ""), e["arg"], True)
     if e.get("kind") == "story":
         state.setdefault("stories", {}).setdefault(e["arg"], {})["status"] = "in_dev"
     e["phase"] = phase
@@ -2256,6 +2473,9 @@ def resume_run(state: dict, e: dict, args) -> None:
         f"{e['run']} resumed at phase {phase}, candidate {e['candidate']['mode']} at "
         f"{e['candidate']['root']}, checkpoint {e['candidate']['checkpoint']}, attempts "
         f"reset. Dispatch {agent} with the slice at {context_path(e['run'])}."
+        + (" The story changed since the last slice: the gate re-ran and "
+           f"{context_path(e['run'])} was rewritten." if resliced else "")
+        + (f" fix_report: {e['fix_report']}" if e.get("fix_report") else "")
     )
 
 
@@ -2320,7 +2540,20 @@ def cmd_phase_start(args) -> None:
         fm, problems, warnings = story_gate(state, args.arg, args.lenient)
         bundle_fm, bundle_source = fm, relative_or_raw(locate_story(args.arg))
         if problems:
-            raise Refuse("gate failed:\n  " + "\n  ".join(problems), REFUSED)
+            # D13 item 7: a gate refusal names its section 7f row when the skill
+            # declares one for this defect — the unresolved-ASSUMPTION row routes
+            # to `/clarify`. A defect the skill declares no row for gets no
+            # forward command from the sequencer: the adapter renders those from
+            # the spec's own table, and inventing a plausible one here would be
+            # worse than printing none.
+            kind = handoff_kind(skill, problems, "BLOCK")
+            declared = (skill_spec(skill) or {}).get("handoff") or {}
+            route = handoff_next(skill, kind, arg=args.arg, run=run,
+                                 agent="the phase worker", tool="the tool") \
+                if kind in declared else None
+            raise Refuse(
+                "gate failed:\n  " + "\n  ".join(problems)
+                + (f"\nNext: {route}" if route else ""), REFUSED)
         e.update({
             "write_fence": fm["write_fence"],
             "test_paths": sorted({r["file"] for r in fm["test_plan"]}),
@@ -2357,8 +2590,11 @@ def cmd_phase_start(args) -> None:
         if problems:
             raise Refuse("gate failed:\n  " + "\n  ".join(problems), REFUSED)
 
+    # `clarify` writes the story document, never the code, so it is the one
+    # skill that may open against a story another run already holds — which is
+    # how a `needs_user` block gets answered. `review` and `qa` stay refused.
     story = args.arg if (spec["kind"] == "story" or anchored) else None
-    if story:
+    if story and skill not in STORY_IN_FLIGHT_EXEMPT:
         for other in live_runs(state):
             if other != run and (state["runs"][other] or {}).get("story") == story:
                 raise Refuse(
@@ -2378,12 +2614,13 @@ def cmd_phase_start(args) -> None:
         )
 
     e["granted_keys"] = sorted(phase_run_keys(e))
+    e["fix_report"] = resolve_fix_report(spec["kind"], args.arg, bool(args.fix))
     if warnings:
         e["gate_warnings"] = warnings
 
     shutil.rmtree(work(run), ignore_errors=True)
     e["candidate"] = candidate_open(e, stack_ignore_dirs(e))
-    write_context(e, bundle_fm, bundle_source)
+    write_context(e, bundle_fm, bundle_source, lenient=bool(args.lenient))
     save_run(e)
     if e["kind"] == "story":
         state.setdefault("stories", {}).setdefault(args.arg, {})["status"] = "in_dev"
@@ -2408,6 +2645,7 @@ def cmd_phase_start(args) -> None:
         f"{run} active, skill {skill}, phase {e['phase']}, candidate {e['candidate']['mode']} "
         f"at {e['candidate']['root']}. Dispatch {agent} with the slice at "
         f"{context_path(run)}; it writes only {e['write_fence']} inside the candidate root."
+        + (f" fix_report: {e['fix_report']}" if e.get("fix_report") else "")
     )
 
 
@@ -2424,6 +2662,9 @@ def handoff(state: dict, e: dict, outcome: str, next_cmd: str, reasons: list[str
         "next": next_cmd,
         "attempts": e["attempts"],
         "authority": {"write_fence": e["write_fence"]},
+        # Every judge findings file this run has persisted, in phase order. The
+        # next phase's worker reads them by path (D13 item 3).
+        "findings_paths": persisted_findings(e),
         "session_id": e.get("session_id") or current_session(),
         "at": now(),
     }
@@ -2450,6 +2691,8 @@ def render_handoff(doc: dict) -> str:
     lines = [head]
     for reason in doc.get("reasons") or []:
         lines.append(f"  - {reason}")
+    for ref in doc.get("findings_paths") or []:
+        lines.append(f"  evidence: {ref}")
     for item in doc.get("open_items") or []:
         if isinstance(item, dict):
             lines.append(f"  open: {item.get('id', '')} {item.get('text', '')}".rstrip())
@@ -2506,18 +2749,22 @@ def block(state: dict, e: dict, problems: list[str], policy: str) -> None:
         state.setdefault("stories", {}).setdefault(e["arg"], {})["status"] = "dev_blocked"
     state.setdefault("runs", {}).setdefault(e["run"], {})["checkpoint"] = \
         (e.get("candidate") or {}).get("checkpoint")
-    # 10 section 6: the forward command of a blocked run resumes it, or asks the
-    # human for the one thing that would let it resume. It is never `/status`,
-    # which reports and changes nothing.
-    if any(p.startswith("COULD_NOT_RUN: hook_fault") for p in problems):
-        nxt = (f"inspect .devforgeai/sessions/raw-events.jsonl and the hook dispatcher "
-               f"(.devforgeai/hooks), then /{e['skill']} {e['arg']}")
-    elif any(p.startswith("COULD_NOT_RUN") for p in problems):
-        nxt = f"install the missing runner, then /{e['skill']} {e['arg']}"
-    elif policy == "REQUIRE_HUMAN":
-        nxt = f"/{e['skill']} {e['arg']}"
-    else:
-        nxt = f"/{e['skill']} {e['arg']} --fix"
+    # 10 section 6 and D13 item 7: the forward command is a named row of the
+    # skill's section 7f table, not a default. The skill's own rows are tried
+    # first, so `red`'s "a planned test already passes" routes to `/clarify`
+    # rather than to the generic resume. It is never `/status`, which reports
+    # and changes nothing.
+    phase = e.get("phase") or ""
+    at_limit = e.get("attempts", {}).get(phase, 0) >= e.get("max_attempts", {}).get(phase, 2)
+    kind = handoff_kind(e["skill"], problems, policy, at_limit=at_limit)
+    note = (last_result(e) or {}).get("note") or " ".join(str(p) for p in problems)
+    nxt = handoff_next(
+        e["skill"], kind, arg=e["arg"], run=e["run"],
+        agent=(phase_spec(e["skill"], phase) or {}).get("agent") or "the phase worker",
+        tool=refused_tool(note),
+    )
+    log("handoff.row", session_id=e.get("session_id"), run=e["run"], phase=phase,
+        row=kind, policy=policy)
     e["blocked_at"] = e["phase"] if policy == "REQUIRE_HUMAN" else None
     e["lease"] = None
     save_run(e)
@@ -2700,9 +2947,10 @@ def bind_lease(e: dict, args) -> None:
     if agent not in allowed:
         raise Refuse(f"phase {e['phase']} belongs to {sorted(allowed)}, not {args.agent!r}",
                      REFUSED)
-    if (phase_spec(e["skill"], e["phase"]) or {}).get("writes", "none") in ("none", "evidence"):
-        print(f"{e['run']} phase {e['phase']}: {agent} judges this checkpoint and holds no "
-              f"lease; its notes go under {evidence_prefix(e)}")
+    if is_judge(e["skill"], e["phase"]):
+        print(f"{e['run']} phase {e['phase']}: {agent} judges this checkpoint, holds no lease "
+              f"and writes nothing; it returns its evidence in the receipt's `findings` field "
+              f"and the sequencer persists it at {findings_path(e)}")
         return
     lease = e.get("lease") or {}
     if lease and lease.get("agent_id") and lease.get("agent_id") != args.agent_id:
@@ -2744,7 +2992,8 @@ def cmd_ingest_result(args) -> None:
             "agent": args.agent or "unknown", "agent_id": args.agent_id or "",
             "status": "could_not_run", "reason_code": "hook_fault",
             "candidate": {"id": e["run"], "input_checkpoint": e["candidate"]["checkpoint"]},
-            "claimed_paths": [], "evidence_refs": [],
+            "claimed_paths": [], "evidence_refs": [], "findings": None,
+            "findings_path": None,
             "note": "SubagentStop carried no agent_id/agent_type; the receipt cannot be bound "
                     "to the active phase and the candidate was not checkpointed.",
             "issues": [], "next": None, "changed": [],
@@ -2758,14 +3007,25 @@ def cmd_ingest_result(args) -> None:
 
     result = parse_receipt(raw, e, args.agent, args.agent_id)
     result["session_id"] = session_id
+    # D13 item 3: the receipt is valid, so its `findings` body is persisted
+    # verbatim at the fixed path before anything else is derived. The path is
+    # recorded in `<phase>-result.json` and in the handoff `findings_paths` list.
+    result["findings_path"] = persist_findings(e, result)
     root = candidate_root(e)
     problems = lease_problems(e, result)
 
     if result["status"] == "pass":
         # A worker cannot hash a file it is writing, so PENDING digests resolve
         # inside the root before the change set is derived from it.
-        result["digests_resolved"] = resolve_pending_digests(
-            e, candidate_changes(e), root)
+        try:
+            pending = candidate_changes(e)
+        except (OSError, ValueError, SystemExit) as exc:
+            # The checkpoint this phase started from is gone, or the diff against
+            # it cannot be taken. Nothing about this run can be derived, so it is
+            # an infra failure of the sequencer's own state, not a phase defect
+            # and not a malformed receipt.
+            return checkpoint_fault(state, e, result, exc)
+        result["digests_resolved"] = resolve_pending_digests(e, pending, root)
         changed = candidate_changes(e)
         result["changed"] = changed
         problems += change_problems(e, changed, result["claimed_paths"], root)
@@ -2819,6 +3079,28 @@ def cmd_ingest_result(args) -> None:
             f"a fresh {RESULT_SCHEMA} receipt",
             REFUSED,
         )
+
+
+def checkpoint_fault(state: dict, e: dict, result: dict, exc: BaseException) -> None:
+    """Ingest could not read the input checkpoint or diff against it.
+
+    `hook_fault` is reserved for a missing hook identity and a malformed
+    receipt; this is neither. The receipt was valid and the worker did its job —
+    the sequencer's own checkpoint is what is missing — so the run is blocked
+    for a human with the candidate root left exactly as it stands.
+    """
+    detail = str(exc).strip().splitlines()[-1] if str(exc).strip() else type(exc).__name__
+    note = (f"the input checkpoint {(e.get('candidate') or {}).get('checkpoint')!r} could not "
+            f"be read and the change set could not be derived: {detail[:400]}")
+    result.update({
+        "status": "could_not_run", "reason_code": "checkpoint_fault",
+        "changed": [], "claimed_paths": [], "note": note, "checkpointed": False,
+    })
+    write_json_atomic(work(e["run"]) / f"{e['phase']}-result.json", result)
+    write_phase_report(e, result, [f"COULD_NOT_RUN: checkpoint_fault: {note}"])
+    log("checkpoint_fault", session_id=result.get("session_id"), run=e["run"],
+        phase=e["phase"], detail=detail[:200])
+    block(state, e, [f"COULD_NOT_RUN: checkpoint_fault: {note}"], "REQUIRE_HUMAN")
 
 
 def cmd_run(args) -> None:
@@ -2997,6 +3279,9 @@ def run_block(state: dict) -> dict:
         "granted_keys": e.get("granted_keys") or [],
         "lease": e.get("lease"),
         "context": context_path(e["run"]),
+        # Printed only when the run was started with `--fix`, so a status block
+        # never names a report that does not exist (D14 item 2).
+        **({"fix_report": e["fix_report"]} if e.get("fix_report") else {}),
     }
 
 
@@ -3075,7 +3360,8 @@ def cmd_session_start(args) -> None:
         f"{args.session_id} provider {args.provider}/{doc['provider_version']}; "
         f"state_parsed={state_parsed}; stack_resolvable={stack_resolvable}; "
         f"candidate_mode={doc['candidate_mode']}"
-        + (f"; worktree unavailable: {prerequisites}" if repo and prerequisites else "")
+        + (f"; worktree unavailable (could_not_run reason_code=prerequisite_missing): "
+           f"{prerequisites}" if repo and prerequisites else "")
         + "; "
         + (f"live runs {live}" if live else "no live run: writes are denied outside a candidate")
     )
@@ -3091,6 +3377,12 @@ def build_parser() -> argparse.ArgumentParser:
     start = phase_ops.add_parser("start", help="model-callable: gate and enter phase 1")
     start.add_argument("skill")
     start.add_argument("arg")
+    start.add_argument(
+        "--fix", action="store_true",
+        help="this run was sent back by qa or review: record the newest of "
+             "docs/reports/qa-<story>.md and docs/reports/review-<story>.md as "
+             "run.yaml#fix_report and print it in the status block",
+    )
     start.add_argument(
         "--lenient", action="store_true",
         help="downgrade unresolvable-source to a recorded warning; refused for a story "

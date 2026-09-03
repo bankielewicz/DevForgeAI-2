@@ -2,12 +2,23 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://devforgeai.dev/schemas/devforgeai/v1/worker-result.schema.json",
   "title": "DevForgeAI worker result",
-  "description": "The receipt: the single JSON object a phase worker returns as its final message on either provider. It carries no file bodies and no hashes. A producer has already written its files inside the candidate root; a judge has written only its findings under .devforgeai/work/<run>/evidence/<agent>/, which is outside every candidate root, gitignored and never promoted. The sequencer validates this object at the identity-bearing SubagentStop event, diffs the candidate root against the input checkpoint to derive what actually changed, runs the transition oracle inside the root, checkpoints, and advances, retries, or rewinds.",
+  "description": "The receipt: the single JSON object a phase worker returns as its final message on either provider. It carries no file bodies and no hashes. A producer has already written its files inside the candidate root; a judge has written nothing anywhere and returns its evidence in `findings`, which the sequencer persists. The sequencer validates this object at the identity-bearing SubagentStop event, diffs the candidate root against the input checkpoint to derive what actually changed, runs the transition oracle inside the root, checkpoints, and advances, retries, or rewinds.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "run", "skill", "phase", "agent", "status", "candidate", "claimed_paths"],
+  "required": [
+    "schema",
+    "run",
+    "skill",
+    "phase",
+    "agent",
+    "status",
+    "candidate",
+    "claimed_paths"
+  ],
   "properties": {
-    "schema": {"const": "devforgeai.worker-result/v1"},
+    "schema": {
+      "const": "devforgeai.worker-result/v1"
+    },
     "run": {
       "type": "string",
       "minLength": 1,
@@ -30,17 +41,33 @@
       "description": "The canonical worker name, or a registered alias. Must resolve to the same canonical name as the stop event's agent_type; the model-supplied value is never identity."
     },
     "status": {
-      "enum": ["pass", "fail", "needs_user", "could_not_run"],
+      "enum": [
+        "pass",
+        "fail",
+        "needs_user",
+        "could_not_run"
+      ],
       "description": "Closed worker status vocabulary. gate_policy values are never returned here."
     },
     "reason_code": {
-      "enum": ["runner_missing", "timeout", "network", "hook_fault"],
-      "description": "Required when status is could_not_run; rejected with any other status."
+      "enum": [
+        "runner_missing",
+        "timeout",
+        "network",
+        "hook_fault",
+        "provider_tool_refused",
+        "prerequisite_missing",
+        "checkpoint_fault"
+      ],
+      "description": "Required when status is could_not_run; rejected with any other status. provider_tool_refused means the provider refused a tool call before any DevForgeAI hook ran. hook_fault is reserved for two causes only: a hook event that lacked identity, and a malformed receipt. prerequisite_missing: a project prerequisite for the candidate mode (git HEAD, ignored work dir, tracked settings or stack.yaml) is absent, sequencer-synthesised at phase start. checkpoint_fault: the sequencer could not take or diff a checkpoint, sequencer-synthesised at ingest."
     },
     "candidate": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "input_checkpoint"],
+      "required": [
+        "id",
+        "input_checkpoint"
+      ],
       "description": "Which candidate root the worker worked in, and which checkpoint it started from. Required on every status, because a judge that read a checkpoint must name the one it read.",
       "properties": {
         "id": {
@@ -61,26 +88,38 @@
       "type": "array",
       "maxItems": 64,
       "uniqueItems": true,
-      "items": {"$ref": "#/$defs/path"},
-      "description": "Every path the worker believes it created, edited or deleted inside the candidate root, root-relative. Empty on any status other than pass, and empty from a judge, whose only write path is .devforgeai/work/<run>/evidence/<agent>/ and lies outside every candidate root. The sequencer derives the truth from the checkpoint diff and refuses the receipt when the derived change set is not a subset of this list (UNCLAIMED_CHANGE). That subset check runs only on status pass: a producer that edited and then failed claims nothing by rule and has changed something in fact, so on a non-pass status the diff is recorded as changed_unchecked and no fence, policy or oracle check runs over it."
+      "items": {
+        "$ref": "#/$defs/path"
+      },
+      "description": "Every path the worker believes it created, edited or deleted inside the candidate root, root-relative. Empty on any status other than pass, and always empty from a judge, which holds no write tool at all. The sequencer derives the truth from the checkpoint diff and refuses the receipt when the derived change set is not a subset of this list (UNCLAIMED_CHANGE). That subset check runs only on status pass: a producer that edited and then failed claims nothing by rule and has changed something in fact, so on a non-pass status the diff is recorded as changed_unchecked and no fence, policy or oracle check runs over it."
     },
     "evidence_refs": {
       "type": "array",
       "maxItems": 16,
       "uniqueItems": true,
-      "items": {"$ref": "#/$defs/path"},
-      "description": "Paths to evidence the sequencer should read: a report inside the candidate root, or an oracle output the sequencer already wrote under .devforgeai/work/<run>/. A report-producing phase names its report here, and the report's own frontmatter carries the verdict that selects the handoff row. A judge names the findings files it wrote under .devforgeai/work/<run>/evidence/<agent>/. Never a file body."
+      "items": {
+        "$ref": "#/$defs/path"
+      },
+      "description": "Paths to evidence the sequencer should read: a report inside the candidate root, or an oracle output the sequencer already wrote under .devforgeai/work/<run>/. A report-producing phase names its report here, and the report's own frontmatter carries the verdict that selects the handoff row. A judge names no findings path here: it returns its evidence in `findings`, and the sequencer, not the worker, chooses the path that string is persisted to. Never a file body."
     },
     "note": {
       "type": "string",
       "maxLength": 16384,
       "description": "At most three lines of plain summary. Rendered into <phase>-report.md."
     },
+    "findings": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 16384,
+      "description": "The judge's detailed evidence, as prose. Required when the phase's worker is a judge (the registry writes mode for the active phase is none) and the status is pass or fail; optional on a judge's needs_user or could_not_run; forbidden on a producer receipt. At most 16384 UTF-8 bytes; maxLength here bounds code points, and the sequencer enforces the byte bound. The sequencer never truncates it: an oversize findings refuses the receipt like any other defect. At ingest the sequencer writes the decoded string verbatim to .devforgeai/work/<run>/evidence/<agent>/findings.md, records that path as findings_path in <phase>-result.json, and references it from the handoff; the next phase's worker reads it by path. issues[] stays the bounded routing summary of at most 10 rows. This string enters the primary context as part of the subagent's returned result, which is why it is bounded."
+    },
     "issues": {
       "type": "array",
       "maxItems": 10,
       "description": "One-line findings. Not a repair instruction and not a status.",
-      "items": {"$ref": "#/$defs/issue"}
+      "items": {
+        "$ref": "#/$defs/issue"
+      }
     },
     "next": {
       "type": "string",
@@ -90,17 +129,66 @@
   },
   "allOf": [
     {
-      "if": {"required": ["status"], "properties": {"status": {"const": "could_not_run"}}},
-      "then": {"required": ["reason_code"]},
-      "else": {"not": {"required": ["reason_code"]}}
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "could_not_run"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "reason_code"
+        ]
+      },
+      "else": {
+        "not": {
+          "required": [
+            "reason_code"
+          ]
+        }
+      }
     },
     {
-      "if": {"required": ["status"], "properties": {"status": {"not": {"const": "pass"}}}},
-      "then": {"properties": {"claimed_paths": {"maxItems": 0}}}
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "not": {
+              "const": "pass"
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "claimed_paths": {
+            "maxItems": 0
+          }
+        }
+      }
     },
     {
-      "if": {"required": ["next"]},
-      "then": {"required": ["status"], "properties": {"status": {"const": "fail"}}}
+      "if": {
+        "required": [
+          "next"
+        ]
+      },
+      "then": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "fail"
+          }
+        }
+      }
     }
   ],
   "$defs": {
@@ -113,15 +201,32 @@
     },
     "issue": {
       "anyOf": [
-        {"type": "string", "minLength": 1, "maxLength": 300},
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["text"],
+          "required": [
+            "text"
+          ],
           "properties": {
-            "id": {"type": "string", "minLength": 1, "maxLength": 120},
-            "kind": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
-            "text": {"type": "string", "minLength": 1, "maxLength": 300}
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "kind": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            },
+            "text": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            }
           }
         }
       ]
