@@ -4,13 +4,15 @@ Runtime code for DevForgeAI's provider hook layer: the process a provider's hook
 
 ## What is here today
 
-`reference/claude-python/` is a **Claude-only Python reference proof of concept** (`hookd.py`, an explicit check registry, `policy.json`, a settings fixture, an installer and a cookbook). Its status:
+There are two provider-specific Python reference proofs of concept:
 
-- 16/16 subprocess test cases pass locally (`python3 components/hook-runtime/reference/claude-python/tests/run_tests.py`).
-- The scratch installer has been tested against a throwaway project; it has never been run against this repository.
-- No live provider session has exercised it. Every protocol fact it relies on was read from the Claude Code hooks and permissions references on 2026-09-03, not observed.
-- It implements Claude's hook input and output schema only. Claude and Codex have different hook schemas and outputs, so it must not be called provider-neutral or dual-provider.
-- It is **not** the authoritative DevForge hook contract. The eventual implementation belongs in protected DevForge and is expected to be Rust; this reference exists to pin down behaviour (one dispatcher per event, explicit registry, fail-closed critical checks, exit-2 blocking, no `allow`) that the real runtime must reproduce.
-- `settings.claude.json` inside the reference is a fixture, not an installable provider fragment. Installing it requires merging into an existing settings file, which `install-manifest.yaml` cannot yet express (a `mode: merge-json` style operation is a separate design task).
+- `reference/claude-python/` contains the Claude event adapter, explicit check registry, policy, settings fixture, installer, tests and cookbook.
+- `reference/codex-python/` contains the Codex event adapter, a supervisor-isolated policy engine, explicit built-in and project registries, policy schema, `.codex/hooks.json` fixture, non-destructive installer, tests and cookbook.
 
-See `reference/claude-python/COOKBOOK.md` for the protocol table, failure policy, add-a-check recipe and best practices.
+They reuse an architectural pattern, not a wire protocol. Claude and Codex expose different event fields, decision JSON, identity surfaces, configuration files and trust behavior. Neither reference may be described as provider-neutral or as evidence for the other provider.
+
+The Codex reference registers one handler for each of four lifecycle events and routes every handler to the same dispatcher. Its ordered registry is the extension seam: adding a check for an already registered event does not add a hook entry. A genuinely new event still needs one configuration entry and a tested event adapter because Codex has no all-events registration.
+
+These are **not** the authoritative DevForgeAI hook or sequencer contracts. They are executable protocol cookbooks. Hooks remain early guardrails; candidate-root diffs, transition oracles, explicit promotion and CI are the material enforcement chain. Each cookbook states its own `DOCUMENTED`, `SIMULATED`, `OBSERVED_LIVE` or `NOT_OBSERVED_LIVE` evidence status and must be read before making a provider-support claim.
+
+See `reference/claude-python/COOKBOOK.md` and `reference/codex-python/COOKBOOK.md` for their protocol matrices, extension procedures, failure policies, test commands and live-probe recipes.
