@@ -629,8 +629,24 @@ def allowed_agents(enforcement: dict) -> set[str]:
 
 
 def phase_run_keys(enforcement: dict) -> set[str]:
+    """The registry's run keys for the active phase, before the run narrows them."""
     spec = phase_spec(enforcement.get("skill", ""), enforcement.get("phase", ""))
     return set(spec["run_keys"]) if spec else set()
+
+
+def granted_keys(enforcement: dict) -> set[str]:
+    """The keys the active phase may broker: `phase_run_keys` ∩ the run's
+    `commands.use` (10 §3 "run keys", §9 `granted_keys`). The sequencer computes
+    this once at every phase entry and stores it in `run.yaml#granted_keys`;
+    the status block, the dispatcher and `devforgeai run` all read that stored
+    value, so no key is ever advertised that another check refuses (D16)."""
+    use = set((enforcement.get("commands") or {}).get("use") or [])
+    return phase_run_keys(enforcement) & use
+
+
+def stored_granted_keys(enforcement: dict) -> set[str]:
+    """What `run.yaml#granted_keys` holds; empty, never recomputed, when absent."""
+    return set(enforcement.get("granted_keys") or [])
 
 
 def run_id(skill: str, arg: str) -> str:

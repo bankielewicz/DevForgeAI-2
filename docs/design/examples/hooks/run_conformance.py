@@ -37,7 +37,7 @@ SCHEMA = "devforgeai.worker-result/v1"
 MARKER = ".devforgeai/candidate"
 
 sys.path.insert(0, str(HERE))
-from policy import is_judge, skill_key            # noqa: E402
+from policy import granted_keys as effective_keys, is_judge, skill_key   # noqa: E402
 
 RED = {"agent_id": "a-red", "agent_type": "red_dev"}
 RED_LEGACY = {"agent_id": "a-red", "agent_type": "dev-tdd-red-tester"}
@@ -255,8 +255,11 @@ def set_phase(root: Path, phase: str, run_id: str = "STORY-001") -> None:
         "commands": {"source": ".devforgeai/stack.yaml#python", "use": ["test", "lint"]},
         "write_fence": ["tinyapp/text.py", "tests/test_text.py", "pyproject.toml"],
         "test_paths": ["tests/test_text.py"],
-        "granted_keys": ["test"] if phase in ("red", "smoke") else ["build", "lint", "test"],
     })
+    # The same computation the sequencer performs at phase entry (D16): the
+    # registry's run keys narrowed by the story's commands.use. The fixture
+    # story authorises `test` and `lint`, never `build`.
+    rec["granted_keys"] = sorted(effective_keys(rec))
     sub = LEASES.get(phase)
     rec["lease"] = None if sub is None else {
         "session_id": "session-1", "agent": sub["agent_type"],
@@ -1873,8 +1876,8 @@ def dapper_policy_backstop() -> tuple[bool, str]:
             "test_paths": ["tests/RepoTests.cs"],
             "commands": {"source": ".devforgeai/stack.yaml#csharp",
                          "use": ["build", "test", "lint"]},
-            "granted_keys": ["build", "lint", "test"],
         })
+        rec["granted_keys"] = sorted(effective_keys(rec))   # green: build, test (D16)
         save_record(root, rec)
         return root
 
@@ -2833,6 +2836,11 @@ DISPATCHER_CASES = [
     ("primary phase start denied while a run is active", 2, event("PreToolUse", "Bash", {"command": "devforgeai phase start dev STORY-002"}), "red", "claude"),
     ("lease holder run test allowed", 0, event("PreToolUse", "Bash", {"command": "devforgeai run test"}, RED), "red", "claude"),
     ("run key the phase does not grant denied", 2, event("PreToolUse", "Bash", {"command": "devforgeai run lint"}, RED), "red", "claude"),
+    # D16: the effective set is run_keys ∩ commands.use. The fixture story's
+    # commands.use is [test, lint]; refactor's registry keys are test, build, lint.
+    ("lease holder run lint at refactor allowed: granted by the phase and authorised by the story", 0, event("PreToolUse", "Bash", {"command": "devforgeai run lint"}, LEASES["refactor"]), "refactor", "claude"),
+    ("run build at refactor denied: the phase grants it but the story's commands.use does not", 2, event("PreToolUse", "Bash", {"command": "devforgeai run build"}, LEASES["refactor"]), "refactor", "claude"),
+    ("run build at green denied: never advertised, never admitted", 2, event("PreToolUse", "Bash", {"command": "devforgeai run build"}, GREEN), "green", "codex"),
     ("run denied to a worker that is not the lease holder", 2, event("PreToolUse", "Bash", {"command": "devforgeai run test"}, {"agent_id": "a-x", "agent_type": "red_dev"}), "red", "claude"),
     ("run denied to the primary window", 2, event("PreToolUse", "Bash", {"command": "devforgeai run test"}), "red", "codex"),
     ("lease holder run test allowed on Codex from inside the root", 0, "CODEX_RUN", "red", "codex"),
@@ -2951,7 +2959,7 @@ GRAMMAR_CASES = [
     # Worker-callable: `run <key>` needs the lease, or the SubagentStop marker.
     ("run refused with no lease and no marker", 1, ["run", "test"], None, "no lease is held"),
     ("run accepted from the SubagentStop marker", 1, ["run", "test"], "SubagentStop", "classification: NO_TESTS"),
-    ("run refuses a key the phase does not grant", 1, ["run", "lint"], "SubagentStop", "does not grant"),
+    ("run refuses a key the phase does not grant", 1, ["run", "lint"], "SubagentStop", "does not include 'lint'"),
 
     # Hook-only: refused without the env, accepted with the matching event.
     ("hook-only phase next refused without hook env", 1, ["phase", "next"], None, "hook-only"),
@@ -2976,7 +2984,53 @@ GRAMMAR_CASES = [
     ("research without its runner is could_not_run", 3, ["phase", "start", "research", "topic"], None, "runner_missing"),
 ]
 
+def granted_keys_backstop() -> tuple[bool, str]:
+    """D16: `run.yaml#granted_keys` is run_keys ∩ commands.use, computed at phase
+    entry; `status` prints it and `devforgeai run` refuses anything outside it,
+    including a key the registry grants but the story does not authorise."""
+    root = started_project("granted", phase="refactor")
+    rec = record(root)
+    status_code, status_out = sequence(root, "status")
+    # positive: the story authorises lint and refactor grants it
+    lint_code, lint_out = sequence(root, "run", "lint", hook_event="SubagentStop")
+    # hostile 1: build is a refactor registry key the story never authorised
+    build_code, build_out = sequence(root, "run", "build", hook_event="SubagentStop")
+    # hostile 2: a story that authorises only `test` narrows refactor to [test]
+    rec2 = record(root)
+    rec2["commands"]["use"] = ["test"]
+    rec2["granted_keys"] = sorted(effective_keys(rec2))
+    save_record(root, rec2)
+    narrow_code, narrow_out = sequence(root, "run", "lint", hook_event="SubagentStop")
+    narrow_status = sequence(root, "status")[1]
+    # hostile 3: a hand-edited run file without the key admits nothing
+    rec3 = record(root)
+    rec3.pop("granted_keys", None)
+    save_record(root, rec3)
+    none_code, none_out = sequence(root, "run", "test", hook_event="SubagentStop")
+    # the sequencer's own phase entry computes the same set from a real start
+    fresh = started_project("granted-red")
+    fresh_rec = record(fresh)
+    status_keys = yaml.safe_load(status_out)["run"]["granted_keys"]
+    narrow_keys = yaml.safe_load(narrow_status)["run"]["granted_keys"]
+    passed = all((
+        rec["granted_keys"] == ["lint", "test"],
+        status_code == 0 and status_keys == ["lint", "test"],
+        lint_code in (0, 3),                      # runs, or could_not_run with no linter
+        "does not include" not in lint_out,
+        build_code == 1 and "does not include 'build'" in build_out,
+        narrow_code == 1 and "does not include 'lint'" in narrow_out,
+        narrow_keys == ["test"],
+        none_code == 1 and "does not include 'test'" in none_out,
+        fresh_rec["granted_keys"] == ["test"],
+    ))
+    return passed, (f"refactor={rec['granted_keys']} lint={lint_code} build={build_code} "
+                    f"narrow={narrow_code} none={none_code} red={fresh_rec['granted_keys']}\n"
+                    f"{build_out.strip()}\n{narrow_out.strip()}\n{none_out.strip()}")
+
+
 BACKSTOPS = [
+    ("granted_keys is run_keys ∩ commands.use, stored once, printed and enforced alike",
+     granted_keys_backstop),
     ("the oracle catches ORM drift inside the candidate root", transition_backstop),
     ("the command broker catches a stack command that edits the tree", command_broker_backstop),
     ("Claude SubagentStop route binds identity, lease, fence, diff and oracle",

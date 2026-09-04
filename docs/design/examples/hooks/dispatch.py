@@ -50,7 +50,7 @@ from policy import (
     judge_write_denial,
     parse_apply_patch,
     phase_names,
-    phase_run_keys,
+    stored_granted_keys,
     phase_spec,
     project_relative,
     validate_phase_write_path,
@@ -348,9 +348,10 @@ def check_sequencer(argv: list[str], enf: dict, in_subagent: bool, agent_type: s
                 f"LEASE_HELD: the lease for phase {enf.get('phase')} belongs to "
                 f"{lease.get('agent')}/{lease.get('agent_id')}, not to this caller"
             )
-        if argv[2] not in phase_run_keys(enf):
+        if argv[2] not in stored_granted_keys(enf):
             raise Block(
-                f"phase {enf.get('phase')} grants {sorted(phase_run_keys(enf))}, not {argv[2]!r}"
+                f"phase {enf.get('phase')} grants {sorted(stored_granted_keys(enf))} "
+                f"(its run_keys ∩ the story's commands.use), not {argv[2]!r}"
             )
         return
 
@@ -534,7 +535,7 @@ def worker_context(enf: dict) -> str:
         if writes == "none" else
         f"Write inside the candidate root {root}; every path you touch is relative to it and "
         f"must match {enf.get('write_fence')}. Run the tests with "
-        f"`devforgeai run <key>` for {sorted(phase_run_keys(enf))}."
+        f"`devforgeai run <key>` for {sorted(stored_granted_keys(enf))}."
     )
     return (
         f"DevForgeAI {enf.get('skill')} phase {phase}. Your slice is "

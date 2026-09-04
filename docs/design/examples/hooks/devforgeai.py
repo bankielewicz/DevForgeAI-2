@@ -83,7 +83,8 @@ from policy import (
     matches,
     phase_fields,
     phase_names,
-    phase_run_keys,
+    granted_keys,
+    stored_granted_keys,
     phase_spec,
     fix_report_sources,
     project_relative,
@@ -874,8 +875,12 @@ def command_entry(stack: dict, key: str) -> dict | None:
 
 def run_key(e: dict, key: str) -> dict:
     """Run one stack.yaml command. Returns a structured outcome record."""
-    if key not in ((e.get("commands") or {}).get("use") or []):
-        raise Refuse(f"run does not authorise command key '{key}'")
+    if key not in stored_granted_keys(e):
+        raise Refuse(
+            f"run.yaml#granted_keys {sorted(stored_granted_keys(e))} does not include "
+            f"'{key}': phase {e.get('phase')} run_keys ∩ story commands.use "
+            f"{sorted((e.get('commands') or {}).get('use') or [])}"
+        )
     stack = stack_section(e)
     if stack is None:
         return {"key": key, "classification": "INFRA_FAILURE", "exit": -1,
@@ -2473,7 +2478,7 @@ def resume_run(state: dict, e: dict, args) -> None:
         state.setdefault("stories", {}).setdefault(e["arg"], {})["status"] = "in_dev"
     e["phase"] = phase
     e["attempts"] = {name: 0 for name in phase_names(e["skill"])}
-    e["granted_keys"] = sorted(phase_run_keys(e))
+    e["granted_keys"] = sorted(granted_keys(e))
     e["blocked_at"] = None
     e["lease"] = None
     save_run(e)
@@ -2624,7 +2629,7 @@ def cmd_phase_start(args) -> None:
             REFUSED,
         )
 
-    e["granted_keys"] = sorted(phase_run_keys(e))
+    e["granted_keys"] = sorted(granted_keys(e))
     e["fix_report"] = resolve_fix_report(skill, args.arg, bool(args.fix))
     if warnings:
         e["gate_warnings"] = warnings
@@ -2798,7 +2803,7 @@ def rewind(state: dict, e: dict, target: str, reason: str) -> None:
     e["attempts"][target] = e["attempts"].get(target, 0) + 1
     e["bounce_count"] = e.get("bounce_count", 0) + 1
     e["phase"] = target
-    e["granted_keys"] = sorted(phase_run_keys(e))
+    e["granted_keys"] = sorted(granted_keys(e))
     e["lease"] = None
     e.pop("red_hashes", None)
     for f in work(e["run"]).glob("*-report.md"):
@@ -2904,7 +2909,7 @@ def advance(state: dict, e: dict, result: dict | None = None) -> None:
         save_run(e)
         return finish_run(state, e, result)
     e["phase"] = nxt
-    e["granted_keys"] = sorted(phase_run_keys(e))
+    e["granted_keys"] = sorted(granted_keys(e))
     e["lease"] = None
     save_run(e)
     save(state)
@@ -3123,8 +3128,12 @@ def cmd_run(args) -> None:
     state = load()
     e = enf(state, args.run)
     phase = e["phase"]
-    if args.key not in phase_run_keys(e):
-        raise Refuse(f"phase {phase} does not grant stack command key {args.key!r}", REFUSED)
+    if args.key not in stored_granted_keys(e):
+        raise Refuse(
+            f"run.yaml#granted_keys {sorted(stored_granted_keys(e))} does not include "
+            f"{args.key!r}: phase {phase} run_keys ∩ the story's commands.use",
+            REFUSED,
+        )
     if os.environ.get("DEVFORGEAI_HOOK_EVENT") != "SubagentStop" and not (e.get("lease") or {}):
         raise Refuse(
             f"no lease is held for phase {phase}; `devforgeai run <key>` belongs to the "
