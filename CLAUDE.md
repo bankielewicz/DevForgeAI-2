@@ -11,7 +11,7 @@ DevForgeAI is a spec-driven development framework for AI coding agents (Claude C
 All commands run from the repository root. The Python package lives at `components/research-core/src`, so it must be on `PYTHONPATH`.
 
 ```bash
-# Research Core tests (165 tests, ~75 s; includes a wheel build)
+# Research Core tests (224 tests, ~90 s; includes a wheel build)
 PYTHONPATH=components/research-core/src python3 -m pytest tests/research -q
 # one test
 PYTHONPATH=components/research-core/src python3 -m pytest tests/research/test_store.py -k seal -q
@@ -24,6 +24,10 @@ python3 docs/design/specs/verify.py                 # or --only v1,v2,v4,v8
 # Sequencer + hook dispatcher draft (docs/design/examples/hooks/)
 python3 docs/design/examples/hooks/run_conformance.py   # allow/deny table; exit 0 = every row holds
 bash docs/design/examples/hooks/demo_sequencer.sh       # STORY-001 through dev in copy and worktree mode
+
+# Research-gap checkpoint validator (CP-00, staged promotion candidate; exit 0 holds, 1 rejected, 2 usage, 3 could not run)
+PYTHONPATH=components/research-core/src python3 -m devforgeai.checkpoint validate --plan docs/research/spec-driven-development-gap-closure
+PYTHONPATH=components/research-core/src python3 -m pytest tests/research/test_gap_checkpoints.py -q   # 59 subprocess cases
 
 # hookd reference proof of concept (components/hook-runtime/reference/claude-python/)
 python3 components/hook-runtime/reference/claude-python/tests/run_tests.py
