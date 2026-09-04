@@ -1,0 +1,65 @@
+run_at: 2026-09-04T15:49:58Z
+candidate: c784ab7 (validator and CLI bytes unchanged); tests: tests/research/test_gap_checkpoints.py with the CS-1..CS-3 hostile tests added
+command: PYTHONPATH=components/research-core/src python3 -m pytest tests/research/test_gap_checkpoints.py -q -p no:cacheprovider -rf --tb=line
+expectation: every new test fails on its assertion (exit code or message), none on an error; every pre-existing test passes
+result: 18 failed (all AssertionError), 59 passed
+--- output ---
+......F.......F.FF.....FF........F..FF...........FF.........FFF...F....F [ 93%]
+..FF.                                                                    [100%]
+=================================== FAILURES ===================================
+E   AssertionError: 0 != 2 : 3 record(s), 0 problem(s); outcome PASS
+/usr/lib/python3.12/unittest/case.py:878: AssertionError: 0 != 2 : 3 record(s), 0 problem(s); outcome PASS
+E   AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+/usr/lib/python3.12/unittest/case.py:878: AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+E   AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+/usr/lib/python3.12/unittest/case.py:878: AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+E   AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+/usr/lib/python3.12/unittest/case.py:878: AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+E   AssertionError: 0 != 2 : 3 record(s), 0 problem(s); outcome PASS
+/usr/lib/python3.12/unittest/case.py:878: AssertionError: 0 != 2 : 3 record(s), 0 problem(s); outcome PASS
+E   AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+/usr/lib/python3.12/unittest/case.py:878: AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+E   AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+/usr/lib/python3.12/unittest/case.py:878: AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+E   AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+/usr/lib/python3.12/unittest/case.py:878: AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+E   AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+/usr/lib/python3.12/unittest/case.py:878: AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+E   AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+/usr/lib/python3.12/unittest/case.py:878: AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+E   AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+/usr/lib/python3.12/unittest/case.py:878: AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+E   AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+/usr/lib/python3.12/unittest/case.py:878: AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+E   AssertionError: 0 != 2 : 3 record(s), 0 problem(s); outcome PASS
+/usr/lib/python3.12/unittest/case.py:878: AssertionError: 0 != 2 : 3 record(s), 0 problem(s); outcome PASS
+E   AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+/usr/lib/python3.12/unittest/case.py:878: AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+E   AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+/usr/lib/python3.12/unittest/case.py:878: AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+E   AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+/usr/lib/python3.12/unittest/case.py:878: AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+E   AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+/usr/lib/python3.12/unittest/case.py:878: AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+E   AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+/usr/lib/python3.12/unittest/case.py:878: AssertionError: 0 != 1 : 3 record(s), 0 problem(s); outcome PASS
+=========================== short test summary info ============================
+FAILED tests/research/test_gap_checkpoints.py::GapCheckpointValidatorTests::test_closed_record_without_diff_rejected
+FAILED tests/research/test_gap_checkpoints.py::GapCheckpointValidatorTests::test_contract_policy_digest_mismatch_rejected
+FAILED tests/research/test_gap_checkpoints.py::GapCheckpointValidatorTests::test_diff_base_not_ancestor_rejected
+FAILED tests/research/test_gap_checkpoints.py::GapCheckpointValidatorTests::test_diff_head_not_head_rejected
+FAILED tests/research/test_gap_checkpoints.py::GapCheckpointValidatorTests::test_git_root_option_rejected
+FAILED tests/research/test_gap_checkpoints.py::GapCheckpointValidatorTests::test_group_writable_executable_rejected
+FAILED tests/research/test_gap_checkpoints.py::GapCheckpointValidatorTests::test_missing_executable_rejected
+FAILED tests/research/test_gap_checkpoints.py::GapCheckpointValidatorTests::test_missing_promotion_evidence_rejected
+FAILED tests/research/test_gap_checkpoints.py::GapCheckpointValidatorTests::test_missing_release_manifest_rejected
+FAILED tests/research/test_gap_checkpoints.py::GapCheckpointValidatorTests::test_release_manifest_entry_tampered_rejected
+FAILED tests/research/test_gap_checkpoints.py::GapCheckpointValidatorTests::test_release_manifest_without_schema_rejected
+FAILED tests/research/test_gap_checkpoints.py::GapCheckpointValidatorTests::test_schema_from_plan_tree_ignored
+FAILED tests/research/test_gap_checkpoints.py::GapCheckpointValidatorTests::test_schema_option_rejected
+FAILED tests/research/test_gap_checkpoints.py::GapCheckpointValidatorTests::test_schema_set_digest_mismatch_rejected
+FAILED tests/research/test_gap_checkpoints.py::GapCheckpointValidatorTests::test_symlinked_executable_rejected
+FAILED tests/research/test_gap_checkpoints.py::GapCheckpointValidatorTests::test_unlisted_release_file_rejected
+FAILED tests/research/test_gap_checkpoints.py::GapCheckpointValidatorTests::test_user_owned_executable_rejected
+FAILED tests/research/test_gap_checkpoints.py::GapCheckpointValidatorTests::test_writable_ancestor_rejected
+18 failed, 59 passed in 15.79s

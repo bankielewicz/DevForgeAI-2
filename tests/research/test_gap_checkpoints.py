@@ -104,10 +104,13 @@ class Scratch:
         self._tmp = tempfile.TemporaryDirectory(prefix="dfai-cp00-")
         self._ext = tempfile.TemporaryDirectory(prefix="dfai-cp00-ext-")
         self.root = Path(self._tmp.name)
-        # A "protected" executable outside every agent-writable workspace.
-        self.executable = Path(self._ext.name) / "devforge"
-        self.executable.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-        self.exe_sha = sha256(self.executable)
+        # A release tree outside every agent-writable workspace, laid out as
+        # components/devforge-release/INSTALLED-LAYOUT.md requires. It is
+        # user-owned here: the subprocess path must reject it (CS-1.3) and
+        # only the in-process seam of CS-1.7 may present it as root-owned.
+        self.release_root = Path(self._ext.name) / "devforge" / "1.0.0-test"
+        self.executable = self.release_root / "bin" / "devforge"
+        self.write_release_tree()
         (self.root / "schemas" / "devforgeai" / "v1").mkdir(parents=True)
         shutil.copy2(SCHEMA, self.root / "schemas" / "devforgeai" / "v1" / SCHEMA.name)
         (self.root / "src").mkdir()
@@ -128,6 +131,26 @@ class Scratch:
     def cleanup(self) -> None:
         self._tmp.cleanup()
         self._ext.cleanup()
+
+    def write_release_tree(self, manifest_entries: list[str] | None = None) -> None:
+        """Write the installed layout: bin/devforge, lib/, schemas/, contracts/, RELEASE.sha256."""
+        root = self.release_root
+        for sub in ("bin", "lib/devforgeai/checkpoint", "schemas/devforgeai/v1", "contracts"):
+            (root / sub).mkdir(parents=True, exist_ok=True)
+        (root / "bin" / "devforge").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        (root / "bin" / "devforge").chmod(0o755)
+        (root / "lib" / "devforgeai" / "__init__.py").write_text("", encoding="utf-8")
+        (root / "lib" / "devforgeai" / "checkpoint" / "validate.py").write_text("# installed copy\n", encoding="utf-8")
+        shutil.copy2(SCHEMA, root / "schemas" / "devforgeai" / "v1" / SCHEMA.name)
+        (root / "contracts" / "MANIFEST.sha256").write_text(
+            f"{SHA}  schemas/devforgeai/v1/{SCHEMA.name}\n", encoding="utf-8")
+        files = [q for q in sorted(root.rglob("*")) if q.is_file() and q.name != "RELEASE.sha256"]
+        lines = manifest_entries if manifest_entries is not None else [
+            f"{sha256(q)}  {q.relative_to(root).as_posix()}" for q in files]
+        (root / "RELEASE.sha256").write_text("# scratch release\n" + "\n".join(lines) + "\n", encoding="utf-8")
+        self.exe_sha = sha256(root / "bin" / "devforge")
+        self.schema_sha = sha256(root / "schemas" / "devforgeai" / "v1" / SCHEMA.name)
+        self.policy_sha = sha256(root / "contracts" / "MANIFEST.sha256")
 
     def git(self, *argv: str) -> str:
         completed = subprocess.run(["git", "-C", str(self.root), *argv],
@@ -205,8 +228,8 @@ class Scratch:
             "promotion_evidence_path": f"{dossier}/evidence/promotion.txt",
             "promotion_evidence_sha256": sha256(self.root / dossier / "evidence" / "promotion.txt"),
             "executable_path": str(self.executable), "executable_sha256": self.exe_sha,
-            "schema_set_version": "v1", "schema_set_sha256": SHA,
-            "contract_policy_version": "1", "contract_policy_sha256": SHA,
+            "schema_set_version": "v1", "schema_set_sha256": self.schema_sha,
+            "contract_policy_version": "1", "contract_policy_sha256": self.policy_sha,
             "installation_owner": "root",
             "permissions_evidence_path": f"{dossier}/evidence/permissions.txt",
             "permissions_evidence_sha256": sha256(self.root / dossier / "evidence" / "permissions.txt"),
@@ -432,6 +455,131 @@ class GapCheckpointValidatorTests(unittest.TestCase):
         _, rec = self._closed_scratch()
         rec["human_closure"]["decision"] = "ACCEPT_RESEARCH_DISPOSITION"
         self._expect("S06.5", "legal only for RESEARCH_ONLY")
+
+    # -- corrective specification 001 (reviews/codex-security-2026-09-04) --
+
+    def test_missing_executable_rejected(self) -> None:                       # CS-1.1
+        _, rec = self._closed_scratch()
+        rec["enforcement"]["protected_release"]["executable_path"] = str(self.scratch.release_root / "bin" / "absent")
+        self._expect("S06.9", "executable missing")
+
+    def test_missing_promotion_evidence_rejected(self) -> None:               # CS-1.1
+        _, rec = self._closed_scratch()
+        rec["enforcement"]["protected_release"]["promotion_evidence_path"] = str(self.scratch.release_root / "absent.txt")
+        self._expect("S06.9", "promotion_evidence_path missing")
+
+    def test_missing_release_manifest_rejected(self) -> None:                 # CS-1.2
+        self._closed_scratch()
+        (self.scratch.release_root / "RELEASE.sha256").unlink()
+        self._expect("S06.9", "RELEASE.sha256 missing")
+
+    def test_user_owned_executable_rejected(self) -> None:                    # CS-1.3
+        self._closed_scratch()          # the fixture tree is owned by this user, not uid 0
+        self._expect("S06.9", "not owned by uid 0")
+
+    def test_group_writable_executable_rejected(self) -> None:                # CS-1.3
+        self._closed_scratch()
+        self.scratch.executable.chmod(0o775)
+        self._expect("S06.9", "group or other writable")
+
+    def test_symlinked_executable_rejected(self) -> None:                     # CS-1.3
+        _, rec = self._closed_scratch()
+        link = self.scratch.release_root / "bin" / "devforge-link"
+        link.symlink_to(self.scratch.executable)
+        rec["enforcement"]["protected_release"]["executable_path"] = str(link)
+        self._expect("S06.9", "symbolic link")
+
+    def test_writable_ancestor_rejected(self) -> None:                        # CS-1.3
+        self._closed_scratch()          # the tree lives under a sticky world-writable temp dir
+        self._expect("S06.9", "ancestor")
+
+    def test_release_manifest_entry_tampered_rejected(self) -> None:          # CS-1.4
+        self._closed_scratch()
+        (self.scratch.release_root / "lib" / "devforgeai" / "checkpoint" / "validate.py").write_text(
+            "# tampered\n", encoding="utf-8")
+        self._expect("S06.9", "does not verify")
+
+    def test_unlisted_release_file_rejected(self) -> None:                    # CS-1.4
+        self._closed_scratch()
+        (self.scratch.release_root / "lib" / "extra.py").write_text("print('unlisted')\n", encoding="utf-8")
+        self._expect("S06.9", "not listed in RELEASE.sha256")
+
+    def test_release_manifest_without_schema_rejected(self) -> None:          # CS-1.4
+        self._closed_scratch()
+        manifest = self.scratch.release_root / "RELEASE.sha256"
+        manifest.write_text("".join(line for line in manifest.read_text().splitlines(keepends=True)
+                                    if "schema.json" not in line), encoding="utf-8")
+        self._expect("S06.9", "schema")
+
+    def test_schema_set_digest_mismatch_rejected(self) -> None:               # CS-1.5
+        _, rec = self._closed_scratch()
+        rec["enforcement"]["protected_release"]["schema_set_sha256"] = "5" * 64
+        self._expect("S06.9", "schema_set_sha256")
+
+    def test_contract_policy_digest_mismatch_rejected(self) -> None:          # CS-1.5
+        _, rec = self._closed_scratch()
+        rec["enforcement"]["protected_release"]["contract_policy_sha256"] = "6" * 64
+        self._expect("S06.9", "contract_policy_sha256")
+
+    def test_schema_option_rejected(self) -> None:                            # CS-2.1
+        self.scratch.materialize()
+        self.scratch.commit()
+        code, out = run_validator(self.scratch.plan, "--schema", str(SCHEMA))
+        self.assertEqual(code, 2, out)
+
+    def test_git_root_option_rejected(self) -> None:                          # CS-2.1, CS-2.3
+        self.scratch.materialize()
+        self.scratch.commit()
+        code, out = run_validator(self.scratch.plan, "--git-root", str(self.scratch.root))
+        self.assertEqual(code, 2, out)
+
+    def test_schema_from_plan_tree_ignored(self) -> None:                     # CS-2.2
+        # A permissive schema above the plan must not change a rejection.
+        rec = self.scratch.records["CP-01"]
+        rec["admitted_inputs"] = [admitted_input(subject_sha256="sha256:abc")]
+        self.scratch.materialize()
+        permissive = self.scratch.root / "schemas" / "devforgeai" / "v1" / SCHEMA.name
+        permissive.write_text("{}\n", encoding="utf-8")
+        self.scratch.commit()
+        code, out = run_validator(self.scratch.plan)
+        self.assertEqual(code, 1, out)
+        self.assertIn("SCHEMA", out)
+
+    def test_closed_record_without_diff_rejected(self) -> None:               # CS-3.1
+        evidence = self.scratch.commit("evidence")
+        self.scratch.close("CP-00", evidence)
+        self.scratch.materialize()
+        self.scratch.commit("closure")
+        code, out = run_validator(self.scratch.plan)
+        self.assertEqual(code, 2, out)
+        self.assertIn("--diff", out)
+
+    def test_diff_head_not_head_rejected(self) -> None:                       # CS-3.2
+        self.scratch.write_dossier("CP-00")
+        self.scratch.write_candidate("CP-00")
+        self.scratch.materialize()
+        base = self.scratch.commit("work")
+        self.scratch.close("CP-00", base)
+        self.scratch.materialize()
+        head = self.scratch.commit("closure")
+        self.scratch.commit("after closure")
+        code, out = run_validator(self.scratch.plan, "--diff", f"{base}..{head}")
+        self.assertEqual(code, 1, out)
+        self.assertIn("S10", out)
+        self.assertIn("HEAD", out)
+
+    def test_diff_base_not_ancestor_rejected(self) -> None:                   # CS-3.2
+        self.scratch.write_dossier("CP-00")
+        self.scratch.write_candidate("CP-00")
+        self.scratch.materialize()
+        base = self.scratch.commit("work")
+        self.scratch.close("CP-00", base)
+        self.scratch.materialize()
+        head = self.scratch.commit("closure")
+        code, out = run_validator(self.scratch.plan, "--diff", f"{head}..{head}")
+        self.assertEqual(code, 1, out)
+        self.assertIn("S10", out)
+        self.assertIn("ancestor", out)
 
     # -- enforcement pins (amendment SDD-GAP-AMD-001) --
 
