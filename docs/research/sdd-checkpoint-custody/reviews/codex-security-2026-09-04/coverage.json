@@ -1,0 +1,80 @@
+{
+  "completeness": "partial",
+  "deferred": [
+    {
+      "id": "devforge-release-review",
+      "reason": "No DevForge release commit, signed/tagged artifact, offline dependency bundle, protected installer, or installed system exists yet.",
+      "surfaceIds": [
+        "surface_promotion_manifest",
+        "surface_root_install"
+      ]
+    }
+  ],
+  "documentType": "codex-security.coverage",
+  "excludePaths": [],
+  "explicitExclusions": [],
+  "includePaths": [
+    "CLAUDE.md",
+    "docs/CHECKPOINT.md"
+  ],
+  "inventoryStrategy": "diff",
+  "mode": "diff",
+  "openQuestions": [
+    {
+      "followUpPrompt": "Review the exact DevForge release PR and installer for complete-byte provenance, atomic installation, root ownership, environment scrubbing, and fail-closed verification.",
+      "question": "Will DevForge ship a self-contained binary or an offline hash-locked Python wheelhouse and release manifest?"
+    }
+  ],
+  "scanId": "devforgeai-pr20-security-review",
+  "schemaVersion": "1.0",
+  "surfaces": [
+    {
+      "disposition": "reported",
+      "id": "surface_release_pin",
+      "label": "Protected-release filesystem validation",
+      "notes": "Missing resources and user-owned bytes pass the current validator.",
+      "receiptRefs": [],
+      "riskArea": "Enforcement integrity"
+    },
+    {
+      "disposition": "reported",
+      "id": "surface_cli_policy",
+      "label": "Protected CLI policy selection",
+      "notes": "Caller-controlled schema and repository-root options remain exposed.",
+      "receiptRefs": [],
+      "riskArea": "Configuration integrity"
+    },
+    {
+      "disposition": "reported",
+      "id": "surface_closure_diff",
+      "label": "Closure-only diff fence",
+      "notes": "The enforcement check is skipped when an optional range is omitted.",
+      "receiptRefs": [],
+      "riskArea": "Workflow integrity"
+    },
+    {
+      "disposition": "reported",
+      "id": "surface_provider_probes",
+      "label": "Two-terminal negative probes",
+      "notes": "The documented test mutates the live control and canonical sources on its failure path.",
+      "receiptRefs": [],
+      "riskArea": "Test safety"
+    },
+    {
+      "disposition": "needs_follow_up",
+      "id": "surface_promotion_manifest",
+      "label": "Slice-2 promotion manifest",
+      "notes": "The six listed files do not cover the wrapper, parent package, interpreter, dependencies, or an installed-layout release manifest.",
+      "receiptRefs": [],
+      "riskArea": "Release provenance"
+    },
+    {
+      "disposition": "needs_follow_up",
+      "id": "surface_root_install",
+      "label": "Root-owned installation supply chain",
+      "notes": "Claude's proposed root network pip install and live-checkout copies are not committed release bytes and were reviewed only from the supplied transcript.",
+      "receiptRefs": [],
+      "riskArea": "Software supply chain"
+    }
+  ]
+}

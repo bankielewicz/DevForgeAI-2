@@ -8,11 +8,11 @@ base_commit: "6a446355605a06891cdeab1cc9d25f35309afba2"
 admitted_inputs: []
 closure_stages:
   researched: NOT_RUN
-  implemented: PASS
+  implemented: NOT_RUN
   proven: NOT_RUN
 research:
   dossier_path: "docs/research/sdd-checkpoint-custody"
-  manifest_sha256: "2adca93970302226e72be79eb92369052b1d9c3ec0d9868bcb34ac43429d3554"
+  manifest_sha256: "77e493788101f638100960dfbb91be210b63e02777605a2db521294096a07721"
   verification_ids: []
 implementation:
   governing_decision_ids:
@@ -37,6 +37,12 @@ implementation:
     - components/research-core/src/devforgeai/checkpoint/**
     - tests/research/test_gap_checkpoints.py
     - docs/research/sdd-checkpoint-custody/**
+    # Scope amendment SDD-GAP-CP00-SCOPE-001 (D-CP00-10), accepted by the
+    # decision authority by merging the amendment PR: the staged release
+    # scaffold (wrapper, installer, dependency lock and offline artifacts,
+    # installed-layout specification, manifest generator, tests). A
+    # non-authoritative STAGED_CANDIDATE, never installed from here.
+    - components/devforge-release/**
   test_evidence:
     - "tests/research/test_gap_checkpoints.py"
     - "docs/research/sdd-checkpoint-custody/probes/tests.txt"
@@ -77,6 +83,8 @@ human_closure:
   decided_at: null
 evidence_merge_commits: []
 limitations:
+  - "Candidate `c784ab7` (pin above) is NOT promotion-eligible: the Codex security review of PR 20 (snapshot `sha256:55f244705de1243a43ef6c6882165f642a8020659c71fd4ab9d597e42892e92b`, dossier `reviews/codex-security-2026-09-04/`) found the release pin fail-open (missing or user-owned executable passes), caller-replaceable schema and repository root (`--schema`, `--git-root`), S10 skipped without `--diff`, and a destructive probe design; every finding was reproduced by the owner at `0246e76`. `implemented` is therefore `NOT_RUN` until a corrective work PR with hostile red tests re-pins a corrected candidate and passes independent exact-head review (D-CP00-11). No promotion, installation, dependency install or closure evidence before then."
+  - "The corrective work uses a second work branch, `research/cp-00-checkpoint-custody-fix1`, because the plan's CP-00 branch merged with PR 19; recorded deviation from plan section 5 (D-CP00-11)."
   - "The validator is a staged promotion candidate (plan section 4.2), invoked as `PYTHONPATH=components/research-core/src python3 -m devforgeai.checkpoint validate --plan docs/research/spec-driven-development-gap-closure`; the authoritative executable is the future protected DevForge `devforge checkpoint validate`, so `proven` requires that pinned, root-owned install and CP-00 stays open until it exists (D-CP00-08)."
   - "Release-pin digests (executable, promotion and permissions evidence) are verified against local bytes only when the pinned path exists on the validating machine; on a machine without the protected install the validator checks the pin's shape, absoluteness and location, not its bytes."
   - "The candidate pin names a commit, so it is recorded in a second commit on the work branch (D-CP00-09); the work PR must merge with a merge commit, not a squash, or the pinned source commit disappears from the history."

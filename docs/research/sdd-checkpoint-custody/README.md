@@ -9,7 +9,7 @@
 | Base commit | `6a446355605a06891cdeab1cc9d25f35309afba2` (PR 17 merge) |
 | Budget profile | `quick` |
 | Request digest | `bb074040aae271daffec1f0bdea0dd7a19199b85194a0f3f78aacb27ce13cf78` (from `devforgeai-research normalize-request request.json`) |
-| Status at work PR | research recorded; first independent verification (V-02) failed two claims, both revised; `researched: NOT_RUN`, `implemented: PASS` under the candidate pin, `proven: NOT_RUN`, `trust_stage: STAGED_CANDIDATE`, `closed: false` |
+| Status after scope amendment 001 | candidate `c784ab7` recorded as not promotion-eligible after the Codex security review (D-CP00-11); `researched: NOT_RUN`, `implemented: NOT_RUN`, `proven: NOT_RUN`, `trust_stage: STAGED_CANDIDATE` (pin kept to identify the reviewed bytes), `closed: false`; corrective work PR pending |
 
 ## What CP-00 delivers
 
@@ -33,11 +33,12 @@
 | `claims.jsonl` | seven claims, all `NOT_ACCEPTED_PENDING_INDEPENDENT_VERIFICATION` (C-01, C-02 revised and C-07 split out after V-02) |
 | `contradictions.jsonl` | three resolved contradictions (two with the plan author's recommendations, one raised by the independent review), one open |
 | `verification.jsonl` | V-01 `COULD_NOT_RUN` (opened with the work PR); V-02 `FAIL` (Codex, head a9ae070, pre-amendment shape); the corrected head awaits V-03 |
-| `decisions.md` | D-CP00-01 to D-CP00-09 |
+| `decisions.md` | D-CP00-01 to D-CP00-11 (10: scope amendment `components/devforge-release/**`; 11: stop order) |
 | `probes/environment.txt` | interpreter and provider versions, HEAD, status |
 | `probes/claude-validate.txt` | the validator run from the Claude Code terminal, output and exit code |
 | `probes/codex-validate.txt` | `NOT_RUN`: the same command for the Codex terminal, to be run by the independent reviewer |
 | `probes/tests.txt` | the test-suite run, output and exit code |
+| `reviews/codex-security-2026-09-04/` | the Codex security review of PR 20: report, findings, scan manifest, coverage, its four proof scripts, and the owner's reproduction at `0246e76` |
 | `MANIFEST.sha256` | every file above except itself |
 
 No record class is `NOT_APPLICABLE`.

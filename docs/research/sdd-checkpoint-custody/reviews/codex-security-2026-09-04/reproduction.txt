@@ -1,0 +1,47 @@
+=== probe_git_root_override.py
+    actual_root exit=1
+    CP-00: S13: candidate bytes changed since source_commit 5ccd4f769903: src/validator.py
+    3 record(s), 1 problem(s); outcome REJECTED
+    caller_git_root exit=1
+    Traceback (most recent call last):
+      File "<frozen runpy>", line 198, in _run_module_as_main
+      File "<frozen runpy>", line 88, in _run_code
+      File "/home/bryan/Projects/DevForgeAI/.claude/worktrees/cp-00-scope-001/components/research-core/src/devforgeai/checkpoint/__main__.py", line 57, in <module>
+        sys.exit(main())
+                 ^^^^^^
+      File "/home/bryan/Projects/DevForgeAI/.claude/worktrees/cp-00-scope-001/components/research-core/src/devforgeai/checkpoint/__main__.py", line 38, in main
+        report = validate_plan(args.plan, git_root=args.git_root, schema_path=args.schema,
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      File "/home/bryan/Projects/DevForgeAI/.claude/worktrees/cp-00-scope-001/components/research-core/src/devforgeai/checkpoint/validate.py", line 724, in validate_plan
+        _check_record(cp, rec, header, plan, root, records, problems)
+      File "/home/bryan/Projects/DevForgeAI/.claude/worktrees/cp-00-scope-001/components/research-core/src/devforgeai/checkpoint/validate.py", line 525, in _check_record
+        _check_enforcement(rec, plan, git_root, False, reject)
+      File "/home/bryan/Projects/DevForgeAI/.claude/worktrees/cp-00-scope-001/components/research-core/src/devforgeai/checkpoint/validate.py", line 297, in _check_enforcement
+        _check_candidate_pin(rec, candidate, plan, git_root, open_rule, reject)
+      File "/home/bryan/Projects/DevForgeAI/.claude/worktrees/cp-00-scope-001/components/research-core/src/devforgeai/checkpoint/validate.py", line 356, in _check_candidate_pin
+        plan_rel = plan.resolve().relative_to(git_root).as_posix()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      File "/usr/lib/python3.12/pathlib.py", line 682, in relative_to
+        raise ValueError(f"{str(self)!r} is not in the subpath of {str(other)!r}")
+    ValueError: '/tmp/dfai-cp00-91ipg0co/docs/research/scratch-plan' is not in the subpath of '/tmp/dfai-cp00-alt-root-lvhjuk5a/clean'
+    [probe exit 0 ]
+=== probe_optional_diff.py
+    diff_omitted exit=0
+    3 record(s), 0 problem(s); outcome PASS
+    diff_supplied exit=1
+    CP-00: S10: closure-only diff 269bcb0fc7c38de2e84b82e226f2c37025c2e2ed..a0ce2943e0d278b18e6861e1de493669369c1a84 also changes implementation.py
+    3 record(s), 1 problem(s); outcome REJECTED
+    [probe exit 0 ]
+=== probe_schema_override.py
+    protected_schema exit=1
+    CP-00: SCHEMA: enforcement/protected_release/schema_set_sha256: 'not-a-digest' is not valid under any of the given schemas
+    2 record(s), 1 problem(s); outcome REJECTED
+    caller_override exit=0
+    3 record(s), 0 problem(s); outcome PASS
+    [probe exit 0 ]
+=== probe_validator_failopen.py
+    user_owned_executable uid=1000 mode=644 exit=0
+    3 record(s), 0 problem(s); outcome PASS
+    missing_executable exit=0
+    3 record(s), 0 problem(s); outcome PASS
+    [probe exit 0 ]
