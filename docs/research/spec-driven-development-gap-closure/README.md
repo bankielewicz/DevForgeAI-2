@@ -5,8 +5,11 @@
 | Plan ID | `SDD-GAP-CLOSURE-2026-09-03` |
 | Created | 2026-09-03 |
 | Re-frozen | 2026-09-04 |
-| Status | `REFROZEN_PENDING_INDEPENDENT_REVIEW` |
-| Base commit | `90de68ec4659189dabbab7686d06360ddd114d4d` (PR 16 merge) |
+| Amended | 2026-09-04 |
+| Status | `AMENDMENT_PENDING_INDEPENDENT_REVIEW` |
+| Frozen evidence base | `90de68ec4659189dabbab7686d06360ddd114d4d` (PR 16 merge) |
+| Amendment base | `6a446355605a06891cdeab1cc9d25f35309afba2` (PR 17 merge) |
+| Amendment | `SDD-GAP-AMD-001`: staged-to-protected DevForge enforcement trust boundary |
 | Target environments | Claude Code terminal and Codex terminal |
 | Decision authority | `github:bankielewicz` |
 
@@ -176,6 +179,31 @@ scalability claim. The remaining gaps may be closed by implemented support or by
 a bounded human decision that removes the capability from the advertised scope;
 silence is not a disposition.
 
+### 2.3 Trust-boundary amendment provenance
+
+`SDD-GAP-AMD-001` records an already-accepted architectural boundary and makes
+its effect on CP-00 explicit. It does not replace or reclassify the frozen
+research evidence above. The decision authority selected this delivery order:
+implement and test the validator as a promotion candidate in DevForgeAI, promote
+the exact reviewed candidate into protected DevForge, then prove and consume the
+installed DevForge release by version and digest.
+
+The amendment is bound to these exact source bytes at amendment base
+`6a446355605a06891cdeab1cc9d25f35309afba2`:
+
+| Source | SHA-256 | Governing fact |
+|---|---|---|
+| `docs/design/adr/ADR-0001-research-placement.md` | `3f8783dc3ee953dc2828f81e74bdba48ac0ba8ad85e68881f2fb8fc0814bfd16` | Research is a deterministic DevForge capability; Research Core here is staging for extraction; released contracts are consumed by version and digest. |
+| `framework/contracts/PROMOTION-CANDIDATE.md` | `34dc2ac50d30363c89e4738d03fda2b0eb506248f6f9ffd39c0c61b8935550b4` | DevForgeAI candidates are non-authoritative until a human promotes the exact reviewed set into protected DevForge. |
+| `components/research-core/README.md` | `b884a5e03023fa72f0ccd60133101f1a31e5190559405e741f40b18e00775bc1` | `devforgeai-research` is a temporary staging implementation and is never copied into a target project. |
+
+The general boundary covers the sequencer, dispatcher/command broker,
+checkpoint validators, transition oracles, and enforcement schemas. CP-00
+exercises the first promotion slice: its checkpoint validator and schema. It
+does not require the entire workflow kernel to be promoted before CP-00 can
+begin. Later provider, promotion, and integrated-closure checkpoints must apply
+the same boundary to their own enforcement surfaces.
+
 ## 3. Scope
 
 ### 3.1 Included
@@ -236,7 +264,62 @@ resource, timeout, or environment prevents a valid verdict, report
 `INFRA_FAILURE`. Do not substitute one provider, runner, or offline harness for
 the missing lane.
 
-### 4.2 Claude Code terminal lane
+### 4.2 Protected DevForge enforcement trust boundary
+
+DevForge owns authoritative enforcement executables and schemas. DevForgeAI may
+draft and test a promotion candidate, but candidate bytes in this repository are
+not an enforcement trust root and cannot satisfy a `PROVEN` stage. A human
+promotes the exact independently reviewed candidate into the separate protected
+DevForge repository. DevForgeAI then consumes an installed DevForge release
+pinned by all of these fields:
+
+- release version and DevForge source commit;
+- absolute executable path and SHA-256;
+- schema-set version and SHA-256;
+- applicable contract/policy version and SHA-256; and
+- installation owner and permissions or access-control evidence showing that
+  the Claude Code and Codex processes cannot modify the executable or its
+  authoritative schemas.
+
+On POSIX, a root-owned executable outside every agent-writable workspace is the
+required CP-00 realization. Another operating system needs the equivalent
+administrator-owned ACL and a separately accepted probe. A user-writable
+installation, a bare command resolved through `PATH`, a project-local fallback,
+or an agent-rebuilt executable is not protected evidence.
+
+Provider hooks remain interception adapters, not the trust root. Each enforced
+hook operation invokes the pinned DevForge executable by its recorded absolute
+path. A project policy may narrow a released rule but cannot disable or widen a
+non-overridable minimum. Version, executable, schema, or policy mismatch fails
+closed before state transition, admission, checkpoint closure, or promotion.
+Disabling or bypassing a provider hook cannot be described as containment; a
+production support claim additionally requires the independent DevForge gate
+declared by the applicable later checkpoint.
+
+The staged-to-protected rule maps to closure stages as follows:
+
+| Stage | Exact requirement |
+|---|---|
+| `RESEARCHED` | The dossier resolves the trust-boundary questions and an independent reviewer accepts its source admission, limitations, and promotion decision. |
+| `IMPLEMENTED` | The candidate implementation, schema, CLI integration, hostile tests, and promotion manifest are complete in DevForgeAI at exact digests; the candidate is still non-authoritative. |
+| `PROVEN` | The exact reviewed candidate has been promoted and released from protected DevForge, installed at the pinned protected path, and invoked successfully by fresh Claude Code and Codex terminal probes with no local fallback. |
+
+The proof probes MUST show: the pinned executable and schema bytes match; a
+same-name `PATH` shadow is not invoked; an attempted executable or schema write
+is denied and changes no protected byte; altered project-local schema, policy,
+and executable copies cannot weaken the result; every pin mismatch fails closed;
+and the same valid and hostile checkpoint records receive the same semantic
+verdict from both terminals. Provider version, prompt digest, raw event paths,
+command, exit status, stdout/stderr, final protected-file digests, and filesystem
+side effects are retained.
+
+The protected DevForge promotion/release commit and the two-terminal raw proof
+must be immutable evidence before the CP-00 closure PR opens. They count as
+external evidence PRs under section 7.2. The closure PR may reference their
+commits, release identity, paths, and digests in the CP-00 record; it MUST NOT
+first create, repair, or rewrite the promoted implementation or raw proof.
+
+### 4.3 Claude Code terminal lane
 
 A live Claude lane MUST record:
 
@@ -262,7 +345,7 @@ hook bypass, or permission to invoke any unlisted tool. Each CP-01 eval record
 MUST retain the exact allowlist and distinguish provider permission refusal
 from a DevForgeAI dispatcher refusal.
 
-### 4.3 Codex terminal lane
+### 4.4 Codex terminal lane
 
 A live Codex lane MUST record:
 
@@ -281,7 +364,7 @@ The lane MUST NOT use `--dangerously-bypass-hook-trust` or an approval bypass.
 An offline harness or direct dispatcher invocation does not count as a live
 Codex result.
 
-### 4.4 Provider-semantic parity
+### 4.5 Provider-semantic parity
 
 Claude and Codex need not use identical filenames, invocation punctuation,
 events, or native tools. They MUST produce the same provider-neutral artifact
@@ -486,6 +569,26 @@ implementation:
   changed_contracts: []
   changed_runtime_paths: []
   test_evidence: []
+enforcement:
+  trust_stage: UNBOUND | STAGED_CANDIDATE | PROTECTED_RELEASE
+  candidate:
+    source_commit: null
+    manifest_path: null
+    manifest_sha256: null
+  protected_release:
+    version: null
+    source_commit: null
+    promotion_evidence_path: null
+    promotion_evidence_sha256: null
+    executable_path: null
+    executable_sha256: null
+    schema_set_version: null
+    schema_set_sha256: null
+    contract_policy_version: null
+    contract_policy_sha256: null
+    installation_owner: null
+    permissions_evidence_path: null
+    permissions_evidence_sha256: null
 provider_proof:
   claude: {status: NOT_RUN, evidence_path: null, subject_sha256: null}
   codex: {status: NOT_RUN, evidence_path: null, subject_sha256: null}
@@ -512,6 +615,16 @@ claim. `ADMITTED` requires a post-CP-00 work PR. `REJECTED` records a failed
 custody, relevance, version, or verification decision without deleting the
 historical entry.
 
+`enforcement.trust_stage` starts as `UNBOUND`. For CP-00,
+`implemented: PASS` requires `STAGED_CANDIDATE`, all three candidate fields,
+and a passing candidate manifest over the exact schema, validator, CLI
+integration, and hostile tests. `proven: PASS` requires `PROTECTED_RELEASE`,
+retains the candidate fields, fills every protected-release field, and proves
+that the promotion evidence maps those candidate bytes to the named DevForge
+release. Every later checkpoint record copies the protected-release pin
+actually used by its validator and provider probes; it does not infer or
+inherit a pin from another record.
+
 Provider proof status uses `NOT_RUN`, `PASS`, `FAIL`, `COULD_NOT_RUN`,
 `INFRA_FAILURE`, or `NOT_APPLICABLE`. Closure-stage fields use the same values.
 For `RESEARCH_ONLY`, `researched` MUST be `PASS` and the other stages MUST be
@@ -534,7 +647,9 @@ legal only for `RESEARCH_ONLY`.
    `ACCEPT_RESEARCH_DISPOSITION`;
 6. all evidence PRs are already merged and named by exact commit;
 7. every limitation is reflected in the support claim and handoff; and
-8. every `reopen_if` condition is concrete and testable.
+8. every `reopen_if` condition is concrete and testable; and
+9. `enforcement.trust_stage` is `PROTECTED_RELEASE`, every release-pin field is
+   non-null and digest-valid, and both provider proofs bind that same pin.
 
 A deferred item remains `closed: false`. Failure, lack of budget, unavailable
 runner, or a decision to revisit later is not closure.
@@ -558,7 +673,9 @@ The closure PR MUST list at least one `reopen_if` condition. On a match, a new P
 sets `closed: false`, names the triggering evidence, and assigns the checkpoint
 an applicable non-complete outcome. Examples include provider-version drift,
 schema incompatibility, a hostile fixture that contradicts a claim, a changed
-support matrix, or a discovered false-positive gate.
+support matrix, a discovered false-positive gate, a changed DevForge release or
+executable/schema/policy digest, an installation that becomes agent-writable,
+or a hook/launcher that no longer invokes the pinned absolute path.
 
 ## 8. Dependency graph
 
@@ -625,21 +742,40 @@ other checkpoint can claim completion.
 **Required outputs:**
 
 - `schemas/devforgeai/v1/research-gap-checkpoint.schema.json`;
-- a semantic validator that rejects a structurally valid but illegally closed
-  checkpoint;
+- a staged semantic validator exposed as
+  `devforgeai-research validate-checkpoints` from
+  `components/research-core/`, rejecting a structurally valid but illegally
+  closed checkpoint;
 - one record per ledger entry under this plan's `checkpoints/` directory;
 - positive and hostile subprocess tests; and
+- an updated promotion-candidate declaration and manifest pinning the exact
+  staged schema, validator, CLI integration, and tests for human promotion into
+  DevForge; and
 - an adjacent manifest that excludes itself.
 
 **Hostile cases:** `closed: true` with a missing authority, missing manifest,
 unmerged evidence, self-review, required provider `NOT_RUN`, unbounded
 limitation, empty `reopen_if`, unknown status, path escape, malformed digest, or
-implementation changes in a closure-only diff.
+implementation changes in a closure-only diff; `implemented: PASS` without a
+complete staged-candidate pin; `proven: PASS` or `closed: true` with an
+unprotected or incomplete release pin; a candidate/release mapping mismatch;
+provider proofs bound to different releases; a relative or `PATH`-resolved
+executable; an agent-writable executable or schema; a project-local fallback;
+and executable, schema, or policy digest mismatch.
+
+The CP-00 work PR may set `researched` and `implemented` to `PASS` after their
+independent evidence passes. It MUST leave `proven: NOT_RUN`,
+`enforcement.trust_stage: STAGED_CANDIDATE`, and `closed: false`. Staging is not
+a degraded substitute for protected proof.
 
 **Closure gate:** all hostile cases are rejected; one complete synthetic record
-passes; both terminals run the same foreground validator command successfully;
-the human authority accepts the schema and confirms
-`decision_authority_id: github:bankielewicz` for the remaining checkpoints.
+passes; the exact staged candidate is independently reviewed, promoted, and
+released from protected DevForge; both fresh terminals run the same foreground
+validator through the pinned absolute executable and pass every trust-boundary
+probe in section 4.2 without a local fallback; the immutable promotion and raw
+probe evidence predate the closure PR; and the human authority accepts the
+schema and confirms `decision_authority_id: github:bankielewicz` for the
+remaining checkpoints.
 
 ### CP-01 — Claude and Codex terminal conformance
 
@@ -1125,25 +1261,34 @@ listed in the evidence inventory when they affect the observed tree.
 
 Use this order:
 
-1. CP-00.
-2. After CP-00 closes, a dedicated work PR validates the entries listed as
+1. CP-00 work PR: research and implement the exact staged promotion candidate
+   in its assigned DevForgeAI worktree, independently review it, merge it with
+   `closed: false`, and do not claim protected enforcement.
+2. Human-promote the exact reviewed candidate into protected DevForge; review,
+   release, and install it at the protected absolute path; retain the immutable
+   promotion record and fresh Claude/Codex proof outside the later closure diff.
+3. CP-00 closure PR: reference the already-merged DevForgeAI work commit, the
+   protected DevForge release and proof digests, set `PROTECTED_RELEASE` and
+   `proven: PASS`, and change only the record, ledger, adjacent manifest, and
+   handoff permitted by section 7.2.
+4. After CP-00 closes, a dedicated work PR validates the entries listed as
    `AVAILABLE_FOR_ADMISSION` for CP-01, CP-03, and CP-09 and changes only the
    entries with complete immutable custody to `ADMITTED`. Evidence that fails
    admission remains historical and cannot set a closure stage to `PASS`.
-3. CP-01 and CP-02 may proceed in parallel after CP-00 because their write sets
+5. CP-01 and CP-02 may proceed in parallel after CP-00 because their write sets
    are provider-adapter versus stack-contract paths.
-4. CP-03 follows CP-02. CP-04 may begin after CP-02 in a separate worktree only
+6. CP-03 follows CP-02. CP-04 may begin after CP-02 in a separate worktree only
    if it does not edit stack/oracle contracts.
-5. CP-05 follows CP-00; CP-06, CP-07, and CP-11 follow the accepted CP-05
+7. CP-05 follows CP-00; CP-06, CP-07, and CP-11 follow the accepted CP-05
    decision and use separate, non-overlapping artifact families.
-6. CP-08 follows CP-03. CP-09 may research concurrently but may not implement
+8. CP-08 follows CP-03. CP-09 may research concurrently but may not implement
    against an unsettled oracle contract.
-7. CP-10 may run after CP-00.
-8. CP-12-PILOT runs only after every CP-12 dependency has a merged closure PR.
+9. CP-10 may run after CP-00.
+10. CP-12-PILOT runs only after every CP-12 dependency has a merged closure PR.
    It produces only the human pilot disposition. The 90-trial full experiment
    requires a subsequent `PROCEED_FULL` decision.
-9. CP-13 must close before drafting the final support statement.
-10. CP-14 is last.
+11. CP-13 must close before drafting the final support statement.
+12. CP-14 is last.
 
 When two branches touch the same normative file, the later checkpoint MUST
 rebase after the earlier merge and rerun every affected validator. Copying
@@ -1154,15 +1299,17 @@ commits and reviewed PRs only.
 
 | Field | Value |
 |---|---|
-| You are here | Plan re-frozen against PR 16; independent review and exact-byte human acceptance are pending; no checkpoint is closed or started |
-| Base | `90de68ec4659189dabbab7686d06360ddd114d4d` |
-| Current branch | `docs/sdd-research-gap-closure` |
-| Current worktree | `worktrees/sdd-research-gap-closure` |
+| You are here | PR 17 merged the independently reviewed plan; trust-boundary amendment `SDD-GAP-AMD-001` is pending independent review and exact-byte human acceptance; no checkpoint stage is `PASS` |
+| Frozen evidence base | `90de68ec4659189dabbab7686d06360ddd114d4d` |
+| Amendment base | `6a446355605a06891cdeab1cc9d25f35309afba2` |
+| Current branch | `docs/cp00-devforge-trust-boundary` |
+| Current worktree | `worktrees/cp00-devforge-trust-boundary` |
 | Canonical checkout | Out of scope; this branch owns only `docs/research/spec-driven-development-gap-closure/` |
 | Decision authority | `github:bankielewicz` |
-| Decision required | Independent Claude review against the ten check-in 13 amendments and check-ins 13–18, then exact-byte human acceptance or amendment |
-| First executable checkpoint | After this plan PR merges and the human accepts it: CP-00 — checkpoint custody and closure validator |
+| CP-00 assignment | Claude Code implements; Codex independently reviews; `github:bankielewicz` accepts or rejects closure |
+| Decision required | Independent Claude review of the exact amendment, then human acceptance and merge |
+| First executable checkpoint | After this amendment merges: staged CP-00 work PR on `research/cp-00-checkpoint-custody` in the mandated `worktrees/cp-00-checkpoint-custody` path |
 | Stop rule | Do not mark a gap closed or advertise additional stack/domain support before its closure PR merges |
 
-This handoff does not invoke CP-00. The human decides whether the re-frozen plan
-becomes governing work after independent review.
+This handoff does not invoke or advance CP-00. The human decides whether this
+amendment becomes governing work after independent review.
