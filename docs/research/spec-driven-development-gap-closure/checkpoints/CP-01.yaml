@@ -1,0 +1,118 @@
+checkpoint_id: CP-01
+checkpoint_type: RESEARCH_AND_IMPLEMENTATION
+closed: false
+attempt_outcome: null
+owner_id: role:unassigned
+decision_authority_id: github:bankielewicz
+base_commit: 6a446355605a06891cdeab1cc9d25f35309afba2
+admitted_inputs:
+- input_id: CP01-CODEX-HOOK-001
+  state: AVAILABLE_FOR_ADMISSION
+  source_commit: 85e91d3a5920734894828e60799f77aec4a02e5f
+  subject: docs/research/codex-hook-runtime-live/20260903T142001Z-cli-0.152.1/checksums.sha256
+  subject_sha256: 26f921c101314a7e3d4e9b1b347e7456e337c95ac6573af9184f1f8da94005d6
+  provider: Codex CLI
+  provider_version: 0.152.1
+  command: fresh interactive sessions, /hooks, and the exact prompts retained in the bundle
+  result: declared hook acceptance gate PASS; proves only the exercised interception boundary
+  evidence_paths:
+  - docs/research/codex-hook-runtime-live/20260903T142001Z-cli-0.152.1
+  limitations:
+  - Proves the exercised interception boundary only; containment, worktree isolation, sequencer diffs, transition oracles, promotion and CI are separate controls.
+- input_id: CP01-CLAUDE-RUN5
+  state: AVAILABLE_FOR_ADMISSION
+  source_commit: 90de68ec4659189dabbab7686d06360ddd114d4d
+  subject: /home/bryan/Projects/DevForgeAI/out/dev/SKILL.md
+  subject_sha256: f866c94e7de944e18dc3a7c814554243c72e9599fe3205f2c45ec4b0c76ca1fb
+  provider: Claude Code
+  provider_version: 2.1.259 operator-recorded; the session record reports unknown
+  command: /dev STORY-001 --lenient, then human-confirmed devforgeai promote STORY-001; session f639832e-af42-4d07-9d83-525de6144ad9; proof repository /home/bryan/Projects/dfai-proof branch run5 base 6bb06b89ce43ec88504122fdf2bf0cd65f19484a
+  result: live run 5 passed all five phases, persisted both judge findings, passed the D17 git -C and sequencer-rendered Oracle probes, promoted by fast-forward; canonical tests pass
+  evidence_paths:
+  - /home/bryan/Projects/dfai-proof/.devforgeai/sessions/raw-events.jsonl
+  - /home/bryan/Projects/dfai-proof/.devforgeai/provenance/log.jsonl
+  limitations:
+  - One Python story, worktree mode, Claude only, lenient placeholder hashes.
+  - 'The two evidence files are ignored mutable files outside this repository and are not yet immutable CP-00 custody; digests at re-freeze: raw-events 87964f5c4bcf12c6ca715e6466e71173346a59307bc38fdd61a4635508411021, provenance fd6b7a3994bb25a6781850b4045dec0f4934d151a372321204da92f8f2619196.'
+  - 'Permission mode is NOT_OBSERVABLE from the retained bytes: raw-events keeps hook-input key names only; the session ran in Claude Code auto mode by operator observation, which is not a bypass flag but is not recorded as a value.'
+- input_id: CP01-CLAUDE-IDENTITYLESS-001
+  state: AVAILABLE_FOR_ADMISSION
+  source_commit: 90de68ec4659189dabbab7686d06360ddd114d4d
+  subject: /home/bryan/Projects/dfai-proof/.devforgeai/sessions/raw-events.jsonl
+  subject_sha256: 87964f5c4bcf12c6ca715e6466e71173346a59307bc38fdd61a4635508411021
+  provider: Claude Code
+  provider_version: 2.1.259
+  command: run-5 hook events for session f639832e-af42-4d07-9d83-525de6144ad9
+  result: 26 identity-less helper subagent stops ignored by the dispatcher while typed workers bound and completed; no hook fault
+  evidence_paths:
+  - /home/bryan/Projects/dfai-proof/.devforgeai/provenance/log.jsonl
+  limitations:
+  - Version-bound to Claude Code 2.1.259; 2.1.260 is installed and unprobed, so CP-01 must re-probe before any 2.1.260 claim.
+- input_id: CP01-CLAUDE-REPORT-REFUSAL-001
+  state: AVAILABLE_FOR_ADMISSION
+  source_commit: 2395f3a27fb7d096cb9dc71968bc6ff9d8a4cae6
+  subject: /home/bryan/Projects/DevForgeAI/out-2395f3a/dev-workspace/iteration-1/eval-1-full-loop-promote/with_skill/outputs/transcript.md
+  subject_sha256: fa95a958e2c33ffdda5edb40a3d90349b18c092433f89e4cec63ec3f0f63f258
+  provider: Claude Code
+  provider_version: 2.1.259
+  command: subagent Write of findings.md during the first generated-skill eval (headless, --allowedTools Skill Agent)
+  result: the provider refused the report-looking Markdown write before the DevForgeAI hook ran
+  evidence_paths:
+  - /home/bryan/Projects/DevForgeAI/out-2395f3a/dev-workspace/iteration-1/eval-1-full-loop-promote/with_skill/outputs/transcript.md
+  limitations:
+  - 'Undocumented provider behaviour, version-bound, and not relied upon: judges hold no write tool and the sequencer persists receipt findings (D13).'
+closure_stages:
+  researched: NOT_RUN
+  implemented: NOT_RUN
+  proven: NOT_RUN
+research:
+  dossier_path: docs/research/claude-codex-terminal-conformance
+  manifest_sha256: null
+  verification_ids: []
+implementation:
+  governing_decision_ids: []
+  changed_contracts: []
+  changed_runtime_paths: []
+  test_evidence: []
+enforcement:
+  trust_stage: UNBOUND
+  candidate:
+    source_commit: null
+    manifest_path: null
+    manifest_sha256: null
+  protected_release:
+    version: null
+    source_commit: null
+    promotion_evidence_path: null
+    promotion_evidence_sha256: null
+    executable_path: null
+    executable_sha256: null
+    schema_set_version: null
+    schema_set_sha256: null
+    contract_policy_version: null
+    contract_policy_sha256: null
+    installation_owner: null
+    permissions_evidence_path: null
+    permissions_evidence_sha256: null
+provider_proof:
+  claude:
+    status: NOT_RUN
+    evidence_path: null
+    subject_sha256: null
+  codex:
+    status: NOT_RUN
+    evidence_path: null
+    subject_sha256: null
+independent_review:
+  reviewer_id: null
+  verdict: null
+  evidence_path: null
+human_closure:
+  authority_id: null
+  decision: null
+  rationale: null
+  decided_at: null
+evidence_merge_commits: []
+limitations:
+- 'Not started. Listed admitted_inputs, if any, are AVAILABLE_FOR_ADMISSION only: they do not start this checkpoint, satisfy a dependency, or set a stage to PASS until CP-00 closes and an admission PR validates their custody.'
+reopen_if: []

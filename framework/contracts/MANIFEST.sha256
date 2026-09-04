@@ -2,6 +2,7 @@
 # Section hashes (01 hash rule), checked by docs/design/specs/verify.py --only v3:
 #   docs/design/10-sequencer-and-contracts.md#2-cli-grammar  sha256:231b93094676198b131720e581f044d8c66b4f0b8dcd3dcb35e4350100807090
 #   docs/design/10-sequencer-and-contracts.md#3-status-vocabulary-and-gate-policy  sha256:2c6a74802ef62ff191f9f21b7822e5ff72dd2dbe68ee80188d2d3446f3e3323f
+# Slice 2 (CP-00 checkpoint validator, SDD-GAP-AMD-001): schema, validator package, CLI entry, tests, declaration. Pinned by the CP-00 record's enforcement.candidate.
 7560b879e66afb3a35d113c73e92abe3d2e96b0269526e9c37cc9f4f2220eb57  framework/contracts/error-taxonomy.yaml
 201263785b35244f3fb0d2d98e784dff73897fc43b065f514676d2abe0207e9b  schemas/devforgeai/v1/error-taxonomy.schema.json
 760ba9c632af70f01ee5fb62ecbb1b57875571523ad61b5cd0dd509953256199  schemas/devforgeai/v1/handoff.schema.json
@@ -9,3 +10,9 @@
 0680f1ceca256b36afef0a01ca260736ed3138b8e42301d06252cb546819447f  schemas/devforgeai/v1/session.schema.json
 45b4d014ad4d2a3753c961b55dc96fc08fb4ebfbc51dc0be64fd1b0a5e64fef6  schemas/devforgeai/v1/stack.schema.json
 67bce4d09cbd18502a01b138675a4a9c3e402011c44081da6a0b7c0b040d974a  schemas/devforgeai/v1/worker-result.schema.json
+872084d7e541fbd07685e79788872bd02aabf533cdaec1669df0d9f256df7385  schemas/devforgeai/v1/research-gap-checkpoint.schema.json
+4ebdaf37a1f6ed77e1271e0b8bebe40d04b6373f173d5bf6f07508d1c94d06ae  components/research-core/src/devforgeai/checkpoint/__init__.py
+39caff85526437681d0b3bc85c814e60c0255437dcf620122be23612fb135309  components/research-core/src/devforgeai/checkpoint/__main__.py
+d3cc818804d1b2e70a59bad3facd750a85f95eabf40a2332468ab418b5eef7aa  components/research-core/src/devforgeai/checkpoint/validate.py
+dbf2ac3e43abdab7f081405284c187513687cf35057062ede35fba88fd40f6f2  tests/research/test_gap_checkpoints.py
+bdd43f5325845be67c27d4858949d109c7b5bfeb7d1ed620371b224023b5e016  framework/contracts/PROMOTION-CANDIDATE.md

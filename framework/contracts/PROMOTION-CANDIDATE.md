@@ -7,12 +7,33 @@ Status: draft assembled 2026-09-03 in DevForgeAI. Not authoritative. Per `docs/d
 | Kind | Path in this repository | Destination in DevForge |
 |---|---|---|
 | Error taxonomy (closed vocabulary, `taxonomy_version: 1`) | `framework/contracts/error-taxonomy.yaml` | `contracts/errors.yaml` |
-| Schemas, JSON Schema Draft 2020-12 | `schemas/devforgeai/v1/*.schema.json` (6 files) | `contracts/schemas/` |
+| Schemas, JSON Schema Draft 2020-12 | `schemas/devforgeai/v1/*.schema.json` (6 files; the seventh, `research-gap-checkpoint.schema.json`, belongs to slice 2 below) | `contracts/schemas/` |
 | CLI grammar: operations, arguments, preconditions, writes, exit codes, access | `docs/design/10-sequencer-and-contracts.md#2-cli-grammar` | `contracts/cli/` |
 | Status vocabulary and gate policy | `docs/design/10-sequencer-and-contracts.md#3-status-vocabulary-and-gate-policy` | `contracts/cli/` |
 | Conformance rows (dispatcher, grammar, backstops) | `docs/design/examples/hooks/run_conformance.py` | `conformance/` after extraction to data files |
 
 The two document sections are pinned by section hash under the rule in `01-skill-anatomy.md` (heading to next heading of the same or higher level, CRLF to LF, joined with LF plus one trailing LF). The files are pinned by `MANIFEST.sha256` beside this document.
+
+## Slice 2: research-gap checkpoint validator (CP-00, staged 2026-09-04)
+
+Promotion candidate under plan `SDD-GAP-CLOSURE-2026-09-03` amendment `SDD-GAP-AMD-001` (section 4.2, staged-to-protected trust boundary). The candidate is non-authoritative until a human promotes this exact set into protected DevForge and installs the release root-owned at an absolute path; the CP-00 record pins the set by `enforcement.candidate` (source commit, this manifest, its digest) and cannot close until `enforcement.protected_release` names the installed release.
+
+| Kind | Path in this repository | Destination in DevForge |
+|---|---|---|
+| Record schema, JSON Schema Draft 2020-12 | `schemas/devforgeai/v1/research-gap-checkpoint.schema.json` | `contracts/schemas/` |
+| Semantic validator package (rules S01–S13) | `components/research-core/src/devforgeai/checkpoint/__init__.py`, `validate.py` | `devforge checkpoint validate` |
+| CLI integration (staged entry point, argparse, exit codes 0/1/2/3) | `components/research-core/src/devforgeai/checkpoint/__main__.py` | `devforge checkpoint` subcommand |
+| Positive and hostile subprocess tests | `tests/research/test_gap_checkpoints.py` | DevForge test suite |
+| This declaration | `framework/contracts/PROMOTION-CANDIDATE.md` | promotion record |
+
+Staged invocation, from the repository root:
+
+```bash
+PYTHONPATH=components/research-core/src python3 -m devforgeai.checkpoint validate --plan docs/research/spec-driven-development-gap-closure
+PYTHONPATH=components/research-core/src python3 -m pytest tests/research/test_gap_checkpoints.py -q
+```
+
+Promotion maps the operation to `devforge checkpoint validate` without adding an eleventh Research operation or a second staging console script. The slice's files are pinned by `MANIFEST.sha256` beside this document, which the validator itself checks against the CP-00 record's candidate pin (rule S13): every entry must verify at the pinned source commit and on disk, and every fenced file outside the records and the dossier must be listed.
 
 ## How to verify before promoting
 

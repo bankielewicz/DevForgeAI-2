@@ -1,0 +1,585 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devforgeai.dev/schemas/devforgeai/v1/research-gap-checkpoint.schema.json",
+  "title": "DevForgeAI research-gap checkpoint record",
+  "description": "One closure record per checkpoint of a research-gap closure plan (plan section 7.1). Structural rules live here; cross-field, Git, custody, reviewer-independence and closure rules live in the semantic validator `python3 -m devforgeai.checkpoint validate`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "checkpoint_id",
+    "checkpoint_type",
+    "closed",
+    "attempt_outcome",
+    "owner_id",
+    "decision_authority_id",
+    "base_commit",
+    "admitted_inputs",
+    "closure_stages",
+    "research",
+    "implementation",
+    "enforcement",
+    "provider_proof",
+    "independent_review",
+    "human_closure",
+    "evidence_merge_commits",
+    "limitations",
+    "reopen_if"
+  ],
+  "$defs": {
+    "commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z]+:[A-Za-z0-9._/-]+$",
+      "maxLength": 200
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "relative_path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "stage_status": {
+      "enum": [
+        "NOT_RUN",
+        "PASS",
+        "FAIL",
+        "COULD_NOT_RUN",
+        "INFRA_FAILURE",
+        "NOT_APPLICABLE"
+      ]
+    },
+    "provider_proof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "evidence_path",
+        "subject_sha256"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/stage_status"
+        },
+        "evidence_path": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/relative_path"
+            }
+          ]
+        },
+        "subject_sha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/sha256"
+            }
+          ]
+        }
+      }
+    },
+    "admitted_input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input_id",
+        "state",
+        "source_commit",
+        "subject",
+        "subject_sha256",
+        "provider",
+        "provider_version",
+        "command",
+        "result",
+        "evidence_paths",
+        "limitations"
+      ],
+      "properties": {
+        "input_id": {
+          "type": "string",
+          "pattern": "^[A-Z0-9][A-Z0-9-]{2,79}$"
+        },
+        "state": {
+          "enum": [
+            "AVAILABLE_FOR_ADMISSION",
+            "ADMITTED",
+            "REJECTED"
+          ]
+        },
+        "source_commit": {
+          "$ref": "#/$defs/commit"
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "Repository-relative path, or an explicitly external absolute path (section 7.1); rule S04 decides which by the leading slash."
+        },
+        "subject_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "provider": {
+          "$ref": "#/$defs/text"
+        },
+        "provider_version": {
+          "$ref": "#/$defs/text"
+        },
+        "command": {
+          "$ref": "#/$defs/text"
+        },
+        "result": {
+          "$ref": "#/$defs/text"
+        },
+        "evidence_paths": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        }
+      }
+    },
+    "nullable_commit": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/commit"
+        }
+      ]
+    },
+    "nullable_sha256": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/sha256"
+        }
+      ]
+    },
+    "nullable_text": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/text"
+        }
+      ]
+    },
+    "nullable_relative_path": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/relative_path"
+        }
+      ]
+    }
+  },
+  "properties": {
+    "checkpoint_id": {
+      "type": "string",
+      "pattern": "^CP-[0-9]{2}$"
+    },
+    "checkpoint_type": {
+      "enum": [
+        "RESEARCH_ONLY",
+        "RESEARCH_AND_IMPLEMENTATION",
+        "EXPERIMENT"
+      ]
+    },
+    "closed": {
+      "type": "boolean"
+    },
+    "attempt_outcome": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "enum": [
+            "COMPLETE",
+            "NEEDS_DECISION",
+            "BLOCKED",
+            "FAILED",
+            "COULD_NOT_RUN",
+            "INFRA_FAILURE"
+          ]
+        }
+      ]
+    },
+    "owner_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "decision_authority_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "base_commit": {
+      "$ref": "#/$defs/commit"
+    },
+    "admitted_inputs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/admitted_input"
+      }
+    },
+    "closure_stages": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "researched",
+        "implemented",
+        "proven"
+      ],
+      "properties": {
+        "researched": {
+          "$ref": "#/$defs/stage_status"
+        },
+        "implemented": {
+          "$ref": "#/$defs/stage_status"
+        },
+        "proven": {
+          "$ref": "#/$defs/stage_status"
+        }
+      }
+    },
+    "research": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dossier_path",
+        "manifest_sha256",
+        "verification_ids"
+      ],
+      "properties": {
+        "dossier_path": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/relative_path"
+            }
+          ]
+        },
+        "manifest_sha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/sha256"
+            }
+          ]
+        },
+        "verification_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        }
+      }
+    },
+    "implementation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "governing_decision_ids",
+        "changed_contracts",
+        "changed_runtime_paths",
+        "test_evidence"
+      ],
+      "properties": {
+        "governing_decision_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "changed_contracts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/relative_path"
+          }
+        },
+        "changed_runtime_paths": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/relative_path"
+          }
+        },
+        "test_evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        }
+      }
+    },
+    "enforcement": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Plan section 7.1 `enforcement` (amendment SDD-GAP-AMD-001). UNBOUND: no pin. STAGED_CANDIDATE: the exact DevForgeAI candidate bytes are pinned by commit and manifest; still non-authoritative. PROTECTED_RELEASE: the installed protected DevForge release is pinned by every field. Rules S13 (open records) and S06.9 (closure) enforce the pins.",
+      "required": [
+        "trust_stage",
+        "candidate",
+        "protected_release"
+      ],
+      "properties": {
+        "trust_stage": {
+          "enum": [
+            "UNBOUND",
+            "STAGED_CANDIDATE",
+            "PROTECTED_RELEASE"
+          ]
+        },
+        "candidate": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source_commit",
+            "manifest_path",
+            "manifest_sha256"
+          ],
+          "properties": {
+            "source_commit": {
+              "$ref": "#/$defs/nullable_commit"
+            },
+            "manifest_path": {
+              "$ref": "#/$defs/nullable_relative_path"
+            },
+            "manifest_sha256": {
+              "$ref": "#/$defs/nullable_sha256"
+            }
+          }
+        },
+        "protected_release": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "version",
+            "source_commit",
+            "promotion_evidence_path",
+            "promotion_evidence_sha256",
+            "executable_path",
+            "executable_sha256",
+            "schema_set_version",
+            "schema_set_sha256",
+            "contract_policy_version",
+            "contract_policy_sha256",
+            "installation_owner",
+            "permissions_evidence_path",
+            "permissions_evidence_sha256"
+          ],
+          "properties": {
+            "version": {
+              "$ref": "#/$defs/nullable_text"
+            },
+            "source_commit": {
+              "$ref": "#/$defs/nullable_commit"
+            },
+            "promotion_evidence_path": {
+              "$ref": "#/$defs/nullable_text"
+            },
+            "promotion_evidence_sha256": {
+              "$ref": "#/$defs/nullable_sha256"
+            },
+            "executable_path": {
+              "$ref": "#/$defs/nullable_text"
+            },
+            "executable_sha256": {
+              "$ref": "#/$defs/nullable_sha256"
+            },
+            "schema_set_version": {
+              "$ref": "#/$defs/nullable_text"
+            },
+            "schema_set_sha256": {
+              "$ref": "#/$defs/nullable_sha256"
+            },
+            "contract_policy_version": {
+              "$ref": "#/$defs/nullable_text"
+            },
+            "contract_policy_sha256": {
+              "$ref": "#/$defs/nullable_sha256"
+            },
+            "installation_owner": {
+              "$ref": "#/$defs/nullable_text"
+            },
+            "permissions_evidence_path": {
+              "$ref": "#/$defs/nullable_text"
+            },
+            "permissions_evidence_sha256": {
+              "$ref": "#/$defs/nullable_sha256"
+            }
+          }
+        }
+      }
+    },
+    "provider_proof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claude",
+        "codex"
+      ],
+      "properties": {
+        "claude": {
+          "$ref": "#/$defs/provider_proof"
+        },
+        "codex": {
+          "$ref": "#/$defs/provider_proof"
+        }
+      }
+    },
+    "independent_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reviewer_id",
+        "verdict",
+        "evidence_path"
+      ],
+      "properties": {
+        "reviewer_id": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/identifier"
+            }
+          ]
+        },
+        "verdict": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "enum": [
+                "PASS",
+                "FAIL",
+                "COULD_NOT_RUN"
+              ]
+            }
+          ]
+        },
+        "evidence_path": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/relative_path"
+            }
+          ]
+        }
+      }
+    },
+    "human_closure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authority_id",
+        "decision",
+        "rationale",
+        "decided_at"
+      ],
+      "properties": {
+        "authority_id": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/identifier"
+            }
+          ]
+        },
+        "decision": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "enum": [
+                "ACCEPT_REMEDIATED",
+                "ACCEPT_RESEARCH_DISPOSITION"
+              ]
+            }
+          ]
+        },
+        "rationale": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/text"
+            }
+          ]
+        },
+        "decided_at": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            }
+          ]
+        }
+      }
+    },
+    "evidence_merge_commits": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/commit"
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/text"
+      }
+    },
+    "reopen_if": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/text"
+      }
+    }
+  }
+}
