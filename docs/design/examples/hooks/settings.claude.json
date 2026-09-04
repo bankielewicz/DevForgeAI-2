@@ -1,5 +1,5 @@
 {
-  "_comment": "Project-level .claude/settings.json fragment. Merge into the project's file; commit it. Hooks bind the write lease at SubagentStart, admit writes inside the run's candidate root, and route the worker's receipt at SubagentStop; they never edit an artifact. Edit and Write are allowed because the PreToolUse hook is the authority on where a write may land: under candidate.root, inside the phase fence, by the lease holder. The denies below are the paths no run may ever touch, canonical-side. Bash allows the five model-callable operations plus `devforgeai run *`, which the sequencer admits only to the lease holder. The ten `devforgeai-research` rules are the provider-external Research Core runner, which is the sole writer inside its own fence and opens no framework run.",
+  "_comment": "Project-level .claude/settings.json fragment. Merge into the project's file; commit it. Hooks bind the write lease at SubagentStart, admit writes inside the run's candidate root, and route the worker's receipt at SubagentStop; they never edit an artifact. Edit and Write are allowed because the PreToolUse hook is the authority on where a write may land: under candidate.root, inside the phase fence, by the lease holder. The denies below are the paths no run may ever touch, canonical-side. Bash allows the five model-callable operations plus `devforgeai run *`, which the sequencer admits only to the lease holder. `Bash(git -C *)` is allowed because a worker's cwd is the canonical checkout and read-only git inside the candidate root is spelled `git -C <candidate.root> <subcommand>` (D17): the PreToolUse hook, which runs before this list is consulted, admits that form only for the run's exact root and the read-only subcommands and denies every other `-C` form, so the allowlist names the surface and the hook decides. The bare mutating forms stay denied here as a second fence. The ten `devforgeai-research` rules are the provider-external Research Core runner, which is the sole writer inside its own fence and opens no framework run.",
   "disableAllHooks": false,
   "permissions": {
     "deny": [
@@ -58,7 +58,9 @@
       "Edit(/**)",
       "Bash(git show *)",
       "Bash(git ls-files *)",
-      "Bash(git blame *)"
+      "Bash(git blame *)",
+      "Bash(git rev-parse *)",
+      "Bash(git -C *)"
     ],
     "disableBypassPermissionsMode": "disable"
   },
