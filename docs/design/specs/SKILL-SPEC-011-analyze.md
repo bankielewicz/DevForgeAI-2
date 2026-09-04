@@ -9,7 +9,7 @@ author: "DevForgeAI wave-2 specification author"
 date: 2026-09-02
 depends_on:
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:6556607035516c49ee43fe2bbeffe1a74e898889d84be00c9a05fdf751d209b6
+    hash: sha256:721c5d5e73f2678f565b23284f78cffe26b62919c6d652aa7756f13a9a0f064e
     excerpt: "**The model dispatches, the sequencer decides.** For an anatomy-governed skill, the primary window (provider entry adapter + skill orchestration) does light, trivial work only."
   - source: docs/design/01-skill-anatomy.md#provenance-chain
     hash: sha256:a972a34352485d39e86add257fad2a007e6241521b18234d152cd35888dbad25
@@ -18,7 +18,7 @@ depends_on:
     hash: sha256:7b068feb30e7cc2f66292b512ac179cd217df225fb58517d2aaadd30b25236dc
     excerpt: "A literal placeholder hash (`sha256:fixture...`, `sha256:PENDING`) is reported as `unresolvable-source`."
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:7c1d67f1154e49247e5dc178fcc1512bdbd53af378c360aeafe69bffed1136ab
+    hash: sha256:ac18004be37ef017e4d4abf8c6303e096d64dbbc0ae0c37e6288230473caaf66
     excerpt: "| analyze | 1 | `cross_reference` | `cross_referencer` | none | 2 | — | report_only | — |"
   - source: docs/design/10-sequencer-and-contracts.md#3-4-re-resolving-sources-and-the-one-downgrade
     hash: sha256:722dadc1737749e30d244f222aaa1d8b845bc93f4a573b16f662719e58b49bcd
@@ -27,31 +27,31 @@ depends_on:
     hash: sha256:9cf7115cdfa637023edc22cbdf5f64c106b1eba340598c8dc97b68361cb76b0f
     excerpt: "The path rules in step 11 are absolute and no receipt may waive them."
   - source: docs/design/10-sequencer-and-contracts.md#5-4-transition-oracles
-    hash: sha256:076840ec9db03155bc9edcceb587e2aa1ca8bf3849e7a8b742f788d1a3b2315f
+    hash: sha256:1885814335792e12db767f85ec2bbf50804a8460424455d92d6efdd6b03dd9d1
     excerpt: "| `report_only` | the shared invariants only; from a judge, `changed[]` is empty and step 8b has already written this phase's `findings.md` under this run's own `evidence/<agent>/` | the fence held and the stack policy holds |"
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:52cf474c332c7d8a02ad1b1abac51d852d5f54c30bf5126deb8a5b18cde77206
+    hash: sha256:fa55ff391a00f9b6c93ab76cd26b305bc16b2617aa714f90501b571e8f68f32f
     excerpt: "| Source basis | `source_basis[] {source, hash, status}` | no | the `provenance` and `context` entries the gate re-resolved |"
   - source: docs/design/10-sequencer-and-contracts.md#10-evidence-files
     hash: sha256:b15253fbdd40635f95f116d473af2336ef37b76b960d909d0153a12ca7e04b1f
     excerpt: "| `.devforgeai/provenance/log.jsonl` | JSONL | every write operation | `analyze`, `retro`, `drift` |"
   - source: docs/design/11-artifact-registry.md#1-template-registry
-    hash: sha256:fabb8d2f142dcde1a31bc53768f8a46d01cac3ea4a7f6b73db22479cc89b5553
+    hash: sha256:cb9cad97fcdd0d5b5da645e2d16f43c665f935174f52f9ba3c2858c004f3e894
     excerpt: "| `analyze-report` | `.devforgeai/skills/analyze/templates/analyze-report.md` | 1 | `^FIND-[0-9]{3}$` | slug, template, template_version, status, depends_on | Orphans, Gaps, Stale Hashes, Actions |"
   - source: docs/design/11-artifact-registry.md#3-depends-on-edges
-    hash: sha256:f3c304ff840d2027432f743288bccec0ea5bc5d7b99b7f41c8d524b1c3591da2
+    hash: sha256:aeee913aef174ba9deaa719c0e9613fb48e0bde822eb23d9af78e022df27147d
     excerpt: "| `analyze-report` | every prd, epic, story and constitution anchor it walked |"
   - source: docs/design/11-artifact-registry.md#4-upstream-and-downstream-per-skill
-    hash: sha256:cfcaef76005176490e96b9e67c8fa4f0b7a6a2e13b6badf856468881fbe25200
+    hash: sha256:b2725079ec12ced201d2d57c7ddcb9819d7a4617feb5d6692d48c4fd6f3b06c5
     excerpt: "\"Upstream\" is what the skill's gate consumes; \"downstream\" is the skill that gates on what it produced."
   - source: docs/design/02-skill-roster.md#analyze
     hash: sha256:2ce12ae1084231862186eba7f234a81decee638f44b47a84f007d4318d1331ce
     excerpt: "- Reports orphans (story with no PRD requirement), gaps (requirement with no story), stale hashes."
   - source: docs/design/02-skill-roster.md#handoff-decision-tables
-    hash: sha256:1dac784b4670cc7559f323011dfe304dfe8c0baf349063162f90d76d902c5d3c
+    hash: sha256:d05a2cd65bcfabdfae43ce112a3b0b26019ad9a38bea5256c8a049e922d03d16
     excerpt: "| analyze | clean | `/dev {first_story}` |"
   - source: docs/design/05-subagent-sets.md#sets-per-skill
-    hash: sha256:f2957217c9af147e4a7ea03749cbe6efda266bd56d403f39aa25c9a655872609
+    hash: sha256:2bb8ba434c56127d48d09179d742bf0f2f284f18363e7c2e911b1f2211ba3a7e
     excerpt: "| analyze | cross-referencer, orphan-finder, stale-hash-finder, report-writer |"
   - source: docs/design/05-subagent-sets.md#contract-format
     hash: sha256:3a2409480378cf04230fb065ccf81153e83704df9a85236cc8cd8fffbc83de7c

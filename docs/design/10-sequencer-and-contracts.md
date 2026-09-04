@@ -12,7 +12,7 @@ Section 12 is the candidate root: where a producer's writes land, how a phase tr
 | `devforgeai.handoff/v1` | `schemas/devforgeai/v1/handoff.schema.json` |
 | `stack.yaml` section | `schemas/devforgeai/v1/stack.schema.json` |
 | `devforgeai.session/v1` | `schemas/devforgeai/v1/session.schema.json` |
-| `.devforgeai/work/<run>/run.yaml` | `schemas/devforgeai/v1/run.schema.json` |
+| `.devforgeai/work/<run>/run.yaml` | `schemas/devforgeai/v1/run.schema.json` for story/document; `schemas/devforgeai/v2/run.schema.json` for range-kind PR runs |
 
 ## 1. Principle
 
@@ -33,7 +33,7 @@ Closed set. `Access` is `model` when the operation may appear in a provider Bash
 | Op | Args | Preconditions it enforces | Writes | Exit codes | Access |
 |---|---|---|---|---|---|
 | `devforgeai status` | none | none | nothing | `0` | model |
-| `devforgeai phase start` | `<skill> <arg> [--fix] [--lenient]` | skill is known and its kind is `story` or `document`; no run is already active in this checkout, except a blocked run (`run.yaml#blocked_at` set, no lease) with the same skill and argument, which this call resumes, and except `clarify` opened against the story a blocked run holds (section 12.2); no `active` or `ready_to_promote` run names the same story, whatever the fences (`STORY_IN_FLIGHT`), from which `clarify` is exempt against a blocked run only (section 12.2); the story's `write_fence` overlaps no active or `ready_to_promote` run's fence (`FENCE_OVERLAP`); the worktree-mode prerequisites in `09-hook-dispatcher.md` section 3 hold when the project is a git repository; for `kind: story` the whole story gate in section 3.2; for `kind: document` the fence gate in section 4, plus the same story gate when the skill is story-anchored (section 4); `--fix` only for a skill that declares fix-report sources in the registry (`dev`: `docs/reports/qa-<story>.md` and `docs/reports/review-<story>.md`; `skill-generator`: `docs/reports/validate-<skill>.md`), else `NO_FIX_SOURCE` (exit 2); and only when at least one declared file exists, the newest by modification time being recorded as `run.yaml#fix_report` (`NO_FIX_REPORT` when none does); `--lenient` only where a story gate runs, and only for a story outside `docs/plan/` (section 3.4); no option other than `--fix` and `--lenient` is accepted | canonical `state.yaml#runs.<run>` (status `active`), `work/<run>/run.yaml` (including `fix_report` when `--fix` was given), `work/<run>/context.json`, the candidate root and its `base` checkpoint, `provenance/log.jsonl` | `0` opened; `1` refused (active run, `STORY_IN_FLIGHT`, `FENCE_OVERLAP`, gate defects, kind `none`, kind `external` with its runner present, `NO_FIX_REPORT`, `--lenient` on a planned story); `2` unknown skill, unparseable story frontmatter, `--lenient` on a skill with no story gate, `--fix` on a skill whose kind is not `story`, or any other option; `3` kind `external` whose runner is absent from `PATH`, or a worktree prerequisite that failed (`prerequisite_missing`) | model |
+| `devforgeai phase start` | `<skill> <arg> [--draft] [--fix] [--lenient]` | skill is known and its kind is `story`, `document`, or `range`; no run is already active in this checkout, except a blocked run (`run.yaml#blocked_at` set, no lease) with the same skill and argument, which this call resumes, and except `clarify` opened against the story a blocked run holds (section 12.2); no `active` or `ready_to_promote` run names the same story, whatever the fences (`STORY_IN_FLIGHT`), from which `clarify` is exempt against a blocked run only (section 12.2); the requested fence overlaps no active or `ready_to_promote` run's fence (`FENCE_OVERLAP`); the worktree-mode prerequisites in `09-hook-dispatcher.md` section 3 hold when the project is a git repository; for `kind: story` the whole story gate in section 3.2; for `kind: document` the fence gate in section 4, plus the same story gate when the skill is story-anchored; for `kind: range` the PR exact-range gate in `14-hosted-verification-and-pr.md` section 2; `--fix` only for a skill that declares fix-report sources in the registry (`dev`: `docs/reports/qa-<story>.md` and `docs/reports/review-<story>.md`; `skill-generator`: `docs/reports/validate-<skill>.md`), else `NO_FIX_SOURCE` (exit 2), and only when at least one declared file exists; `--lenient` only where a story gate runs, and only for a story outside `docs/plan/`; `--draft` only for `pr`; no other option is accepted | canonical `state.yaml#runs.<run>` (status `active`), `work/<run>/run.yaml` (including fix or PR range metadata when applicable), `work/<run>/context.json`, the candidate root and its `base` checkpoint, `provenance/log.jsonl` | `0` opened; `1` refused (active run, `STORY_IN_FLIGHT`, `FENCE_OVERLAP`, gate or exact-range defects, kind `none`, kind `external` with its runner present, `NO_FIX_REPORT`, `--lenient` on a planned story); `2` unknown skill, malformed argument, an option on an ineligible skill, or any other option; `3` kind `external` whose runner is absent from `PATH`, or a worktree prerequisite that failed (`prerequisite_missing`) | model |
 | `devforgeai phase fail` | `--reason <text>` | a run is active | `work/<run>/handoff.json`, canonical `state.yaml` (status `blocked`/`dev_blocked`, `next`), `provenance/log.jsonl`; abandons the candidate root when the policy says abandon | `0` recorded; `1` no active run | model |
 | `devforgeai validate` | none | a run is active | nothing | `0` invariants hold; `1` no active run, or fence/stack invariants fail | model |
 | `devforgeai promote` | `<run>` | the run's status is `ready_to_promote`; canonical base unmoved (`STALE_BASE`); no dirty canonical file among the run's changed paths (`DIRTY_TARGET`); the sequencer lock is free | canonical tree (the run's changed paths), canonical `state.yaml#runs.<run>` (status `promoted`), `work/<run>/handoff.json`, `provenance/log.jsonl` | `0` promoted; `1` `NO_CANDIDATE`, run not `ready_to_promote`, `STALE_BASE` after a failed rebase, `DIRTY_TARGET`, or `MERGE_CONFLICT`; `3` the lock could not be taken | model |
@@ -63,12 +63,18 @@ Refusal reasons this grammar names, beyond the gate defect classes in section 3.
 | `NO_CANDIDATE` | `promote`, `candidate abandon` | the named run has no candidate root: it was never opened, or it was already promoted or abandoned |
 | `NO_FIX_SOURCE` | `phase start` | `--fix` was given for a skill that declares no fix-report source in the registry (only `dev`, with the qa and review reports, and `skill-generator`, with the validate report, declare one); exit 2 |
 | `NO_FIX_REPORT` | `phase start` | `--fix` was given and none of the skill's declared fix-report files exists (for `dev`, neither `docs/reports/qa-<story>.md` nor `docs/reports/review-<story>.md`; for `skill-generator`, no `docs/reports/validate-<skill>.md`), so there is no report for the run's workers to read and nothing to record as `run.yaml#fix_report`. The refusal names both paths it looked for |
+| `PR_RANGE` | `phase start pr`, PR completion | the two full commit pins or repository identity fail one of `14-hosted-verification-and-pr.md` section 2's checks; no candidate opens, or an opened run does not complete |
+| `PR_DRAFT_PATHS` | PR draft oracle | the producer changed anything other than the two fixed `pr-artifacts` paths, omitted one, or produced an extra path |
+| `PR_TITLE` | PR draft oracle | the title is not exactly one trimmed non-empty line of at most 72 characters |
+| `PR_BODY` | PR draft oracle | a required heading is absent, duplicated, or out of order; a full pin is absent; or unresolved placeholder text remains |
+| `PR_ENCODING` | PR draft oracle | either draft artifact is absent, unreadable, or not UTF-8 |
+| `PR_PACKET` | PR external completion | the installed schema is unavailable or the generated packet fails it; no external completion is recorded |
 
 Notes that bind skill authors:
 
 - `devforgeai run <key>` is the one operation a worker calls that is not `status`. It is admitted only to the producer holding the lease, only for a key in `run.yaml#granted_keys`, and it runs with cwd = `candidate.root`. The primary window is refused: it holds no lease. The Claude allowlist declares `Bash(devforgeai run *)` as surface so the permission layer can name the operation; the sequencer, not the allowlist, decides.
 - A judge calls `devforgeai status` and nothing else. A producer calls `devforgeai status` and `devforgeai run <key>`. The primary window may call the five model-callable operations, and only as current state allows: `devforgeai phase start` only when no run is active, to resume a blocked run with the same skill and argument, or to open `clarify` beside a blocked run on the same story, `devforgeai validate` and `devforgeai phase fail` only when one is, `devforgeai promote <run>` only for a run already marked `ready_to_promote` and only when the user has asked for it.
-- `--fix` and `--lenient` are the only two flags `phase start` accepts, and the dispatcher's Bash grammar accepts them only as trailing tokens, in either order, each at most once. Any other flag, and any repetition or reordering of these two, is refused before the sequencer runs. `--fix` is legal for a story skill only: it opens an ordinary run whose workers read the qa or review report the sequencer recorded as `run.yaml#fix_report`, and it narrows nothing but the red oracle's required-fail set (section 4, "Fix mode"). `promote` takes one positional run id and no flag at all.
+- `--fix`, `--lenient`, and `--draft` are the only flags `phase start` accepts. The first two retain their story-gate rules and may appear once as trailing tokens in either order; `--draft` may appear once and only on `phase start pr <base>..<head>`. Any other flag, duplicate, or illegal combination is refused before the sequencer runs. `promote` takes one positional run id and no flag at all, and a `pr` run is never promotable.
 - No operation writes a narrative report on request. `<phase>-report.md` is rendered by the sequencer from the ingested result, and `docs/reports/<skill>-<run>-<phase>.md` is its rendered view, written at the transition.
 - Skills whose kind is `none` have no phases and never open a run; their command is a thin wrapper over a deterministic operation. `status` wraps `devforgeai status`; the installer skill wraps the installer, which is not part of this grammar.
 - The installer skill is the one skill that writes `.devforgeai/` itself, and it does so through documented provider-side steps in its own `SKILL.md` — copy the hook fragments, write the `state.yaml` skeleton, create `work/`, `sessions/` and `provenance/` — not through any operation in this table. There is nothing for a sequencer to enforce until `state.yaml` exists, so the window is exactly that: while no `.devforgeai/state.yaml` exists the hook dispatcher permits a write under `.devforgeai/` and denies every other path; the moment the file exists that window closes and every path under `.devforgeai/` is refused by name, to the installer skill and to everything else (`09-hook-dispatcher.md`; `examples/hooks/dispatch.py` `check_installer_write`). `.claude/**`, `.codex/**`, `CLAUDE.md` and `AGENTS.md` are denied on both sides of the boundary: the dispatcher is itself one of the files the installer writes, so the provider fragments land before it is armed to see them. Re-installing over an installed repository is therefore not a skill operation at all.
@@ -94,7 +100,7 @@ One consequence remains, and it is smaller than it was: Research Core runs in th
 | Gate policy | `BLOCK`, `REQUIRE_HUMAN`, `WARN`, `OFF` | the artifact author, per defect class | `story.gate_policy`, `run.yaml#gate_policy`, `handoff.outcome` |
 | Oracle classification | `PASS`, `EXPECTED_TEST_FAILURE`, `TEST_FAILURE`, `NO_TESTS`, `COLLECTION_ERROR`, `INFRA_FAILURE`, `TIMEOUT` | the sequencer, from a brokered command | `run.yaml#last_oracle`, `handoff.validation[]` |
 
-The reason codes divide by who caused the stop. `runner_missing`, `timeout` and `network` are the brokered command's. `provider_tool_refused` is the provider's: it refused a tool call before any DevForgeAI hook ran, so no hook decision, no fence and no lease was involved and the phase never got to execute. `hook_fault` is the framework's, and it stays reserved for exactly two causes — a hook event that lacked identity, and a malformed receipt. All but `runner_missing` roll up to `INFRA_FAILURE`; see `13-error-taxonomy.md` and `framework/contracts/error-taxonomy.yaml`, which is normative.
+The reason codes divide by who caused the stop. `runner_missing`, `timeout` and `network` are the brokered command's. `provider_tool_refused` is the provider's: it refused a tool call before any DevForgeAI hook ran, so no hook decision, no fence and no lease was involved and the phase never got to execute. `hook_fault` is the framework's, and it stays reserved for exactly two causes — a hook event that lacked identity, and a malformed receipt. All but `runner_missing` roll up to `INFRA_FAILURE`; see `13-error-taxonomy.md`. Story/document runs use `framework/contracts/error-taxonomy.yaml`; range-kind PR runs use the staged `framework/contracts/error-taxonomy-v2.yaml` so the frozen version-1 candidate is not re-pinned.
 
 `gate_policy` is a defect-to-action map. It is never a status a worker returns, and no worker reads it. There is no `test_defect` status and no `test_defect` issue kind: a rewind is `status: fail` with `next: <rewind_to>`, and it is legal only from a phase whose registry entry declares `rewind_to`.
 
@@ -197,6 +203,7 @@ Column meanings:
 | amend | document | `docs/architecture/**`, `docs/reports/impact-<arg>.md`, `.devforgeai/provenance/adr/**` | 4 |
 | retro | document | `docs/reports/retro-<arg>.md` | 4 |
 | drift | document | `docs/reports/drift-<arg>.md` | 3 |
+| pr | range | candidate-only `pr-artifacts/title.txt`, `pr-artifacts/body.md`; accepted output under canonical `.devforgeai/work/<run>/output/` | 2 |
 
 `dev-tdd` is a variant of `dev`, not a nineteenth entry: it resolves to `dev` before the enforcement block is written, so it shares the phase list, the gate, and the oracles. The story or the constitution decides which variant's worker files are installed; the sequencer sees `dev`.
 
@@ -275,6 +282,8 @@ Column meanings:
 | drift | 1 | `code_map` | `code_mapper` | none | 2 | — | report_only | — |
 | drift | 2 | `doc_diff` | `doc_differ` | none | 2 | — | report_only | — |
 | drift | 3 | `report` | `drift_writer` | docs | 2 | — | document | — |
+| pr | 1 | `draft` | `pr_drafter` | docs | 2 | — | document | — |
+| pr | 2 | `critique` | `pr_critic` | none | 2 | — | report_only | `draft` |
 
 **Fix mode.** `/dev <story> --fix` opens an ordinary dev run whose story context bundle names the qa or review report that routed here. The sequencer, not the caller, resolves that path: `phase start` records the newer of `docs/reports/qa-<story>.md` and `docs/reports/review-<story>.md` as `run.yaml#fix_report`, refuses `NO_FIX_REPORT` when neither exists, and prints `fix_report` in the `devforgeai status` block so the primary can paste it into the dispatch prompt (section 2). The only change is the red oracle's required-fail set: it is the `test_plan` rows whose criteria the report marks failed, plus any test added in this run, and every other `test_plan` test must pass in the red checkpoint. Green and refactor are unchanged. Without this narrowing, promoted code that already passes some planned tests could never leave red. The runnable draft in `examples/hooks/` does not yet read `fix_report` and applies the full-fail rule in every dev run; that gap is listed in its README.
 
@@ -441,7 +450,7 @@ The accepted result is written to `.devforgeai/work/<run>/<phase>-result.json`: 
 | `red` | build first when the section is compiled; broker `test`; classification is not `NO_TESTS` or `COLLECTION_ERROR`; the command exits non-zero; every `test_plan` name is present and `failed`, never `error`; no test outside `test_plan`; records `red_hashes` | the suite is red for the intended assertions, and only for them; classification is recorded as `EXPECTED_TEST_FAILURE` |
 | `green` | every `test_paths` hash equals `red_hashes`; build when compiled; broker `test`; every `test_plan` name is `passed` | the tests that were red are green and were not edited to get there |
 | `refactor` | everything `green` checks, plus `lint` exits zero when the run authorises the key | behaviour unchanged, structure improved, style clean |
-| `document` | the phase declared `writes: docs` and `changed[]` is non-empty, unless it is marked conditional, in which case an empty change set needs a non-empty `note`; every changed path exists in the root with the bytes the checkpoint will hold | the document the phase owes exists inside its fence, or the run records why none was owed |
+| `document` | the phase declared `writes: docs` and `changed[]` is non-empty, unless it is marked conditional, in which case an empty change set needs a non-empty `note`; every changed path exists in the root with the bytes the checkpoint will hold. For `pr/draft`, the change set is exactly the two fixed artifact paths and the title/body contract in `14-hosted-verification-and-pr.md` section 3 passes | the document the phase owes exists inside its fence, or the run records why none was owed; a PR draft is complete and range-bound |
 | `report_only` | the shared invariants only; from a judge, `changed[]` is empty and step 8b has already written this phase's `findings.md` under this run's own `evidence/<agent>/` | the fence held and the stack policy holds |
 
 Outcomes:
@@ -449,7 +458,8 @@ Outcomes:
 | Situation | Effect |
 |---|---|
 | no problems, another phase follows | advance; log `transition.pass`; render the report view |
-| no problems, last phase | set `runs.<run>.status: ready_to_promote`; write a `REQUIRE_HUMAN` handoff whose `next` is `devforgeai promote <run>`; keep the candidate root and its checkpoints. The run's work is complete and unpromoted, which is a decision for a human, not a status the sequencer may close on its own |
+| no problems, last phase of `pr` | re-run the range and draft gates; persist the accepted artifacts, request, and packet under `work/<run>/output/`; remove the candidate root; set `runs.<run>.status: complete_external`; write a `REQUIRE_HUMAN` handoff naming push, request submission, and the saved continuation. No promotion occurs |
+| no problems, last phase of any other skill | set `runs.<run>.status: ready_to_promote`; write a `REQUIRE_HUMAN` handoff whose `next` is `devforgeai promote <run>`; keep the candidate root and its checkpoints. The run's work is complete and unpromoted, which is a decision for a human, not a status the sequencer may close on its own |
 | problems, attempts below the limit | attempt +1; log `transition.fail`; exit 1 with the rows on stderr so the same worker sees them and continues |
 | problems, attempts at the limit | `REQUIRE_HUMAN` handoff; the story's status becomes `dev_blocked` and the run stays `active` with its lease released, so the candidate root survives for inspection; `devforgeai phase fail --reason <text>` is what abandons it |
 | any problem row beginning `COULD_NOT_RUN` | routed by `gate_policy.test_runner_missing`; the handoff's next step is the repair, then the skill's command |
@@ -480,13 +490,14 @@ The dispatcher records that Claude Code documents `agent_id` and `agent_type` on
 
 ## 6. Handoff envelope
 
-`.devforgeai/work/<run>/handoff.json`, `devforgeai.handoff/v1`. Written at a completed run, at a block, at `devforgeai phase fail`, and again at `devforgeai promote <run>`. The block printed by the primary window and by `devforgeai status` is this file's rendering; it may not contain a fact this file does not hold.
+`.devforgeai/work/<run>/handoff.json`, `devforgeai.handoff/v1`. Written at a completed run, at a block, at `devforgeai phase fail`, at PR external completion, and again at `devforgeai promote <run>`. The block printed by the primary window and by `devforgeai status` is this file's rendering; it may not contain a fact this file does not hold.
 
 | Corpus field group | Concrete fields | Required | Source |
 |---|---|---|---|
 | Location | `run`, `skill`, `phase`, `location` | yes | `run.yaml`; `location` is `.devforgeai/work/<run>/` |
 | Result | `outcome`, `reasons[]` | yes | `pass` on completion, else the `gate_policy` action; `reasons` is the defect or completion list, never empty |
 | Canonical artifacts | `artifacts[] {path, sha256, phase, checkpoint, status}` | no | the `changed[]` rows of each phase result. Until the run is promoted these paths name bytes in the candidate root, which is why each row carries the `checkpoint` they live in as well as the hash |
+| External artifacts | `artifacts[] {path, sha256, phase, checkpoint, status}` | `pr` only | after PR critique these name the persisted title, body, request, and packet under `work/<run>/output/`; status is `complete_external`, and no row claims canonical Git promotion |
 | Source basis | `source_basis[] {source, hash, status}` | no | the `provenance` and `context` entries the gate re-resolved |
 | Validation | `validation[] {key, classification, exit, not_run}` | no | every brokered command outcome; `not_run: true` names a check that could not run and why |
 | Decisions | `decisions[] {text, authority}` | no | decisions accepted during the run, each with a named authority |
@@ -498,7 +509,7 @@ The dispatcher records that Claude Code documents `agent_id` and `agent_type` on
 | Repair route | `repair_route[] {defect, owner, command}` | no | the skill that owns the failing template, and the command that re-runs it |
 | Result | `verdict` | no | the frontmatter `verdict` of the report the last phase's receipt named in `evidence_refs`, on a report-producing skill only. It selects the row this envelope renders and therefore `next`; it never changes `outcome` |
 
-`outcome` is `pass`, `BLOCK`, `REQUIRE_HUMAN`, `WARN` or `OFF`. `BLOCK` is what `devforgeai phase fail` records. `REQUIRE_HUMAN` is what an exhausted attempt budget, a `needs_user` result, a missing worker identity, the default `test_runner_missing` policy, and a completed-but-unpromoted run record. `pass` is now written at one moment only: a successful `devforgeai promote <run>`, when the work has actually reached the canonical tree. `WARN` and `OFF` appear only when a story loosened `test_runner_missing`; the run is still closed.
+`outcome` is `pass`, `BLOCK`, `REQUIRE_HUMAN`, `WARN` or `OFF`. `BLOCK` is what `devforgeai phase fail` records. `REQUIRE_HUMAN` is what an exhausted attempt budget, a `needs_user` result, a missing worker identity, the default `test_runner_missing` policy, a completed-but-unpromoted run, and a `pr` packet awaiting human publication record. `pass` is written only after a successful promotion into the canonical tree; external completion deliberately remains `REQUIRE_HUMAN` because no GitHub object exists yet. `WARN` and `OFF` appear only when a story loosened `test_runner_missing`; the run is still closed.
 
 Rendering rules, enforced by the sequencer and checked by `skill-validator`:
 
@@ -526,6 +537,7 @@ The rows below are the framework-level situations, and they are what a skill's `
 | Situation | `next` |
 |---|---|
 | any run, all phases passed, not yet promoted | `devforgeai promote <run>` |
+| `pr`, critique passed and external packet persisted | human pushes the exact head branch and submits `work/<run>/output/pr-request.json`, then runs the saved continuation |
 | story run, promoted | `/review <arg>` |
 | document run, promoted, no verdict or `verdict: pass` | `/status` |
 | `review`, promoted, `verdict: findings` or `fail` | `/dev <arg> --fix` |
@@ -627,7 +639,7 @@ This is the evidence that the chain was armed, what it could resolve, and who wa
 
 ## 9. Enforcement block
 
-`.devforgeai/work/<run>/run.yaml`, `schemas/devforgeai/v1/run.schema.json`. Written by the sequencer at `devforgeai phase start` and updated at every transition. It outlives the candidate root: promotion and abandonment remove the root, branch, tags and copy-aside, and leave `run.yaml` with the final status so `devforgeai status`, inspection and `NO_CANDIDATE` still resolve. It is gitignored and per-run: it never enters a commit, a checkpoint or a promotion, and two runs never share one. Nothing in it is derived at hook time from a Markdown document: the gate resolved every value once and recorded the result, so a hook reads one file and decides.
+`.devforgeai/work/<run>/run.yaml`, validated by `schemas/devforgeai/v1/run.schema.json` for story/document runs and `schemas/devforgeai/v2/run.schema.json` for range-kind PR runs. Written by the sequencer at `devforgeai phase start` and updated at every transition. It outlives the candidate root: promotion and abandonment remove the root, branch, tags and copy-aside, and leave `run.yaml` with the final status so `devforgeai status`, inspection and `NO_CANDIDATE` still resolve. It is gitignored and per-run: it never enters a commit, a checkpoint or a promotion, and two runs never share one. Nothing in it is derived at hook time from a Markdown document: the gate resolved every value once and recorded the result, so a hook reads one file and decides.
 
 The name "enforcement block" is kept for what this file holds, because that is what every skill specification calls it. What changed is where it lives: it used to be a mapping inside canonical `state.yaml`, which made two concurrent runs impossible and put per-phase churn into a tracked file. Section 12.3 states the split and the two-marker rule that resolves which file a process is looking at.
 
@@ -792,11 +804,11 @@ runs:
     root: .devforgeai/work/STORY-001/wt   # relative: state.yaml is tracked and carries no machine path
     base_ref: 4f9c1e2a8b7d6c5f4e3d2c1b0a9f8e7d6c5b4a39
     checkpoint: green
-    status: active              # active | ready_to_promote | promoted | abandoned
+    status: active              # active | ready_to_promote | promoted | complete_external | abandoned
 next: "/dev STORY-001"
 ```
 
-Per-run enforcement — `phase`, `write_fence`, `test_paths`, `granted_keys`, `lease`, `attempts`, `bounce_count` — lives in `.devforgeai/work/<run>/run.yaml`, which is gitignored (section 9). Canonical state is written at exactly three moments, always under the lock: `phase start` registers the run, promotion marks it `promoted`, abandonment marks it `abandoned`.
+Per-run enforcement — `phase`, `write_fence`, `test_paths`, `granted_keys`, `lease`, `attempts`, `bounce_count`, and range metadata when applicable — lives in `.devforgeai/work/<run>/run.yaml`, which is gitignored (section 9). Canonical state is written at exactly four moments, always under the lock: `phase start` registers the run, promotion marks it `promoted`, PR packet persistence marks it `complete_external`, and abandonment marks it `abandoned`.
 
 The sequencer never commits on the target branch. A promotion's edits to canonical `state.yaml` are working-tree edits, which the owner commits alongside the story's code; a framework that committed for the user would decide the granularity of their history.
 
@@ -840,6 +852,14 @@ Promotion, in order, under `.devforgeai/lock`:
 | 6 | remove the candidate root, its branch and its tags | — |
 
 `devforgeai candidate abandon <run>` is the other exit. `devforgeai phase fail --reason <text>` calls it when the policy says abandon; the root, its branch and its tags go, `runs.<run>.status` becomes `abandoned`, and the canonical tree is exactly as it was at `phase start`. A blocked run is **not** abandoned: it keeps `status: active` with its lease released, so its root and every checkpoint survive for inspection, and the user chooses between `devforgeai phase fail --reason` and repairing the story and re-running.
+
+`pr` is the sole external-completion route and never enters the promotion table.
+After its last judge passes, the sequencer revalidates the range and the two
+draft files, persists the four external artifacts under
+`.devforgeai/work/<run>/output/`, removes the candidate, and marks the run
+`complete_external`. It does not touch the source branch, default branch,
+remote, GitHub API, or any path outside canonical `.devforgeai/`. Publication
+is the human step rendered in the handoff.
 
 Three properties follow, and every skill specification may rely on them:
 

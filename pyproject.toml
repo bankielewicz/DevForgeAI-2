@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools==80.9.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,8 +7,11 @@ name = "devforgeai"
 version = "0.1.0"
 description = "Deterministic, provider-neutral DevForgeAI workflow core"
 requires-python = ">=3.11"
-dependencies = ["jsonschema>=4.23,<5"]
+dependencies = ["jsonschema>=4.23,<5", "PyYAML>=6.0.3,<7"]
 classifiers = ["Operating System :: POSIX :: Linux"]
+
+[dependency-groups]
+dev = ["build==1.4.0", "pytest==9.0.2", "setuptools==80.9.0"]
 
 [project.scripts]
 devforgeai-research = "devforgeai.research.cli:main"

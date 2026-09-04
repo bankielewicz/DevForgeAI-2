@@ -9,34 +9,34 @@ author: "DevForgeAI plan skill (wave 2 spec authoring)"
 date: 2026-09-02
 depends_on:
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:6556607035516c49ee43fe2bbeffe1a74e898889d84be00c9a05fdf751d209b6
+    hash: sha256:721c5d5e73f2678f565b23284f78cffe26b62919c6d652aa7756f13a9a0f064e
     excerpt: "**The model dispatches, the sequencer decides.** For an anatomy-governed skill, the primary window (provider entry adapter + skill orchestration) does light, trivial work only."
   - source: docs/design/01-skill-anatomy.md#context-bundle-format
     hash: sha256:7b068feb30e7cc2f66292b512ac179cd217df225fb58517d2aaadd30b25236dc
     excerpt: "3. Split the file on LF (a file that ends with LF therefore yields a final empty line, which belongs to the last section); join the section lines with LF and append one LF."
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:7c1d67f1154e49247e5dc178fcc1512bdbd53af378c360aeafe69bffed1136ab
+    hash: sha256:ac18004be37ef017e4d4abf8c6303e096d64dbbc0ae0c37e6288230473caaf66
     excerpt: "| amend | document | `docs/architecture/**`, `docs/reports/impact-<arg>.md`, `.devforgeai/provenance/adr/**` | 4 |"
   - source: docs/design/10-sequencer-and-contracts.md#5-worker-result
-    hash: sha256:9a3b34599a10c9c34105dee5a9de75cc0511decc55a5f85794dcf0954b731507
+    hash: sha256:a27553487d0bfd28fe9329ef145aa47fd00138ec923cf737e3e5e94f7ff212a4
     excerpt: "One schema, both providers, every skill. The worker's final message is exactly this object, with no Markdown fence and no surrounding prose."
   - source: docs/design/10-sequencer-and-contracts.md#3-status-vocabulary-and-gate-policy
-    hash: sha256:1706823f7848f5cb6b23e68dfd783885fad3fdfa5d98fb6df0b90270a818fc20
+    hash: sha256:5e1b603b96613581b8d9010526f504e445cbf524de972ea7a999ac0c127b6667
     excerpt: "A document run carries the fixed map `{unresolvable_source: BLOCK}`, because it has no story to declare a wider one."
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:52cf474c332c7d8a02ad1b1abac51d852d5f54c30bf5126deb8a5b18cde77206
+    hash: sha256:fa55ff391a00f9b6c93ab76cd26b305bc16b2617aa714f90501b571e8f68f32f
     excerpt: "| document run, promoted, no verdict or `verdict: pass` | `/status` |"
   - source: docs/design/11-artifact-registry.md#1-template-registry
-    hash: sha256:fabb8d2f142dcde1a31bc53768f8a46d01cac3ea4a7f6b73db22479cc89b5553
+    hash: sha256:cb9cad97fcdd0d5b5da645e2d16f43c665f935174f52f9ba3c2858c004f3e894
     excerpt: "| `impact-report` | `.devforgeai/skills/amend/templates/impact-report.md` | 1 | `^IMP-[0-9]{3}$` | doc, template, template_version, status, depends_on | Change, Affected Stories, Re-slice Actions |"
   - source: docs/design/11-artifact-registry.md#2-artifact-path-patterns
-    hash: sha256:858455b885ac6c1ddbe427a433ba715f7266d08b90e105135172877e29ea0ecc
+    hash: sha256:988ba5b8cbc3a4e0b7f3b52b1b6a41ddced3512ad481de63762ebdbd0bdef035
     excerpt: "| `.devforgeai/provenance/adr/NNNN-<slug>.md` | `adr` | architect (`adr`), amend (`adr`) | sequencer |"
   - source: docs/design/02-skill-roster.md#amend
     hash: sha256:7d3fb6fd5626ff057c8ecc768d30ab052bdb90a9521ffab125245d279812caff
     excerpt: "- Impact-analyzer finds every story whose context bundle hashes the changed section."
   - source: docs/design/05-subagent-sets.md#sets-per-skill
-    hash: sha256:f2957217c9af147e4a7ea03749cbe6efda266bd56d403f39aa25c9a655872609
+    hash: sha256:2bb8ba434c56127d48d09179d742bf0f2f284f18363e7c2e911b1f2211ba3a7e
     excerpt: "| amend | change-applier, adr-writer, impact-analyzer, resync-slicer |"
 ---
 

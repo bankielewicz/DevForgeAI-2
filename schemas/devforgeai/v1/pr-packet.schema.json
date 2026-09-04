@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devforgeai.dev/schemas/devforgeai/v1/pr-packet.schema.json",
+  "title": "DevForgeAI PR packet",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "run",
+    "range",
+    "repository",
+    "types",
+    "changed_paths",
+    "artifacts",
+    "draft",
+    "post_action_next",
+    "created_at"
+  ],
+  "properties": {
+    "schema": {"const": "devforgeai.pr-packet/v1"},
+    "run": {"type": "string", "pattern": "^pr-[0-9a-f]{12}-[0-9a-f]{12}$"},
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["base", "head", "base_ref", "head_ref"],
+      "properties": {
+        "base": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "head": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "base_ref": {"type": "string", "minLength": 1, "maxLength": 255},
+        "head_ref": {"type": "string", "minLength": 1, "maxLength": 255}
+      }
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "types": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "architecture",
+          "analyzed_plan",
+          "validated_skill",
+          "passing_qa",
+          "governance_amendment",
+          "implementation"
+        ]
+      }
+    },
+    "changed_paths": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["status", "path"],
+        "properties": {
+          "status": {"type": "string", "pattern": "^[ACDMRTUXB][0-9]{0,3}$"},
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+          }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "body", "request"],
+      "properties": {
+        "title": {"$ref": "#/$defs/artifact"},
+        "body": {"$ref": "#/$defs/artifact"},
+        "request": {"$ref": "#/$defs/artifact"}
+      }
+    },
+    "draft": {"type": "boolean"},
+    "post_action_next": {"type": ["string", "null"], "maxLength": 1024},
+    "created_at": {"type": "string", "format": "date-time"}
+  },
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^\\.devforgeai/work/pr-[0-9a-f]{12}-[0-9a-f]{12}/output/[^/]+$"
+        },
+        "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+      }
+    }
+  }
+}

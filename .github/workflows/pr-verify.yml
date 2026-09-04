@@ -1,0 +1,138 @@
+name: pull-request-verification
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-verify-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12.3"
+  NODE_VERSION: "24.18.0"
+  UV_VERSION: "0.11.26"
+  UV_PYTHON: "3.12.3"
+  UV_PYTHON_DOWNLOADS: "never"
+  RUST_VERSION: "1.94.0"
+
+jobs:
+  research:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the exact event head
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: false
+      - name: Reproduce the environment from uv.lock
+        run: uv sync --frozen --dev
+      - name: Run the research and contract tests
+        run: uv run python -m pytest tests/research -q
+
+  contracts:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the exact event head
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: false
+      - name: Reproduce the environment from uv.lock
+        run: uv sync --frozen --dev
+      - name: Verify design provenance
+        run: uv run python docs/design/specs/verify.py
+      - name: Verify the hook reference component
+        run: uv run python components/hook-runtime/reference/claude-python/tests/run_tests.py
+      - name: Build the wheel
+        run: uv build --no-build-isolation
+      - name: Reject whitespace errors
+        run: git diff --check
+
+  sequencer:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the exact event head
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: false
+      - name: Reproduce the environment from uv.lock
+        run: uv sync --frozen --dev
+      - name: Run enforcement conformance
+        run: uv run python docs/design/examples/hooks/run_conformance.py
+      - name: Run the copy and worktree demo
+        run: bash docs/design/examples/hooks/demo_sequencer.sh
+
+  release_candidate:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the exact event head
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: false
+      - name: Reproduce the environment from uv.lock
+        run: uv sync --frozen --dev
+      - name: Require the corrected PR 22 release candidate
+        run: |
+          test -f components/devforge-release/launcher/Cargo.toml
+          test -f components/devforge-release/launcher/Cargo.lock
+          test -f components/devforge-release/launcher/BUILD-DIGEST.txt
+          test -f components/devforge-release/tests/test_devforge_release.py
+      - name: Pin the Rust toolchain
+        run: |
+          rustup toolchain install "$RUST_VERSION" --profile minimal --target x86_64-unknown-linux-musl --no-self-update
+          rustup override set "$RUST_VERSION"
+          test "$(rustc --version | cut -d' ' -f2)" = "$RUST_VERSION"
+      - name: Test the staged protected-launcher candidate
+        run: components/devforge-release/launcher/build.sh
+      - name: Test the staged release layout and validator
+        run: uv run python -m pytest components/devforge-release/tests -q
+
+  required:
+    if: ${{ always() }}
+    needs: [research, contracts, sequencer, release_candidate]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require every advisory verification lane
+        run: |
+          test "${{ needs.research.result }}" = success
+          test "${{ needs.contracts.result }}" = success
+          test "${{ needs.sequencer.result }}" = success
+          test "${{ needs.release_candidate.result }}" = success

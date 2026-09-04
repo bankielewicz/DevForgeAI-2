@@ -22,7 +22,7 @@ provider entry adapter  ->  skill (primary window)  ->  LLM workers
 ### Provider entry adapter responsibilities (and nothing more)
 
 1. Parse arguments and flags.
-2. Call `devforgeai phase start <skill> <arg>`; the sequencer reads `.devforgeai/state.yaml`, runs the gate, and refuses if the prerequisite phase is incomplete.
+2. Call `devforgeai phase start <skill> <arg>` with only the skill's declared option; the sequencer reads `.devforgeai/state.yaml`, runs the artifact, story, or exact-range gate, and refuses if a precondition is incomplete.
 3. Load the skill.
 4. Print the handoff the sequencer rendered.
 
@@ -52,7 +52,7 @@ Model-callable CLI, closed set. Anything else is hook-only and is denied in the 
 | `devforgeai phase start <skill> <arg>` | run the deterministic gate, open the candidate root, and open the phase |
 | `devforgeai phase fail --reason <text>` | record a BLOCK handoff and stop |
 | `devforgeai validate` | fence and invariant scan; writes nothing |
-| `devforgeai promote <run>` | fast-forward a `ready_to_promote` run into the canonical checkout; called only after `REQUIRE_HUMAN` and only when the user asks |
+| `devforgeai promote <run>` | fast-forward a `ready_to_promote` run into the canonical checkout; called only after `REQUIRE_HUMAN` and only when the user asks. A `pr` run completes as `complete_external` and is never promotable |
 
 `session-start`, `ingest-result`, `phase next`, and the four `candidate` operations (`open`, `checkpoint`, `promote`, `abandon`) are hook-only: they require the `DEVFORGEAI_HOOK_EVENT` environment marker and never appear in a model-facing allowlist. `devforgeai run <key>` is not model-callable from the primary window: it is available to the producer worker that holds the run's lease, for the keys the phase granted, and it executes with cwd = `candidate.root`. The grammar is normative in `10-sequencer-and-contracts.md`.
 
@@ -162,6 +162,7 @@ Slice is sub-phase 1 and it dispatches nothing. The artifact a phase consumes al
 |---|---|
 | story run (`dev`) | the story's `context[]`, entry by entry, with each entry's verdict: resolved, `stale-hash` or `unresolvable-source` |
 | story-anchored document run (`review`, `qa`) | the same, from the story the argument names |
+| exact-range run (`pr`) | the base/head pair, repository identity, changed-path rows, classified types, and saved continuation resolved by the sequencer |
 | every other document run | `slice: none` and an empty entry list: the document gate identifies no incoming artifact, so there is no bundle to resolve and each worker reads the paths its own phase names |
 | `init`, `status`, `research` | nothing: no run opens, so the sequencer creates no evidence directory |
 
@@ -256,11 +257,11 @@ runs:                              # one row per candidate root the sequencer op
     root: .devforgeai/work/RUN-000012/wt
     base_ref: 4c1f9ab              # canonical HEAD pinned at `phase start`
     checkpoint: devforgeai/RUN-000012/green
-    status: active                 # active | ready_to_promote | promoted | abandoned
+    status: active                 # active | ready_to_promote | promoted | complete_external | abandoned
 next: "/dev STORY-001 --fix"
 ```
 
-`/status` renders this file. Only the `devforgeai` sequencer writes it, and only at `phase start` (registering the run), at promotion or abandonment, and at `phase fail`; Research state is written only by Research Core. Canonical `state.yaml` carries no per-phase enforcement: `phase`, `fence`, `test_paths`, `granted_keys`, `lease` and `bounce_count` live in `.devforgeai/work/<run>/run.yaml`, which is gitignored and never promoted. Nothing inside a candidate root reads `state.yaml`; a worker reads `context.json` and the status block it was handed.
+`/status` renders this file. Only the `devforgeai` sequencer writes it, and only at `phase start` (registering the run), at promotion, PR external completion, abandonment, and `phase fail`; Research state is written only by Research Core. Canonical `state.yaml` carries no per-phase enforcement: `phase`, `fence`, `test_paths`, `granted_keys`, `lease` and `bounce_count` live in `.devforgeai/work/<run>/run.yaml`, which is gitignored and never promoted. Nothing inside a candidate root reads `state.yaml`; a worker reads `context.json` and the status block it was handed.
 
 ### Evidence home
 
@@ -272,6 +273,7 @@ There is one home for a run's evidence, and the sequencer writes every file in i
 | `.devforgeai/work/<run>/wt/` | the candidate root itself: a git worktree on branch `devforgeai/<run>`, or a copy of the project tree where the project is not a git repository. Producers write here; the sequencer creates, checkpoints, promotes and removes it. Gitignored |
 | `.devforgeai/work/<run>/evidence/<agent>/findings.md` | the judge's detailed evidence, written by the sequencer at ingest from the receipt's `findings`. The judge holds no write tool and never touches this path. Run-scoped, gitignored, never promoted; read by the next phase's worker by path |
 | `.devforgeai/work/<run>/context.json` | the Slice output: the incoming artifact's context bundle as the gate resolved it, written once at `phase start` |
+| `.devforgeai/work/pr-*/output/` | the accepted PR title/body, human GitHub request and digest-bound packet. Written by the sequencer after the final range revalidation; the candidate is then removed without promotion |
 | `.devforgeai/work/<run>/<phase>-report.md` | the phase's narrative report, rendered from the worker receipt and the checkpoint diff |
 | `.devforgeai/work/<run>/<phase>-result.json` | the accepted `devforgeai.worker-result/v1` plus `session_id`, the `changed[]` set the sequencer derived from the checkpoint diff, the checkpoint ref, and the transition verdict |
 | `.devforgeai/work/<run>/handoff.json` | the handoff envelope for this run |

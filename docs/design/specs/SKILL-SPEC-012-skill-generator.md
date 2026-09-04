@@ -13,10 +13,10 @@ depends_on:
     hash: sha256:3ba95218e8c9c2dcbbe0ed870c729906bb92cefa3c70a33d8476b95562b9889e
     excerpt: "Lives in `.devforgeai/skills/<name>/skill.yaml`."
   - source: docs/design/04-dual-target.md#compiled-layouts
-    hash: sha256:44f02357b7a9e513985b6d3de6268cd0d178830cb1256c97267e46c64dde6a28
+    hash: sha256:71f2d7b8032b775748a7e3d929cf6fc13846cfbd7a58c342b0014ea63bfc8327
     excerpt: "portable `SKILL.md` frontmatter is exactly the six open-standard fields (`name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`), because the standard's validator rejects unknown keys."
   - source: docs/design/04-dual-target.md#validation
-    hash: sha256:154da47d56b6186c38274dacc2cdd6ccffdab348221a4f3519b4ef835a99d8ba
+    hash: sha256:e619ca83326c3c6b8b4f8293ed02bded2f6d7ca88f0199820ef18cb09915fdbc
     excerpt: "skill-validator runs after every compile and checks:"
   - source: docs/design/06-skill-specification.md#deferred-to-devforgeai-s-skill-generator
     hash: sha256:7c73717a4098a383d070bd0b2897276f3700ffc269045018efa5ab9800c0fdaa
@@ -25,34 +25,34 @@ depends_on:
     hash: sha256:ab73600267ef7b6721cf5c7599e7432f096b116b2b5aac12405ac933f9c17576
     excerpt: "If any section is ambiguous or any unresolved authoring assumption remains, the generator stops with a `SPEC GAPS` list instead of guessing. The author fixes the spec and re-runs."
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:7c1d67f1154e49247e5dc178fcc1512bdbd53af378c360aeafe69bffed1136ab
+    hash: sha256:ac18004be37ef017e4d4abf8c6303e096d64dbbc0ae0c37e6288230473caaf66
     excerpt: "| skill-generator | document | `.devforgeai/skills/<arg>/**` | 6 |"
   - source: docs/design/10-sequencer-and-contracts.md#5-2-validation-order
     hash: sha256:9cf7115cdfa637023edc22cbdf5f64c106b1eba340598c8dc97b68361cb76b0f
     excerpt: "It is `.devforgeai/state.yaml`, `.devforgeai/stack.yaml`, `.devforgeai/work/**`, `.devforgeai/provenance/**`, `.devforgeai/sessions/**`, `.devforgeai/hooks/**`, `.devforgeai/research-cas/**`, `.claude/**`, `.codex/**`, `.agents/**`, `.git/**`, `CLAUDE.md`, `AGENTS.md`."
   - source: docs/design/10-sequencer-and-contracts.md#9-enforcement-block
-    hash: sha256:c4ef5db527d878b1b1302d8912abfe770cc2f5da41917033dba11494461dcfbf
+    hash: sha256:c9d19b1d5b6ca97110a14668d937b2011b0003412eb7680db35296c629af5c0d
     excerpt: "`skill-generator`'s fence `.devforgeai/skills/<arg>/**` is checkpointed and rewound like any other path; **the \"no rewind promise for `skill-generator`\" caveat is withdrawn**"
   - source: docs/design/10-sequencer-and-contracts.md#11-per-skill-evidence-and-gate-table
     hash: sha256:21b4e5d8b01ebbca643e6e4725154ebadb0dd02ad84001495ae703f6ccee4a56
     excerpt: "Every skill specification fills this table in its section 7, one row per phase, in phase order:"
   - source: docs/design/11-artifact-registry.md#1-template-registry
-    hash: sha256:fabb8d2f142dcde1a31bc53768f8a46d01cac3ea4a7f6b73db22479cc89b5553
+    hash: sha256:cb9cad97fcdd0d5b5da645e2d16f43c665f935174f52f9ba3c2858c004f3e894
     excerpt: "| `skill-yaml` | `.devforgeai/skills/skill-generator/templates/skill.yaml` | 1 | `^[a-z][a-z0-9-]*$` | name, version, target, handoff, workers | not a Markdown artifact; the neutral skill definition |"
   - source: docs/design/11-artifact-registry.md#2-artifact-path-patterns
-    hash: sha256:858455b885ac6c1ddbe427a433ba715f7266d08b90e105135172877e29ea0ecc
+    hash: sha256:988ba5b8cbc3a4e0b7f3b52b1b6a41ddced3512ad481de63762ebdbd0bdef035
     excerpt: "| `.devforgeai/skills/<name>/skill.yaml` | `skill-yaml` | skill-generator | sequencer |"
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:52cf474c332c7d8a02ad1b1abac51d852d5f54c30bf5126deb8a5b18cde77206
+    hash: sha256:fa55ff391a00f9b6c93ab76cd26b305bc16b2617aa714f90501b571e8f68f32f
     excerpt: "| 1 | `next` is never empty and is never a description. One exact command. |"
   - source: docs/design/02-skill-roster.md#handoff-decision-tables
-    hash: sha256:1dac784b4670cc7559f323011dfe304dfe8c0baf349063162f90d76d902c5d3c
+    hash: sha256:d05a2cd65bcfabdfae43ce112a3b0b26019ad9a38bea5256c8a049e922d03d16
     excerpt: "| skill-generator | pass | `/skill-validate {skill}`, then the command that requested the generation. The generator's run is closed first; nothing is auto-run inside it |"
   - source: docs/design/05-subagent-sets.md#sets-per-skill
-    hash: sha256:f2957217c9af147e4a7ea03749cbe6efda266bd56d403f39aa25c9a655872609
+    hash: sha256:2bb8ba434c56127d48d09179d742bf0f2f284f18363e7c2e911b1f2211ba3a7e
     excerpt: "| skill-generator | spec-reader, skill-yaml-writer, subagent-writer, template-writer, claude-compiler, codex-compiler |"
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:6556607035516c49ee43fe2bbeffe1a74e898889d84be00c9a05fdf751d209b6
+    hash: sha256:721c5d5e73f2678f565b23284f78cffe26b62919c6d652aa7756f13a9a0f064e
     excerpt: "Model-callable CLI, closed set. Anything else is hook-only and is denied in the Bash allowlist:"
 ---
 

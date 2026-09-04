@@ -1,0 +1,7 @@
+name = "pr_critic"
+description = "Judge the draft when a DevForgeAI pr run names phase critique."
+sandbox_mode = "read-only"
+approval_policy = "never"
+developer_instructions = """
+Read the exact range, the installed PR workflow reference, and the two draft artifacts. Write nothing. Report unsupported claims, missing sections, omitted changed-path classes, and range drift. Run no stack key, package manager, network command, Git write, gh, or push. Return exactly one devforgeai.worker-result/v1 receipt with empty claimed_paths and bounded findings. Set next to draft when repair is required.
+"""

@@ -9,11 +9,11 @@ author: "DevForgeAI spec author (wave 2)"
 date: 2026-09-02
 depends_on:
   - source: docs/design/10-sequencer-and-contracts.md#2-cli-grammar
-    hash: sha256:808848a3cd77c93dfa2a03846c5e1619417f20e8d05482cfb94a7aecd26be5da
+    hash: sha256:3162dcab3fffc6dd2aa362e73bc14d7591348f74d8d447d2b831a58910c10eec
     excerpt: |
       Skills whose kind is `none` have no phases and never open a run; their command is a thin wrapper over a deterministic operation. `status` wraps `devforgeai status`; the installer skill wraps the installer, which is not part of this grammar.
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:7c1d67f1154e49247e5dc178fcc1512bdbd53af378c360aeafe69bffed1136ab
+    hash: sha256:ac18004be37ef017e4d4abf8c6303e096d64dbbc0ae0c37e6288230473caaf66
     excerpt: |
       | init | none | — | none; the command is a thin wrapper over the deterministic installer, and `devforgeai phase start` refuses it |
   - source: docs/design/09-hook-dispatcher.md#5-provider-configuration-and-installation
@@ -24,24 +24,24 @@ depends_on:
     hash: sha256:0917d5a622cc649b55fb714b637903ed5496d60836de49881a8ee199d0d74290
     excerpt: "- Zero LLM workers. `SKILL.md` is a thin wrapper over its bundled `scripts/install.py`; everything below is deterministic."
   - source: docs/design/02-skill-roster.md#handoff-decision-tables
-    hash: sha256:1dac784b4670cc7559f323011dfe304dfe8c0baf349063162f90d76d902c5d3c
+    hash: sha256:d05a2cd65bcfabdfae43ce112a3b0b26019ad9a38bea5256c8a049e922d03d16
     excerpt: |
       | init | greenfield | `/brainstorm {slug}` |
       | init | brownfield | `/onboard` |
       | init | target unsupported | `/init --target {other}` |
   - source: docs/design/11-artifact-registry.md#4-upstream-and-downstream-per-skill
-    hash: sha256:cfcaef76005176490e96b9e67c8fa4f0b7a6a2e13b6badf856468881fbe25200
+    hash: sha256:b2725079ec12ced201d2d57c7ddcb9819d7a4617feb5d6692d48c4fd6f3b06c5
     excerpt: |
       | init | — | the target repository | `state.yaml`, documentation skeleton, hook files | onboard, brainstorm |
   - source: docs/design/01-skill-anatomy.md#state-file
-    hash: sha256:b6afd02f6be66c6d1f475f84e66e384d4613a92706e71e849dc091610de8b25a
+    hash: sha256:5ff3d2480bc71373ac10df92968dc548ead129769b4e1c2227acff93905540c5
     excerpt: "`/status` renders this file. Only the `devforgeai` sequencer writes it, and only at `phase start` (registering the run), at promotion or abandonment, and at `phase fail`; Research state is written only by Research Core."
   - source: docs/design/01-skill-anatomy.md#handoff-contract
     hash: sha256:dc50836dc15a928b0c4758ef3a671c6f78d5c7db7ea207c923b917d89faa9e96
     excerpt: |
       4. **Cold-session safe.** Every command works from a fresh session with no memory of this run, because it reads `state.yaml`.
   - source: docs/design/05-subagent-sets.md#sets-per-skill
-    hash: sha256:f2957217c9af147e4a7ea03749cbe6efda266bd56d403f39aa25c9a655872609
+    hash: sha256:2bb8ba434c56127d48d09179d742bf0f2f284f18363e7c2e911b1f2211ba3a7e
     excerpt: "| init | none; `SKILL.md` is a thin wrapper over its bundled `scripts/install.py` |"
   - source: docs/design/03-brownfield.md#entry-flow
     hash: sha256:4cc41530e239bbce842a2a0ce623ca484bf200e48bbc85c45ef60fc0f3948118
@@ -650,7 +650,7 @@ The DevForgeAI `skill-validator` checks for anatomy skills — all sub-phase kin
 | `docs/design/09-hook-dispatcher.md#5-provider-configuration-and-installation` | sha256:57561a943867bc2ab6a76fb718050bd27e955019d02169cdc9062065eca438b9 | sections 0 (payload), 6 (outputs), 8 (assets), 9 (merge and trust) |
 | `docs/design/02-skill-roster.md#init` | sha256:0917d5a622cc649b55fb714b637903ed5496d60836de49881a8ee199d0d74290 | sections 2, 6, 9 (no language inference) |
 | `docs/design/02-skill-roster.md#handoff-decision-tables` | sha256:c0893be957755c72c7cd3f92ac38d90455ee02aec7ed2f672fbe8c6dc6ac142c | section 7 (handoff outcomes) |
-| `docs/design/11-artifact-registry.md#4-upstream-and-downstream-per-skill` | sha256:cfcaef76005176490e96b9e67c8fa4f0b7a6a2e13b6badf856468881fbe25200 | section 6 (inputs and outputs, no template) |
+| `docs/design/11-artifact-registry.md#4-upstream-and-downstream-per-skill` | sha256:b2725079ec12ced201d2d57c7ddcb9819d7a4617feb5d6692d48c4fd6f3b06c5 | section 6 (inputs and outputs, no template) |
 | `docs/design/01-skill-anatomy.md#state-file` | sha256:cec96cadc465f6269eaf0756ef40ff4299302e0754cd4cd887a2c44e50d4851d | sections 6 (seed state file), 9 |
 | `docs/design/01-skill-anatomy.md#handoff-contract` | sha256:4feb33747f3dc13225e4b6fe0b111c66ccec97d25902bb6850780bdd894e6a1d | sections 7, 9 (cold-session safety without a handoff file) |
 | `docs/design/05-subagent-sets.md#sets-per-skill` | sha256:9e12f3beb236a025c18d40e741c09ba675bd71d2d87f56e2b205c7556b944bf9 | sections 7 (no workers), 9 |

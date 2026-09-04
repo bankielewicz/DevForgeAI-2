@@ -43,6 +43,8 @@ RED = {"agent_id": "a-red", "agent_type": "red_dev"}
 RED_LEGACY = {"agent_id": "a-red", "agent_type": "dev-tdd-red-tester"}
 GREEN = {"agent_id": "a-green", "agent_type": "green_dev"}
 SMOKE = {"agent_id": "a-smoke", "agent_type": "smoke_qa"}
+PR_DRAFTER = {"agent_id": "a-pr-draft", "agent_type": "pr_drafter"}
+PR_CRITIC = {"agent_id": "a-pr-critic", "agent_type": "pr_critic"}
 
 RED_TEXT = '''import tinyapp.text as text
 
@@ -2709,7 +2711,7 @@ def eval3_routing_backstop() -> tuple[bool, str]:
 
     passed = all((
         attempts[0][0] == 2 and not handoffs[0],   # first attempt: retry, no handoff
-        attempts[1][0] == 2 and handoffs[1],       # second: the budget is spent, hand off
+        attempts[1][0] == 0 and handoffs[1],       # second: accepted block, no same-worker bounce
         envelope["outcome"] == "REQUIRE_HUMAN",
         envelope["next"] == "/clarify STORY-001",
         "is passed, expected failed" in reasons,
@@ -2955,6 +2957,7 @@ DISPATCHER_CASES = [
     ("no run: phase start --fix allowed", 0, event("PreToolUse", "Bash", {"command": "devforgeai phase start dev STORY-001 --fix"}), "NONE", "claude"),
     ("no run: phase start --fix --lenient allowed", 0, event("PreToolUse", "Bash", {"command": "devforgeai phase start dev STORY-001 --fix --lenient"}), "NONE", "claude"),
     ("no run: phase start --lenient --fix allowed in either order", 0, event("PreToolUse", "Bash", {"command": "devforgeai phase start dev STORY-001 --lenient --fix"}), "NONE", "codex"),
+    ("no run: explicit PR range with --draft allowed", 0, event("PreToolUse", "Bash", {"command": "devforgeai phase start pr 1111111111111111111111111111111111111111..2222222222222222222222222222222222222222 --draft"}), "NONE", "codex"),
     ("no run: phase start with a repeated option denied", 2, event("PreToolUse", "Bash", {"command": "devforgeai phase start dev STORY-001 --fix --fix"}), "NONE", "claude"),
     ("no run: phase start with any other flag denied", 2, event("PreToolUse", "Bash", {"command": "devforgeai phase start dev STORY-001 --force"}), "NONE", "claude"),
     ("no run: phase start with an accepted option plus another denied", 2, event("PreToolUse", "Bash", {"command": "devforgeai phase start dev STORY-001 --lenient --force"}), "NONE", "claude"),
@@ -3097,7 +3100,215 @@ def oracle_record_backstop() -> tuple[bool, str]:
                     f"{section.strip()[:300]}")
 
 
+def pr_project(label: str) -> tuple[Path, str, str]:
+    """A named feature branch whose exact base is the remote default branch."""
+    root = make_project(label, git=True)
+    subprocess.run(["git", "branch", "-M", "main"], cwd=root, check=True,
+                   capture_output=True, text=True)
+    base = git_out(root, "rev-parse", "HEAD")
+    subprocess.run(
+        ["git", "remote", "add", "origin", "git@github.com:bankielewicz/example.git"],
+        cwd=root, check=True, capture_output=True, text=True,
+    )
+    subprocess.run(["git", "update-ref", "refs/remotes/origin/main", base], cwd=root,
+                   check=True, capture_output=True, text=True)
+    subprocess.run(
+        ["git", "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main"],
+        cwd=root, check=True, capture_output=True, text=True,
+    )
+    subprocess.run(["git", "switch", "-c", "feature/pr-packet"], cwd=root, check=True,
+                   capture_output=True, text=True)
+    (root / "docs" / "design").mkdir(parents=True)
+    (root / "docs" / "design" / "decision.md").write_text("# Decision\n\nExact range.\n")
+    subprocess.run(["git", "add", "docs/design/decision.md"], cwd=root, check=True,
+                   capture_output=True, text=True)
+    subprocess.run(
+        ["git", "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid",
+         "commit", "-qm", "Add exact range fixture"],
+        cwd=root, check=True, capture_output=True, text=True,
+    )
+    return root, base, git_out(root, "rev-parse", "HEAD")
+
+
+def pr_range_gate_backstop() -> tuple[bool, str]:
+    """A PR run opens only for one exact, publishable base..head range."""
+    root, base, head = pr_project("pr-gate")
+    malformed = sequence(root, "phase", "start", "pr", "main..HEAD")
+    wrong_head = sequence(root, "phase", "start", "pr", f"{head}..{base}")
+    unrelated = subprocess.run(
+        ["git", "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid",
+         "commit-tree", f"{head}^{{tree}}", "-m", "unrelated"],
+        cwd=root, check=True, capture_output=True, text=True,
+    ).stdout.strip()
+    non_ancestor = sequence(root, "phase", "start", "pr", f"{unrelated}..{head}")
+    valid = sequence(root, "phase", "start", "pr", f"{base}..{head}", "--draft")
+    run_id = f"pr-{base[:12]}-{head[:12]}"
+    rec = record(root, run_id) if valid[0] == 0 else {}
+    passed = all((
+        malformed[0] == 2 and "40-character lowercase" in malformed[1],
+        wrong_head[0] == 1 and "canonical HEAD" in wrong_head[1],
+        non_ancestor[0] == 1 and "not an ancestor" in non_ancestor[1],
+        valid[0] == 0,
+        rec.get("range") == {
+            "base": base,
+            "head": head,
+            "base_ref": "main",
+            "head_ref": "feature/pr-packet",
+        },
+        rec.get("draft") is True,
+        rec.get("write_fence") == ["pr-artifacts/title.txt", "pr-artifacts/body.md"],
+        rec.get("phase") == "draft",
+    ))
+    return passed, (f"malformed={malformed[0]} wrong_head={wrong_head[0]} "
+                    f"non_ancestor={non_ancestor[0]} valid={valid[0]} run={run_id}\n"
+                    f"{malformed[1]}\n{wrong_head[1]}\n{non_ancestor[1]}")
+
+
+def pr_external_completion_backstop() -> tuple[bool, str]:
+    """Accepted PR text is persisted without promoting model-authored files."""
+    root, base, head = pr_project("pr-complete")
+    state_path = root / ".devforgeai" / "state.yaml"
+    state = yaml.safe_load(state_path.read_text())
+    state["next"] = "/plan example"
+    state_path.write_text(yaml.safe_dump(state, sort_keys=False))
+    started = sequence(root, "phase", "start", "pr", f"{base}..{head}")
+    run_id = f"pr-{base[:12]}-{head[:12]}"
+    title = "Describe the exact PR range"
+    body = (
+        "## Summary\n\nPackage the committed decision.\n\n"
+        "## Governing artifacts\n\n- docs/design/decision.md\n\n"
+        "## Changes\n\n- Added the exact-range fixture.\n\n"
+        "## Verification\n\n- NOT_EVALUATED: no committed verification artifact.\n\n"
+        "## Limits\n\n- Hosted verification was not run.\n\n"
+        "## Human publication\n\n- Human owns push and GitHub submission.\n\n"
+        f"Base: `{base}`\n\nHead: `{head}`\n"
+    )
+    draft = deliver(
+        root, PR_DRAFTER, "draft",
+        {"pr-artifacts/title.txt": title + "\n", "pr-artifacts/body.md": body},
+        run_id=run_id, skill="pr",
+    )
+    after_draft = record(root, run_id)
+    critic = deliver(root, PR_CRITIC, "critique", {}, run_id=run_id, skill="pr")
+    final_state = state_of(root)
+    final_record = record(root, run_id)
+    output = root / ".devforgeai" / "work" / run_id / "output"
+    packet = json.loads((output / "pr-packet.json").read_text()) if output.is_dir() else {}
+    request = json.loads((output / "pr-request.json").read_text()) if output.is_dir() else {}
+    title_path = output / "title.txt"
+    body_path = output / "body.md"
+    handoff_doc = json.loads(
+        (root / ".devforgeai" / "work" / run_id / "handoff.json").read_text()
+    ) if output.is_dir() else {}
+    candidate = Path((final_record.get("candidate") or {}).get("root", "/nonexistent"))
+    passed = all((
+        started[0] == 0,
+        draft[0] == 0 and after_draft.get("phase") == "critique",
+        critic[0] == 0,
+        final_state["runs"][run_id]["status"] == "complete_external",
+        not candidate.exists(),
+        not (root / "pr-artifacts").exists(),
+        title_path.read_text() == title + "\n",
+        body_path.read_text() == body,
+        request == {
+            "base": "main", "body": body, "draft": False,
+            "head": "feature/pr-packet", "title": title,
+        },
+        packet.get("range", {}).get("base") == base,
+        packet.get("range", {}).get("head") == head,
+        packet.get("types") == ["architecture"],
+        packet.get("post_action_next") == "/plan example",
+        packet.get("artifacts", {}).get("title", {}).get("sha256") == digest(title_path),
+        packet.get("artifacts", {}).get("body", {}).get("sha256") == digest(body_path),
+        packet.get("artifacts", {}).get("request", {}).get("sha256") == digest(output / "pr-request.json"),
+        "git push -u origin feature/pr-packet" in handoff_doc.get("next", ""),
+        "gh api repos/bankielewicz/example/pulls" in handoff_doc.get("next", ""),
+        "/plan example" in handoff_doc.get("next", ""),
+    ))
+    return passed, (f"start={started[0]} draft={draft[0]} critic={critic[0]} "
+                    f"status={(final_state.get('runs', {}).get(run_id) or {}).get('status')}\n"
+                    f"{critic[1][-320:]}")
+
+
+def pr_completion_revalidates_range_backstop() -> tuple[bool, str]:
+    """A remote-default move after drafting blocks external completion."""
+    root, base, head = pr_project("pr-range-moved")
+    started = sequence(root, "phase", "start", "pr", f"{base}..{head}")
+    run_id = f"pr-{base[:12]}-{head[:12]}"
+    body = (
+        "## Summary\n\nExact range.\n\n"
+        "## Governing artifacts\n\n- docs/design/decision.md\n\n"
+        "## Changes\n\n- Added one decision.\n\n"
+        "## Verification\n\n- NOT_EVALUATED.\n\n"
+        "## Limits\n\n- Remote state may move.\n\n"
+        "## Human publication\n\n- Human owned.\n\n"
+        f"Base: `{base}`\n\nHead: `{head}`\n"
+    )
+    draft = deliver(
+        root, PR_DRAFTER, "draft",
+        {"pr-artifacts/title.txt": "Bind the exact range\n", "pr-artifacts/body.md": body},
+        run_id=run_id, skill="pr",
+    )
+    subprocess.run(["git", "update-ref", "refs/remotes/origin/main", head], cwd=root,
+                   check=True, capture_output=True, text=True)
+    critic = deliver(root, PR_CRITIC, "critique", {}, run_id=run_id, skill="pr")
+    final_state = state_of(root)
+    rec = record(root, run_id)
+    handoff_path = root / ".devforgeai" / "work" / run_id / "handoff.json"
+    handoff_doc = json.loads(handoff_path.read_text())
+    candidate = Path(rec["candidate"]["root"])
+    output = root / ".devforgeai" / "work" / run_id / "output"
+    passed = all((
+        started[0] == 0,
+        draft[0] == 0,
+        critic[0] == 0,
+        final_state["runs"][run_id]["status"] == "active",
+        rec.get("blocked_at") == "critique",
+        candidate.exists(),
+        not output.exists(),
+        any("PR_RANGE" in reason for reason in handoff_doc.get("reasons", [])),
+    ))
+    return passed, (f"start={started[0]} draft={draft[0]} critic={critic[0]} "
+                    f"status={final_state['runs'][run_id]['status']} "
+                    f"blocked_at={rec.get('blocked_at')}\n{critic[1][-320:]}")
+
+
+def pr_artifact_contract_backstop() -> tuple[bool, str]:
+    """Malformed or placeholder PR text never reaches a checkpoint or output."""
+    root, base, head = pr_project("pr-artifact")
+    started = sequence(root, "phase", "start", "pr", f"{base}..{head}")
+    run_id = f"pr-{base[:12]}-{head[:12]}"
+    bad = deliver(
+        root, PR_DRAFTER, "draft",
+        {
+            "pr-artifacts/title.txt": "  too vague  \n",
+            "pr-artifacts/body.md": f"## Summary\n\nTODO\n\nBase: {base}\nHead: {head}\n",
+        },
+        run_id=run_id, skill="pr",
+    )
+    rec = record(root, run_id)
+    output = root / ".devforgeai" / "work" / run_id / "output"
+    passed = all((
+        started[0] == 0,
+        bad[0] == 2,
+        "PR_TITLE" in bad[1],
+        "PR_BODY" in bad[1],
+        rec.get("phase") == "draft",
+        rec.get("candidate", {}).get("checkpoint") == "base",
+        not output.exists(),
+        not (root / "pr-artifacts").exists(),
+    ))
+    return passed, f"start={started[0]} bad={bad[0]} checkpoint={rec.get('candidate', {}).get('checkpoint')}\n{bad[1][-500:]}"
+
+
 BACKSTOPS = [
+    ("a PR run gates one exact publishable base..head range", pr_range_gate_backstop),
+    ("malformed PR text is refused before checkpoint or external output",
+     pr_artifact_contract_backstop),
+    ("a PR run persists reviewed text and completes externally without promotion",
+     pr_external_completion_backstop),
+    ("a PR run revalidates the exact range before external completion",
+     pr_completion_revalidates_range_backstop),
     ("the oracle record is the sequencer's own run, rendered as ## Oracle, never the worker's note",
      oracle_record_backstop),
     ("granted_keys is run_keys ∩ commands.use, stored once, printed and enforced alike",

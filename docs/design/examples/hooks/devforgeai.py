@@ -5,7 +5,7 @@ Closed CLI grammar (D7).
 
 Model-callable (in the provider Bash allowlist, no hook env required):
     devforgeai status                        print the run block
-    devforgeai phase start <skill> <arg> [--fix] [--lenient]
+    devforgeai phase start <skill> <arg> [--draft] [--fix] [--lenient]
                                              gate, open the candidate root, enter phase 1
     devforgeai phase fail --reason TEXT      record a blocker and hand off
     devforgeai validate                      check fence/stack invariants without advancing
@@ -160,10 +160,21 @@ GIT_IDENTITY = {
 MAX_RESULT_BYTES = 4 * 1024 * 1024
 MAX_ISSUES = 10
 HANDOFF_SCHEMA = "devforgeai.handoff/v1"
+PR_PACKET_SCHEMA = "devforgeai.pr-packet/v1"
+PR_RANGE = re.compile(r"^([0-9a-f]{40})\.\.([0-9a-f]{40})$")
+PR_BODY_HEADINGS = (
+    "## Summary",
+    "## Governing artifacts",
+    "## Changes",
+    "## Verification",
+    "## Limits",
+    "## Human publication",
+)
 
 
 class Refuse(SystemExit):
     def __init__(self, msg: str, code: int = REFUSED):
+        self.message = msg
         sys.stderr.write(f"devforgeai: {msg}\n")
         super().__init__(code)
 
@@ -1482,6 +1493,54 @@ def artifact_problems(e: dict, changed: list[dict], root: Path) -> list[str]:
                         + "\n  ".join(rows))
         if writes_mode == "fields":
             problems += field_update_problems(e, path, root)
+    if e.get("skill") == "pr" and e.get("phase") == "draft":
+        problems += pr_draft_problems(e, changed, root)
+    return problems
+
+
+def pr_draft_problems(e: dict, changed: list[dict], root: Path) -> list[str]:
+    """Deterministic shape checks for the two model-authored PR artifacts."""
+    expected = {"pr-artifacts/title.txt", "pr-artifacts/body.md"}
+    actual = {row["path"] for row in changed if row.get("kind") != "deleted"}
+    problems: list[str] = []
+    if actual != expected:
+        problems.append(
+            "PR_DRAFT_PATHS: draft must add or modify exactly "
+            f"{sorted(expected)}, got {sorted(actual)}"
+        )
+        return problems
+    try:
+        title_bytes = (root / "pr-artifacts/title.txt").read_bytes()
+        body_bytes = (root / "pr-artifacts/body.md").read_bytes()
+        title_text = title_bytes.decode("utf-8")
+        body = body_bytes.decode("utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        return [f"PR_ENCODING: both artifacts must be readable UTF-8 ({exc})"]
+
+    lines = title_text.splitlines()
+    if len(lines) != 1 or not lines[0].strip() or lines[0] != lines[0].strip():
+        problems.append("PR_TITLE: title.txt must contain exactly one trimmed non-empty line")
+    elif len(lines[0]) > 72:
+        problems.append(f"PR_TITLE: title is {len(lines[0])} characters; maximum is 72")
+    if lines and any(ord(char) < 32 for char in lines[0]):
+        problems.append("PR_TITLE: title contains a control character")
+
+    positions: list[int] = []
+    for heading in PR_BODY_HEADINGS:
+        count = sum(1 for line in body.splitlines() if line == heading)
+        if count != 1:
+            problems.append(f"PR_BODY: {heading!r} must occur exactly once, got {count}")
+            continue
+        positions.append(body.index(heading))
+    if len(positions) == len(PR_BODY_HEADINGS) and positions != sorted(positions):
+        problems.append("PR_BODY: required headings are out of order")
+    for key in ("base", "head"):
+        value = str((e.get("range") or {}).get(key) or "")
+        if value and value not in body:
+            problems.append(f"PR_BODY: body does not name the full {key} commit {value}")
+    for marker in ("{{", "}}", "TODO", "TBD", "<fill in>"):
+        if marker in body:
+            problems.append(f"PR_BODY: unfinished placeholder {marker!r} is forbidden")
     return problems
 
 
@@ -2472,6 +2531,160 @@ def story_source_digest(arg: str) -> str | None:
         return None
 
 
+def github_repository(url: str) -> str | None:
+    """`owner/repository` for the two ordinary github.com origin URL forms."""
+    match = re.fullmatch(
+        r"(?:git@github\.com:|https://github\.com/)([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+?)(?:\.git)?",
+        url.strip(),
+    )
+    return match.group(1) if match else None
+
+
+def committed_file_at(commit: str, path: str) -> str:
+    """A committed text file, or the empty string when it cannot be read."""
+    result = git(ROOT, "show", f"{commit}:{path}", check=False)
+    return result.stdout if result.returncode == 0 else ""
+
+
+def classify_pr_types(head: str, changed: list[dict]) -> list[str]:
+    """Classify the immutable range without inferring an unrecorded verdict."""
+    paths = [row["path"] for row in changed]
+    found: list[str] = []
+
+    def add(name: str) -> None:
+        if name not in found:
+            found.append(name)
+
+    if any(path.startswith(("docs/design/", "docs/architecture/")) for path in paths):
+        add("architecture")
+    if any(path.startswith("docs/plan/") or path.startswith("docs/reports/analyze-")
+           for path in paths):
+        add("analyzed_plan")
+    validate_reports = [path for path in paths if path.startswith("docs/reports/validate-")]
+    if any(re.search(r"(?m)^verdict:\s*pass\s*$", committed_file_at(head, path))
+           for path in validate_reports):
+        add("validated_skill")
+    qa_reports = [path for path in paths if path.startswith("docs/reports/qa-")]
+    if any(re.search(r"(?m)^verdict:\s*pass\s*$", committed_file_at(head, path))
+           for path in qa_reports):
+        add("passing_qa")
+    if any(
+        path in {"AGENTS.md", "CLAUDE.md", "docs/CHECKPOINT.md"}
+        or path.startswith(("framework/contracts/", "schemas/"))
+        for path in paths
+    ):
+        add("governance_amendment")
+    if any(path.startswith(("components/", "crates/", "src/", "tests/", "providers/",
+                            "framework/skills/")) for path in paths):
+        add("implementation")
+    if not found:
+        add("implementation")
+    return found
+
+
+def pr_range_gate(arg: str) -> dict:
+    """Resolve and bind one publishable GitHub base..head range."""
+    match = PR_RANGE.fullmatch(arg)
+    if not match:
+        raise Refuse(
+            "PR_RANGE: argument must be <base>..<head> using two full 40-character lowercase "
+            "commit IDs",
+            USAGE,
+        )
+    base, head = match.groups()
+    if not git_repo(ROOT):
+        raise Refuse("PR_RANGE: the canonical root is not a Git repository", REFUSED)
+    for label, commit in (("base", base), ("head", head)):
+        resolved = git(ROOT, "rev-parse", "--verify", f"{commit}^{{commit}}", check=False)
+        if resolved.returncode != 0 or resolved.stdout.strip() != commit:
+            raise Refuse(f"PR_RANGE: {label} commit {commit} does not resolve exactly", REFUSED)
+    current_head = git(ROOT, "rev-parse", "HEAD").stdout.strip()
+    if current_head != head:
+        raise Refuse(
+            f"PR_RANGE: canonical HEAD is {current_head}, not the requested head {head}",
+            REFUSED,
+        )
+    if git(ROOT, "merge-base", "--is-ancestor", base, head, check=False).returncode != 0:
+        raise Refuse(f"PR_RANGE: base {base} is not an ancestor of head {head}", REFUSED)
+
+    head_ref = git(ROOT, "symbolic-ref", "--quiet", "--short", "HEAD", check=False).stdout.strip()
+    if not head_ref:
+        raise Refuse("PR_RANGE: canonical HEAD is detached; a publishable head branch is required")
+    if git(ROOT, "check-ref-format", "--branch", head_ref, check=False).returncode != 0:
+        raise Refuse(f"PR_RANGE: head branch {head_ref!r} is invalid", REFUSED)
+
+    remote_head = git(
+        ROOT, "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD", check=False
+    ).stdout.strip()
+    if not remote_head.startswith("origin/"):
+        raise Refuse(
+            "PR_RANGE: refs/remotes/origin/HEAD does not name the remote default branch",
+            REFUSED,
+        )
+    base_ref = remote_head.removeprefix("origin/")
+    remote_base = git(ROOT, "rev-parse", remote_head, check=False)
+    if remote_base.returncode != 0 or remote_base.stdout.strip() != base:
+        raise Refuse(
+            f"PR_RANGE: remote default branch {remote_head} is not the requested base {base}",
+            REFUSED,
+        )
+    if head_ref == base_ref:
+        raise Refuse(
+            f"PR_RANGE: head branch {head_ref!r} is the default branch; use a topic branch",
+            REFUSED,
+        )
+
+    origin = git(ROOT, "remote", "get-url", "origin", check=False)
+    repository = github_repository(origin.stdout) if origin.returncode == 0 else None
+    if repository is None:
+        raise Refuse(
+            "PR_RANGE: origin must be an https://github.com/owner/repo.git or "
+            "git@github.com:owner/repo.git URL",
+            REFUSED,
+        )
+
+    raw = git(
+        ROOT, "diff", "--name-status", "--no-renames", "-z", base, head, check=False
+    )
+    if raw.returncode != 0:
+        raise Refuse(f"PR_RANGE: cannot read {base}..{head}", REFUSED)
+    tokens = raw.stdout.split("\0")
+    if tokens and tokens[-1] == "":
+        tokens.pop()
+    if len(tokens) % 2:
+        raise Refuse("PR_RANGE: git returned a malformed name-status stream", REFUSED)
+    changed = [
+        {"status": tokens[index], "path": tokens[index + 1]}
+        for index in range(0, len(tokens), 2)
+    ]
+    if not changed:
+        raise Refuse("PR_RANGE: base and head contain no changed paths", REFUSED)
+    return {
+        "base": base,
+        "head": head,
+        "base_ref": base_ref,
+        "head_ref": head_ref,
+        "repository": repository,
+        "changed_paths": changed,
+        "types": classify_pr_types(head, changed),
+    }
+
+
+def pr_packet_schema() -> dict:
+    """Find the source-tree or verbatim-installed PR packet schema."""
+    relatives = (
+        Path("schemas/devforgeai/v1/pr-packet.schema.json"),
+        Path(".devforgeai/contracts/schemas/pr-packet.schema.json"),
+    )
+    here = Path(__file__).resolve()
+    for base in (here.parent, *here.parents, ROOT):
+        for relative in relatives:
+            candidate = base / relative
+            if candidate.is_file():
+                return json.loads(candidate.read_text(encoding="utf-8"))
+    raise OSError("cannot locate the installed pr-packet.schema.json")
+
+
 def slice_doc(e: dict) -> dict:
     """This run's `context.json`, or an empty mapping when it cannot be read."""
     try:
@@ -2595,6 +2808,11 @@ def cmd_phase_start(args) -> None:
             raise SystemExit(COULD_NOT_RUN)
         raise Refuse(f"{skill} is executed by {runner}, not by this sequencer", REFUSED)
 
+    if args.draft and skill != "pr":
+        raise Refuse("--draft is accepted only by the pr skill", USAGE)
+    if skill == "pr" and (args.fix or args.lenient):
+        raise Refuse("the pr skill accepts --draft, not --fix or --lenient", USAGE)
+
     run = run_id(skill, args.arg)
     if run in live_runs(state):
         existing = load_run(run)
@@ -2655,6 +2873,27 @@ def cmd_phase_start(args) -> None:
             "commands": {"source": fm["commands"]["source"], "use": fm["commands"]["use"]},
             "gate_policy": fm.get("gate_policy", {}),
         })
+    elif spec["kind"] == "range":
+        fence, problems = document_gate(skill, args.arg)
+        range_info = pr_range_gate(args.arg)
+        e.update({
+            "write_fence": fence,
+            "test_paths": [],
+            "test_plan": [],
+            "commands": {},
+            "gate_policy": {"unresolvable_source": "BLOCK"},
+            "range": {
+                key: range_info[key]
+                for key in ("base", "head", "base_ref", "head_ref")
+            },
+            "repository": range_info["repository"],
+            "changed_paths": range_info["changed_paths"],
+            "pr_types": range_info["types"],
+            "draft": bool(args.draft),
+            "post_action_next": state.get("next"),
+        })
+        if problems:
+            raise Refuse("gate failed:\n  " + "\n  ".join(problems), REFUSED)
     else:
         fence, problems = document_gate(skill, args.arg)
         e.update({
@@ -2715,6 +2954,17 @@ def cmd_phase_start(args) -> None:
     shutil.rmtree(work(run), ignore_errors=True)
     e["candidate"] = candidate_open(e, stack_ignore_dirs(e))
     write_context(e, bundle_fm, bundle_source, lenient=bool(args.lenient))
+    if e.get("kind") == "range":
+        context = json.loads((work(run) / "context.json").read_text())
+        context.update({
+            "slice": "range",
+            "range": e["range"],
+            "repository": e["repository"],
+            "changed_paths": e["changed_paths"],
+            "types": e["pr_types"],
+            "note": "the sequencer resolved the immutable Git range at the entry gate",
+        })
+        write_json_atomic(work(run) / "context.json", context)
     save_run(e)
     if e["kind"] == "story":
         state.setdefault("stories", {}).setdefault(args.arg, {})["status"] = "in_dev"
@@ -2905,6 +3155,127 @@ def cmd_phase_next(args) -> None:
     advance(state, e)
 
 
+def complete_pr_external(state: dict, e: dict) -> None:
+    """Persist reviewed PR text, discard the candidate, and stop before publication."""
+    try:
+        current = pr_range_gate(f"{e['range']['base']}..{e['range']['head']}")
+    except Refuse as exc:
+        return block(state, e, [exc.message], "REQUIRE_HUMAN")
+    recorded = {
+        "base": e["range"]["base"],
+        "head": e["range"]["head"],
+        "base_ref": e["range"]["base_ref"],
+        "head_ref": e["range"]["head_ref"],
+        "repository": e["repository"],
+        "changed_paths": e.get("changed_paths") or [],
+        "types": e.get("pr_types") or [],
+    }
+    if current != recorded:
+        return block(
+            state,
+            e,
+            ["PR_RANGE: repository identity, changed paths, or type evidence changed "
+             "after the run opened; invoke a new exact range"],
+            "REQUIRE_HUMAN",
+        )
+    root = candidate_root(e)
+    expected_rows = [
+        {"path": "pr-artifacts/title.txt", "kind": "modified"},
+        {"path": "pr-artifacts/body.md", "kind": "modified"},
+    ]
+    problems = pr_draft_problems(e, expected_rows, root)
+    if problems:
+        return block(state, e, problems, "REQUIRE_HUMAN")
+
+    source_title = root / "pr-artifacts" / "title.txt"
+    source_body = root / "pr-artifacts" / "body.md"
+    title = source_title.read_text(encoding="utf-8").rstrip("\n")
+    body = source_body.read_text(encoding="utf-8")
+    output = work(e["run"]) / "output"
+    shutil.rmtree(output, ignore_errors=True)
+    output.mkdir(parents=True)
+    title_path = output / "title.txt"
+    body_path = output / "body.md"
+    shutil.copy2(source_title, title_path)
+    shutil.copy2(source_body, body_path)
+
+    request = {
+        "title": title,
+        "head": e["range"]["head_ref"],
+        "base": e["range"]["base_ref"],
+        "body": body,
+        "draft": bool(e.get("draft")),
+    }
+    request_path = output / "pr-request.json"
+    write_json_atomic(request_path, request)
+
+    def artifact(path: Path) -> dict:
+        return {
+            "path": path.relative_to(ROOT).as_posix(),
+            "sha256": sha(path),
+        }
+
+    packet = {
+        "schema": PR_PACKET_SCHEMA,
+        "run": e["run"],
+        "range": e["range"],
+        "repository": e["repository"],
+        "types": e.get("pr_types") or ["implementation"],
+        "changed_paths": e.get("changed_paths") or [],
+        "artifacts": {
+            "title": artifact(title_path),
+            "body": artifact(body_path),
+            "request": artifact(request_path),
+        },
+        "draft": bool(e.get("draft")),
+        "post_action_next": e.get("post_action_next"),
+        "created_at": now(),
+    }
+    try:
+        from jsonschema import Draft202012Validator
+
+        schema = pr_packet_schema()
+        schema_errors = sorted(
+            Draft202012Validator(schema).iter_errors(packet),
+            key=lambda error: list(error.absolute_path),
+        )
+    except (ImportError, OSError, ValueError) as exc:
+        shutil.rmtree(output, ignore_errors=True)
+        return block(state, e, [f"PR_PACKET: validator unavailable: {exc}"], "REQUIRE_HUMAN")
+    if schema_errors:
+        shutil.rmtree(output, ignore_errors=True)
+        rows = [
+            f"PR_PACKET: {'/'.join(str(part) for part in error.absolute_path) or '<root>'}: "
+            f"{error.message}"
+            for error in schema_errors
+        ]
+        return block(state, e, rows, "REQUIRE_HUMAN")
+    packet_path = output / "pr-packet.json"
+    write_json_atomic(packet_path, packet)
+
+    next_after = e.get("post_action_next") or "/status"
+    request_relative = request_path.relative_to(ROOT).as_posix()
+    next_step = (
+        f"human: git push -u origin {e['range']['head_ref']}; then human: gh api "
+        f"repos/{e['repository']}/pulls --method POST --input {request_relative}; "
+        f"after successful publication: {next_after}"
+    )
+    candidate_path = e["candidate"]["root"]
+    candidate_remove(e)
+    e["lease"] = None
+    save_run(e)
+    close_run(state, e, "complete_external")
+    reasons = [
+        f"reviewed PR artifacts persisted at {output.relative_to(ROOT).as_posix()}",
+        f"candidate root {candidate_path} removed without promotion",
+        "branch push and GitHub publication remain human-owned",
+    ]
+    handoff(state, e, "REQUIRE_HUMAN", next_step, reasons)
+    save(state)
+    log("run.complete_external", run=e["run"], base=e["range"]["base"],
+        head=e["range"]["head"], output=output.relative_to(ROOT).as_posix())
+
+
 def finish_run(state: dict, e: dict, result: dict) -> None:
     """The last phase passed: park the run for a human to promote (10 s12.4).
 
@@ -2912,6 +3283,8 @@ def finish_run(state: dict, e: dict, result: dict) -> None:
     handoff's one forward command is `devforgeai promote <run>`; the user reads
     the rendered reports first and then promotes, or does not.
     """
+    if e.get("skill") == "pr":
+        return complete_pr_external(state, e)
     e["lease"] = None
     save_run(e)
     close_run(state, e, "ready_to_promote")
@@ -3175,7 +3548,8 @@ def cmd_ingest_result(args) -> None:
     write_json_atomic(result_path, result)
 
     after = load_run(e["run"]) if run_file(e["run"]).exists() else {}
-    if after.get("phase") == phase and result["status"] == "pass" \
+    if after.get("phase") == phase and not after.get("blocked_at") \
+            and result["status"] == "pass" \
             and (state.get("runs", {}).get(e["run"], {}) or {}).get("status") == "active":
         raise Refuse(
             f"phase {phase} remains active after validation; revise the candidate and return "
@@ -3373,7 +3747,7 @@ def run_block(state: dict) -> dict:
         e = enf(state)
     except SystemExit:
         return {}
-    return {
+    block = {
         "run": e["run"],
         "skill": e["skill"],
         "candidate": {
@@ -3390,6 +3764,15 @@ def run_block(state: dict) -> dict:
         # never names a report that does not exist (D14 item 2).
         **({"fix_report": e["fix_report"]} if e.get("fix_report") else {}),
     }
+    if e.get("kind") == "range":
+        block.update({
+            "range": e.get("range"),
+            "repository": e.get("repository"),
+            "changed_paths": e.get("changed_paths") or [],
+            "types": e.get("pr_types") or [],
+            "draft": bool(e.get("draft")),
+        })
+    return block
 
 
 def cmd_status(args) -> None:
@@ -3484,6 +3867,10 @@ def build_parser() -> argparse.ArgumentParser:
     start = phase_ops.add_parser("start", help="model-callable: gate and enter phase 1")
     start.add_argument("skill")
     start.add_argument("arg")
+    start.add_argument(
+        "--draft", action="store_true",
+        help="PR skill only: set draft=true in the human-owned GitHub request",
+    )
     start.add_argument(
         "--fix", action="store_true",
         help="this run was sent back by the skill that judges its output: record the "

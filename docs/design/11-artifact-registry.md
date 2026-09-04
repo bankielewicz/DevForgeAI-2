@@ -44,6 +44,7 @@ Header keys are the machine-readable block the gate reads without a model. Every
 | `impact-report` | `.devforgeai/skills/amend/templates/impact-report.md` | 1 | `^IMP-[0-9]{3}$` | doc, template, template_version, status, depends_on | Change, Affected Stories, Re-slice Actions |
 | `retro-report` | `.devforgeai/skills/retro/templates/retro-report.md` | 1 | `^LESS-[0-9]{3}$` | sprint, template, template_version, status, depends_on | Outcomes, Lessons, Proposed Amendments, Archive |
 | `drift-report` | `.devforgeai/skills/drift/templates/drift-report.md` | 1 | `^DRIFT-[0-9]{3}$` | slug, template, template_version, status, depends_on | Sourcetree Drift, Techstack Drift, Architecture Drift, Actions |
+| `pr-packet` | `schemas/devforgeai/v1/pr-packet.schema.json` | 1 | run `^pr-[0-9a-f]{12}-[0-9a-f]{12}$` | schema, run, range, repository, types, changed_paths, artifacts, draft, post_action_next, created_at | not Markdown; closed JSON external-completion record |
 | `handoff` | `.devforgeai/skills/status/templates/handoff.md` | 1 | `^[a-z][a-z0-9-]*$` | none; the rendering of `handoff.json` | You Are Here, Artifacts, Open Issues, Next Steps, Also Possible |
 
 Ownership decisions applied here:
@@ -94,6 +95,10 @@ Ownership decisions applied here:
 | `.devforgeai/work/<run>/run.yaml` | none | sequencer | sequencer, hooks |
 | `.devforgeai/work/<run>/wt/**` (candidate root), `<phase>.manifest.json`, `cp/<phase>/**` (copy-mode checkpoints) | none | sequencer creates; producers write inside the fence | sequencer |
 | `.devforgeai/work/<run>/evidence/<agent>/findings.md` | none | sequencer, from the judge receipt's `findings` at ingest; the judge holds no write tool | sequencer, downstream workers by path |
+| `.devforgeai/work/pr-*/output/title.txt` | none | pr | sequencer, copied byte-for-byte from the accepted candidate artifact |
+| `.devforgeai/work/pr-*/output/body.md` | none | pr | sequencer, copied byte-for-byte from the accepted candidate artifact |
+| `.devforgeai/work/pr-*/output/pr-request.json` | none | pr | sequencer |
+| `.devforgeai/work/pr-*/output/pr-packet.json` | `pr-packet` | pr | sequencer |
 | `.devforgeai/sessions/<session_id>.json` | none | sequencer | sequencer |
 | `.devforgeai/provenance/log.jsonl` | none | sequencer | sequencer |
 | `docs/research/<slug>/runs/RUN-NNNNNN/**` | Research typed schemas | research | Research Core |
@@ -127,7 +132,7 @@ An artifact's frontmatter `depends_on` lists the upstream sections it was sliced
 | `retro-report` | the sprint; the qa and review reports for its stories |
 | `drift-report` | `sourcetree`, `techstack`, `architecture` sections; the observed tree |
 
-`dev-notes`, `handoff`, and every file under `.devforgeai/work/` carry no `depends_on`: they are evidence of one run, and that run's `.devforgeai/work/<run>/run.yaml` already pins what it was allowed to touch.
+`dev-notes`, `handoff`, `pr-packet`, and every file under `.devforgeai/work/` carry no Markdown `depends_on`: they are evidence of one run, and that run's `.devforgeai/work/<run>/run.yaml` already pins what it was allowed to touch. A `pr-packet` instead carries the exact base/head pair, repository identity, changed paths, and artifact hashes required by its JSON schema.
 
 `.devforgeai/work/<run>/context.json` is the same kind of file: the Slice output the sequencer writes at `phase start` from the incoming artifact's already-hashed `context[]` bundle. It carries the entries and their re-resolution verdicts, not a new `depends_on` edge, and no worker writes it.
 
@@ -154,6 +159,7 @@ An artifact's frontmatter `depends_on` lists the upstream sections it was sliced
 | amend | architect, retro, drift, analyze | `constitution`, `sourcetree`, `techstack`, `architecture`, `adr`, `story`, `retro-report`, `drift-report`, `analyze-report` | amended architecture documents, `adr`, `impact-report` | plan, analyze, review, retro |
 | retro | plan, dev, review, qa, amend | `sprint`, `dev-notes`, `review-report`, `qa-report`, `adr` | `retro-report` | amend, plan |
 | drift | architect | `sourcetree`, `techstack`, `architecture`, the observed tree | `drift-report` | amend, architect |
+| pr | Git and the preceding governed boundary | exact committed base/head range, repository identity, saved continuation | `title.txt`, `body.md`, `pr-request.json`, `pr-packet` under the run output directory | human publication only |
 | status | — | `state.yaml`, `handoff.json` | nothing | — |
 
 `init` and `status` carry no template edge. `init` hands off through `state.yaml`, and `status` renders `handoff.json`; neither gates on a document, so neither appears in the edge list below.
@@ -340,6 +346,11 @@ registry:
     downstream:
     - amend
     - architect
+  - name: pr
+    command: /pr --base <40hex> --head <40hex> [--draft]
+    kind: range
+    upstream: []
+    downstream: []
   - name: status
     command: /status
     kind: none
@@ -566,6 +577,11 @@ registry:
     consumed_by:
     - amend
     - architect
+  - name: pr-packet
+    path: schemas/devforgeai/v1/pr-packet.schema.json
+    produced_by:
+    - pr
+    consumed_by: []
   - name: handoff
     path: .devforgeai/skills/status/templates/handoff.md
     produced_by:
@@ -691,6 +707,18 @@ registry:
     writer: sequencer
   - pattern: .devforgeai/work/<run>/evidence/<agent>/findings.md
     template: null
+    writer: sequencer
+  - pattern: .devforgeai/work/pr-*/output/title.txt
+    template: null
+    writer: sequencer
+  - pattern: .devforgeai/work/pr-*/output/body.md
+    template: null
+    writer: sequencer
+  - pattern: .devforgeai/work/pr-*/output/pr-request.json
+    template: null
+    writer: sequencer
+  - pattern: .devforgeai/work/pr-*/output/pr-packet.json
+    template: pr-packet
     writer: sequencer
   - pattern: .devforgeai/sessions/<session_id>.json
     template: null

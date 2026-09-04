@@ -141,7 +141,7 @@ def fix_report_sources(skill: str) -> tuple[str, ...]:
 
 # The options `devforgeai phase start` accepts, closed. Dispatch check 8 admits
 # any subset of these in any order and refuses every other option.
-PHASE_START_OPTIONS = ("--fix", "--lenient")
+PHASE_START_OPTIONS = ("--draft", "--fix", "--lenient")
 
 # The frontmatter keys a field-restricted phase (`writes: fields`) may change.
 STORY_FIELD_KEYS = ("blocked_by", "size", "sprint")
@@ -155,7 +155,7 @@ STORY_FIELD_KEYS = ("blocked_by", "size", "sprint")
 # sequencer executes the argv with cwd = candidate.root.
 MODEL_CALLABLE = {
     "status": "devforgeai status",
-    "phase start": "devforgeai phase start <skill> <arg> [--fix] [--lenient]",
+    "phase start": "devforgeai phase start <skill> <arg> [--draft] [--fix] [--lenient]",
     "phase fail": "devforgeai phase fail --reason <text>",
     "validate": "devforgeai validate",
     "promote": "devforgeai promote <run>",
@@ -227,9 +227,10 @@ def _doc(name, agent, writes="docs", attempts=2, oracle="document", conditional=
 
 
 # ---------------------------------------------------------------------------
-# Skill registry: all 18 roster skills plus the dev-tdd variant of dev.
+# Skill registry: all 19 roster skills plus the dev-tdd variant of dev.
 #   kind    story    -> `phase start <skill> <STORY-ID>`, story v3 gate
 #           document -> `phase start <skill> <slug|doc-id>`, document fence gate
+#           range    -> `phase start pr <base>..<head>`, exact Git-range gate
 #           none     -> zero LLM workers (decision 14); phase start refuses
 #           external -> wraps a separate runner (research)
 #   fence   document-fence path patterns; `{arg}` is substituted at gate time.
@@ -258,6 +259,14 @@ SKILLS: dict[str, dict] = {
         "phases": [],
         "fence": ["docs/research/{arg}/**"],
         "note": "wraps the Research Core CLI; execution is out of scope here",
+    },
+    "pr": {
+        "kind": "range",
+        "fence": ["pr-artifacts/title.txt", "pr-artifacts/body.md"],
+        "phases": [
+            _doc("draft", "pr_drafter"),
+            _phase("critique", agent="pr_critic", rewind_to="draft"),
+        ],
     },
     "onboard": {
         "kind": "document",
@@ -654,6 +663,9 @@ def run_id(skill: str, arg: str) -> str:
     spec = skill_spec(skill) or {}
     if spec.get("kind") == "story":
         return arg
+    if spec.get("kind") == "range":
+        base, _, head = arg.partition("..")
+        return f"pr-{base[:12]}-{head[:12]}"
     return f"{skill_key(skill)}-{arg}"
 
 

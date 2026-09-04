@@ -15,6 +15,21 @@ entries:
     verbatim: true
     pin_digest: true
     order: 1
+  - source: schemas/devforgeai/v1/pr-packet.schema.json
+    destination: .devforgeai/contracts/schemas/pr-packet.schema.json
+    verbatim: true
+    pin_digest: true
+    order: 1
+  - source: schemas/devforgeai/v2/run.schema.json
+    destination: .devforgeai/contracts/schemas/v2/run.schema.json
+    verbatim: true
+    pin_digest: true
+    order: 1
+  - source: schemas/devforgeai/v2/error-taxonomy.schema.json
+    destination: .devforgeai/contracts/schemas/v2/error-taxonomy.schema.json
+    verbatim: true
+    pin_digest: true
+    order: 1
   # provider-neutral framework material -> .devforgeai/
   - source: framework/skills
     destination: .devforgeai/skills
@@ -36,6 +51,14 @@ entries:
     derived: true
   - source: framework/skills/research
     destination: .agents/skills/research/references
+    flatten: true
+    derived: true
+  - source: framework/skills/pr
+    destination: .claude/skills/pr/references
+    flatten: true
+    derived: true
+  - source: framework/skills/pr
+    destination: .agents/skills/pr/references
     flatten: true
     derived: true
 # Not installed by this manifest: components/research-core/ is the Python package,

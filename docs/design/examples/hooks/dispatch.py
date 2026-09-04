@@ -377,7 +377,7 @@ def check_sequencer(argv: list[str], enf: dict, in_subagent: bool, agent_type: s
         return
     raise Block(
         f"primary may call only the {len(PRIMARY_CALLABLE)} model-callable operations "
-        "(`devforgeai phase start <skill> <arg> [--fix] [--lenient]`, "
+        "(`devforgeai phase start <skill> <arg> [--draft] [--fix] [--lenient]`, "
         "`devforgeai phase fail --reason <text>`, `devforgeai validate`, "
         "`devforgeai promote <run>`, `devforgeai status`), as allowed by current state"
     )
