@@ -1,0 +1,12 @@
+# Static, non-PIE musl build; paths remapped so the binary carries no build
+# directory (reproducibility across the DevForgeAI and DevForge checkouts).
+[build]
+target = "x86_64-unknown-linux-musl"
+
+[target.x86_64-unknown-linux-musl]
+rustflags = [
+  "-C", "target-feature=+crt-static",
+  "-C", "relocation-model=static",
+  "--remap-path-prefix", "/home=/remapped",
+  "--remap-path-prefix", "/tmp=/remapped",
+]

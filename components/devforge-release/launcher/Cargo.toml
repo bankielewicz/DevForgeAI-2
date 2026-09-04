@@ -1,0 +1,15 @@
+[package]
+name = "devforge"
+version = "0.1.0"
+edition = "2021"
+description = "DevForge trust-boundary launcher: static musl binary, no dependencies (corrective-spec-002 CS-8)"
+publish = false
+
+[dependencies]
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

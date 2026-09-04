@@ -22,6 +22,9 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "components" / "research-core" / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+from devforgeai.checkpoint.validate import ReleaseFS, validate_plan  # noqa: E402
 SCHEMA = ROOT / "schemas" / "devforgeai" / "v1" / "research-gap-checkpoint.schema.json"
 REAL_PLAN = ROOT / "docs" / "research" / "spec-driven-development-gap-closure"
 AUTH = "github:test-authority"
@@ -54,6 +57,50 @@ RELEASE_FIELDS = ("version", "source_commit", "promotion_evidence_path", "promot
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+class FakeProtectedFS(ReleaseFS):
+    """CS-1.7 seam: objects under the listed protected roots (and their ancestors)
+    read as owned by uid 0 with no group/other write; bytes and symlinks are real.
+    `executing_root` plays the release root the validator runs from (CS-6.1) and
+    `attest_root` the fixed attestation directory (CS-9.2). In-process only."""
+
+    def __init__(self, protected: list[Path] | None = None, executing_root: Path | None = None,
+                 attest_root: Path | None = None) -> None:
+        self.protected = [Path(p).resolve() for p in (protected or [])]
+        self._executing_root = executing_root
+        if attest_root is not None:
+            self.attest_root = attest_root
+
+    def _masked(self, path: Path) -> bool:
+        resolved = Path(path).resolve()
+        return any(resolved == root or resolved in root.parents or resolved.is_relative_to(root)
+                   for root in self.protected)
+
+    def lstat(self, path: Path) -> os.stat_result:
+        st = os.lstat(path)
+        if os.path.islink(path) or not self._masked(path):
+            return st
+        masked = (st.st_mode & ~0o022, st.st_ino, st.st_dev, st.st_nlink, 0, 0,
+                  st.st_size, st.st_atime, st.st_mtime, st.st_ctime)
+        return os.stat_result(masked)
+
+    def executing_root(self, module_file: Path) -> Path | None:
+        return self._executing_root
+
+
+def run_inprocess(plan: Path, diff_range: str | None = None, scratch: "Scratch | None" = None,
+                  fs: ReleaseFS | None = None):
+    """The positive protected path: in-process, seam injected. Returns the report.
+    A validator that refuses to run (any exception) is a failed assertion, so a
+    red run records it as such rather than as an error."""
+    if fs is None:
+        assert scratch is not None
+        fs = scratch.fake()
+    try:
+        return validate_plan(plan, diff_range=diff_range, release_fs=fs)
+    except Exception as exc:      # noqa: BLE001
+        raise AssertionError(f"validator refused to run: {type(exc).__name__}: {exc}") from exc
 
 
 def admitted_input(**overrides: object) -> dict:
@@ -104,10 +151,24 @@ class Scratch:
         self._tmp = tempfile.TemporaryDirectory(prefix="dfai-cp00-")
         self._ext = tempfile.TemporaryDirectory(prefix="dfai-cp00-ext-")
         self.root = Path(self._tmp.name)
-        # A "protected" executable outside every agent-writable workspace.
-        self.executable = Path(self._ext.name) / "devforge"
-        self.executable.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-        self.exe_sha = sha256(self.executable)
+        # A release tree outside every agent-writable workspace, laid out as
+        # components/devforge-release/INSTALLED-LAYOUT.md requires. It is
+        # user-owned here: the subprocess path must reject it (CS-1.3) and
+        # only the in-process seam of CS-1.7 may present it as root-owned.
+        self.release_root = Path(self._ext.name) / "devforge" / "1.0.0-test"
+        self.executable = self.release_root / "bin" / "devforge"
+        # The fixed attestation directory (CS-9.2), played by the seam only.
+        self.attest_root = Path(self._ext.name) / "var" / "lib" / "devforge" / "attest"
+        self.identity: dict = {
+            "identity_format": "devforge-release-identity/v1",
+            "version": "1.0.0", "devforge_commit": COMMIT, "devforge_tag": "v1.0.0",
+            "candidate_repository": "https://example.invalid/DevForgeAI",
+            "candidate_checkpoint_id": "CP-00",
+            "candidate_source_commit": COMMIT, "candidate_manifest_sha256": SHA,
+            "schema_set_version": "v1", "contract_policy_version": "1",
+            "launcher_toolchain": "rustc 0.0.0 (fixture)", "built_at": "2026-09-04T00:00:00Z",
+        }
+        self.write_release_tree()
         (self.root / "schemas" / "devforgeai" / "v1").mkdir(parents=True)
         shutil.copy2(SCHEMA, self.root / "schemas" / "devforgeai" / "v1" / SCHEMA.name)
         (self.root / "src").mkdir()
@@ -128,6 +189,79 @@ class Scratch:
     def cleanup(self) -> None:
         self._tmp.cleanup()
         self._ext.cleanup()
+
+    def write_release_tree(self, manifest_entries: list[str] | None = None,
+                           root: Path | None = None, identity: bool = True) -> None:
+        """Write the installed layout (layout contract v2): bin/devforge, lib/,
+        schemas/, contracts/MANIFEST.sha256 (the candidate manifest once pinned),
+        RELEASE-IDENTITY.json, RELEASE.sha256."""
+        root = root or self.release_root
+        for sub in ("bin", "lib/devforgeai/checkpoint", "schemas/devforgeai/v1", "contracts"):
+            (root / sub).mkdir(parents=True, exist_ok=True)
+        (root / "bin" / "devforge").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        (root / "bin" / "devforge").chmod(0o755)
+        (root / "bin" / "devforge-checkpoint.py").write_text("# launcher\n", encoding="utf-8")
+        (root / "bin" / "devforge-checkpoint.py").chmod(0o755)
+        (root / "lib" / "devforgeai" / "__init__.py").write_text("", encoding="utf-8")
+        (root / "lib" / "devforgeai" / "checkpoint" / "validate.py").write_text("# installed copy\n", encoding="utf-8")
+        shutil.copy2(SCHEMA, root / "schemas" / "devforgeai" / "v1" / SCHEMA.name)
+        for name in ("release-identity.schema.json", "closure-attestation.schema.json"):
+            source = SCHEMA.parent / name
+            (root / "schemas" / "devforgeai" / "v1" / name).write_text(
+                source.read_text(encoding="utf-8") if source.is_file() else "{}\n", encoding="utf-8")
+        candidate = self.root / CANDIDATE_MANIFEST
+        (root / "contracts" / "MANIFEST.sha256").write_bytes(
+            candidate.read_bytes() if candidate.is_file() else f"{SHA}  schemas/devforgeai/v1/{SCHEMA.name}\n".encode())
+        identity_file = root / "RELEASE-IDENTITY.json"
+        if identity:
+            identity_file.write_text(json.dumps(self.identity, indent=2) + "\n", encoding="utf-8")
+        elif identity_file.exists():
+            identity_file.unlink()
+        files = [q for q in sorted(root.rglob("*")) if q.is_file() and q.name != "RELEASE.sha256"]
+        lines = manifest_entries if manifest_entries is not None else [
+            f"{sha256(q)}  {q.relative_to(root).as_posix()}" for q in files]
+        (root / "RELEASE.sha256").write_text("# scratch release\n" + "\n".join(lines) + "\n", encoding="utf-8")
+        if root == self.release_root:
+            self.exe_sha = sha256(root / "bin" / "devforge")
+            self.schema_sha = sha256(root / "schemas" / "devforgeai" / "v1" / SCHEMA.name)
+            self.policy_sha = sha256(root / "contracts" / "MANIFEST.sha256")
+
+    def fake(self, executing_root: Path | None = None, protected: list[Path] | None = None) -> FakeProtectedFS:
+        """The seam for this scratch: release tree and attestation directory read as root-owned."""
+        return FakeProtectedFS(
+            protected=protected if protected is not None else [self.release_root.parent, self.attest_root],
+            executing_root=executing_root or self.release_root,
+            attest_root=self.attest_root)
+
+    def repository_identity(self) -> tuple[str, list[str]]:
+        roots = sorted(self.git("rev-list", "--max-parents=0", "HEAD").split())
+        return hashlib.sha256("\n".join(roots).encode()).hexdigest(), roots
+
+    def attest(self, cp: str, base: str, head: str, **overrides: object) -> Path:
+        """Mint a closure attestation the way `devforge checkpoint attest` does (CS-9.1),
+        into the fixed location under the seam's attest_root (CS-9.2)."""
+        identity, roots = self.repository_identity()
+        plan_rel = self.plan.relative_to(self.root).as_posix()
+        record_rel = f"{plan_rel}/checkpoints/{cp}.yaml"
+        blob = subprocess.run(["git", "-C", str(self.root), "cat-file", "blob", f"{head}:{record_rel}"],
+                              capture_output=True, check=True).stdout
+        document = {
+            "attestation_format": "devforge-closure-attestation/v1",
+            "repository_identity": identity, "repository_root_commits": roots,
+            "plan_path": plan_rel, "plan_id": "SCRATCH", "checkpoint_id": cp, "record_path": record_rel,
+            "base_commit": base, "head_commit": head,
+            "record_sha256": hashlib.sha256(blob).hexdigest(),
+            "release_root": str(self.release_root),
+            "release_identity_sha256": (sha256(self.release_root / "RELEASE-IDENTITY.json")
+                                        if (self.release_root / "RELEASE-IDENTITY.json").is_file() else "0" * 64),
+            "authority_id": AUTH, "review_reference": "https://example.invalid/pull/1#review",
+            "minted_at": "2026-09-04T00:00:00Z", "minted_by_uid": 0,
+        }
+        document.update(overrides)
+        target = self.attest_root / identity[:32] / "SCRATCH" / f"{cp}.json"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+        return target
 
     def git(self, *argv: str) -> str:
         completed = subprocess.run(["git", "-C", str(self.root), *argv],
@@ -199,14 +333,21 @@ class Scratch:
         dossier = rec["research"]["dossier_path"]
         if not rec["enforcement"]["candidate"]["source_commit"]:
             self.write_candidate(cp)
+        # The release identity binds the candidate of the checkpoint it was built
+        # from (CS-6.4) and the installed policy is that candidate manifest itself.
+        candidate = rec["enforcement"]["candidate"]
+        if cp == self.identity["candidate_checkpoint_id"]:
+            self.identity.update(candidate_source_commit=candidate["source_commit"],
+                                 candidate_manifest_sha256=candidate["manifest_sha256"])
+        self.write_release_tree()
         rec["enforcement"]["trust_stage"] = "PROTECTED_RELEASE"
         rec["enforcement"]["protected_release"] = {
             "version": "1.0.0", "source_commit": COMMIT,
             "promotion_evidence_path": f"{dossier}/evidence/promotion.txt",
             "promotion_evidence_sha256": sha256(self.root / dossier / "evidence" / "promotion.txt"),
             "executable_path": str(self.executable), "executable_sha256": self.exe_sha,
-            "schema_set_version": "v1", "schema_set_sha256": SHA,
-            "contract_policy_version": "1", "contract_policy_sha256": SHA,
+            "schema_set_version": "v1", "schema_set_sha256": self.schema_sha,
+            "contract_policy_version": "1", "contract_policy_sha256": self.policy_sha,
             "installation_owner": "root",
             "permissions_evidence_path": f"{dossier}/evidence/permissions.txt",
             "permissions_evidence_sha256": sha256(self.root / dossier / "evidence" / "permissions.txt"),
@@ -249,8 +390,8 @@ class Scratch:
         (self.checkpoints / "MANIFEST.sha256").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def run_validator(plan: Path, *extra: str) -> tuple[int, str]:
-    env = dict(os.environ, PYTHONPATH=str(SRC), PYTHONDONTWRITEBYTECODE="1")
+def run_validator(plan: Path, *extra: str, env_extra: dict[str, str] | None = None) -> tuple[int, str]:
+    env = dict(os.environ, PYTHONPATH=str(SRC), PYTHONDONTWRITEBYTECODE="1", **(env_extra or {}))
     completed = subprocess.run(
         [sys.executable, "-m", "devforgeai.checkpoint", "validate", "--plan", str(plan), *extra],
         capture_output=True, text=True, env=env, cwd=str(ROOT))
@@ -271,22 +412,63 @@ class GapCheckpointValidatorTests(unittest.TestCase):
         self.assertEqual(code, 0, out)
         self.assertIn("3 record(s), 0 problem(s)", out)
 
-    def test_complete_closed_record_passes(self) -> None:
-        evidence = self.scratch.commit("evidence")
-        self.scratch.close("CP-00", evidence)
+    def _work_then_close(self, *cps: str, attest: bool = True) -> tuple[str, str]:
+        """Work commit (dossiers, candidate, open records), the closure commit, then
+        the attestation the protected host mints once the head is frozen (CS-9.3)."""
+        for cp in cps:
+            self.scratch.write_dossier(cp)
+        self.scratch.write_candidate("CP-00")
         self.scratch.materialize()
-        self.scratch.commit("closure")
-        code, out = run_validator(self.scratch.plan)
-        self.assertEqual(code, 0, out)
+        base = self.scratch.commit("work")
+        for cp in cps:
+            self.scratch.close(cp, base)
+        self.scratch.materialize()
+        head = self.scratch.commit("closure")
+        if attest:
+            for cp in cps:
+                self.scratch.attest(cp, base, head)
+        return base, head
+
+    def test_complete_closed_record_passes(self) -> None:
+        # CS-1.7: the positive protected case runs in-process through the seam.
+        base, head = self._work_then_close("CP-00")
+        report = run_inprocess(self.scratch.plan, f"{base}..{head}", self.scratch)
+        self.assertEqual([str(p) for p in report.problems], [])
+        self.assertEqual(report.outcome, "PASS")
 
     def test_research_only_disposition_passes(self) -> None:
-        evidence = self.scratch.commit("evidence")
-        self.scratch.close("CP-00", evidence)
-        self.scratch.close("CP-13", evidence)
-        self.scratch.materialize()
-        self.scratch.commit("closure")
-        code, out = run_validator(self.scratch.plan)
-        self.assertEqual(code, 0, out)
+        base, head = self._work_then_close("CP-00", "CP-13")
+        report = run_inprocess(self.scratch.plan, f"{base}..{head}", self.scratch)
+        self.assertEqual([str(p) for p in report.problems], [])
+
+    def test_no_seam_from_the_cli(self) -> None:
+        # The same closed plan through the subprocess path: the staged validator
+        # has no executing release and the release tree is user-owned, so no CLI
+        # flag or environment selects the seam.
+        base, head = self._work_then_close("CP-00")
+        code, out = run_validator(self.scratch.plan, "--diff", f"{base}..{head}")
+        self.assertEqual(code, 1, out)
+        self.assertIn("S06.9", out)
+
+    def test_closed_record_rejected_by_staged_validator(self) -> None:         # CS-6.1
+        base, head = self._work_then_close("CP-00")
+        code, out = run_validator(self.scratch.plan, "--diff", f"{base}..{head}")
+        self.assertEqual(code, 1, out)
+        self.assertIn("decidable only by the installed validator", out)
+
+    def test_closure_range_comes_from_attestation(self) -> None:               # CS-9.5
+        # No --diff: the attested base..head is the closure range.
+        self._work_then_close("CP-00")
+        report = run_inprocess(self.scratch.plan, None, self.scratch)
+        self.assertEqual([str(p) for p in report.problems], [])
+        self.assertEqual(report.outcome, "PASS")
+
+    def test_attestation_holds_after_later_commit(self) -> None:               # CS-9.6
+        self._work_then_close("CP-00")
+        (self.scratch.root / "unrelated.md").write_text("later\n", encoding="utf-8")
+        self.scratch.commit("later work")
+        report = run_inprocess(self.scratch.plan, None, self.scratch)
+        self.assertEqual([str(p) for p in report.problems], [])
 
     def test_open_record_with_staged_candidate_and_research_holds(self) -> None:
         # The CP-00 work-PR state the amendment allows: researched and
@@ -301,15 +483,10 @@ class GapCheckpointValidatorTests(unittest.TestCase):
     def test_closure_only_diff_passes(self) -> None:
         # The work PR created the dossier, the candidate pin and its manifest;
         # the closure diff touches records, ledger and adjacent manifest only.
-        self.scratch.write_dossier("CP-00")
-        self.scratch.write_candidate("CP-00")
-        self.scratch.materialize()
-        base = self.scratch.commit("work")
-        self.scratch.close("CP-00", base)
-        self.scratch.materialize()
-        head = self.scratch.commit("closure")
-        code, out = run_validator(self.scratch.plan, "--diff", f"{base}..{head}")
-        self.assertEqual(code, 0, out)
+        base, head = self._work_then_close("CP-00")
+        report = run_inprocess(self.scratch.plan, f"{base}..{head}", self.scratch)
+        self.assertEqual([str(p) for p in report.problems if p.rule == "S10"], [])
+        self.assertEqual(report.outcome, "PASS")
 
     def test_json_output_names_outcome(self) -> None:
         self.scratch.materialize()
@@ -321,19 +498,53 @@ class GapCheckpointValidatorTests(unittest.TestCase):
     # ---- hostile: each mutation is rejected with its rule id ----
 
     def _closed_scratch(self) -> tuple[str, dict]:
+        self.scratch.write_dossier("CP-00")
+        self.scratch.write_candidate("CP-00")
         evidence = self.scratch.commit("evidence")
         rec = self.scratch.close("CP-00", evidence)
         return evidence, rec
 
-    def _expect(self, rule: str, *needles: str) -> str:
+    def _commit_and_attest(self) -> tuple[str | None, str]:
+        """Commit the scratch state; for every closed record mint the attestation
+        the protected host would (base = the previous commit, head = HEAD)."""
         self.scratch.materialize()
-        self.scratch.commit()
-        code, out = run_validator(self.scratch.plan)
+        head = self.scratch.commit()
+        base = None
+        closed = [cp for cp, rec in self.scratch.records.items() if rec["closed"]]
+        if closed:
+            base = self.scratch.git("rev-parse", "HEAD~1")
+            for cp in closed:
+                self.scratch.attest(cp, base, head)
+        return base, head
+
+    def _expect(self, rule: str, *needles: str) -> str:
+        """Subprocess path (staged validator). A closed plan is given the range that
+        matches its attestation; the staged validator still rejects it (CS-6.1) and
+        reports every other problem it can decide."""
+        base, head = self._commit_and_attest()
+        extra = ("--diff", f"{base}..{head}") if base else ()
+        code, out = run_validator(self.scratch.plan, *extra)
         self.assertEqual(code, 1, out)
         self.assertIn(rule, out)
         for needle in needles:
             self.assertIn(needle, out)
         return out
+
+    def _expect_inprocess(self, rule: str, *needles: str, diff: str | None = None,
+                          fs: ReleaseFS | None = None, attest: bool = True) -> list[str]:
+        """Protected path through the seam: the executing release is the fixture's."""
+        if attest:
+            self._commit_and_attest()
+        else:
+            self.scratch.materialize()
+            self.scratch.commit()
+        report = run_inprocess(self.scratch.plan, diff, self.scratch, fs)
+        problems = [str(p) for p in report.problems]
+        matching = [p for p in problems if rule in p]
+        self.assertTrue(matching, f"no {rule} problem; got {problems}")
+        for needle in needles:
+            self.assertTrue(any(needle in p for p in matching), f"{needle!r} not in {matching}")
+        return problems
 
     def test_missing_authority_rejected(self) -> None:
         _, rec = self._closed_scratch()
@@ -432,6 +643,271 @@ class GapCheckpointValidatorTests(unittest.TestCase):
         _, rec = self._closed_scratch()
         rec["human_closure"]["decision"] = "ACCEPT_RESEARCH_DISPOSITION"
         self._expect("S06.5", "legal only for RESEARCH_ONLY")
+
+    # -- corrective specification 001 (reviews/codex-security-2026-09-04) --
+
+    def test_missing_executable_rejected(self) -> None:                       # CS-1.1
+        _, rec = self._closed_scratch()
+        rec["enforcement"]["protected_release"]["executable_path"] = str(self.scratch.release_root / "bin" / "absent")
+        self._expect("S06.9", "executable missing")
+
+    def test_missing_promotion_evidence_rejected(self) -> None:               # CS-1.1
+        _, rec = self._closed_scratch()
+        rec["enforcement"]["protected_release"]["promotion_evidence_path"] = str(self.scratch.release_root / "absent.txt")
+        self._expect("S06.9", "promotion_evidence_path missing")
+
+    def test_missing_release_manifest_rejected(self) -> None:                 # CS-1.2
+        self._closed_scratch()
+        (self.scratch.release_root / "RELEASE.sha256").unlink()
+        self._expect("S06.9", "RELEASE.sha256 missing")
+
+    def test_user_owned_executable_rejected(self) -> None:                    # CS-1.3
+        self._closed_scratch()          # the fixture tree is owned by this user, not uid 0
+        self._expect("S06.9", "not owned by uid 0")
+
+    def test_group_writable_executable_rejected(self) -> None:                # CS-1.3
+        self._closed_scratch()
+        self.scratch.executable.chmod(0o775)
+        self._expect("S06.9", "group or other writable")
+
+    def test_symlinked_executable_rejected(self) -> None:                     # CS-1.3
+        _, rec = self._closed_scratch()
+        link = self.scratch.release_root / "bin" / "devforge-link"
+        link.symlink_to(self.scratch.executable)
+        rec["enforcement"]["protected_release"]["executable_path"] = str(link)
+        self._expect("S06.9", "symbolic link")
+
+    def test_writable_ancestor_rejected(self) -> None:                        # CS-1.3
+        self._closed_scratch()          # the tree lives under a sticky world-writable temp dir
+        self._expect("S06.9", "ancestor")
+
+    def test_release_manifest_entry_tampered_rejected(self) -> None:          # CS-1.4
+        self._closed_scratch()
+        (self.scratch.release_root / "lib" / "devforgeai" / "checkpoint" / "validate.py").write_text(
+            "# tampered\n", encoding="utf-8")
+        self._expect("S06.9", "does not verify")
+
+    def test_unlisted_release_file_rejected(self) -> None:                    # CS-1.4
+        self._closed_scratch()
+        (self.scratch.release_root / "lib" / "extra.py").write_text("print('unlisted')\n", encoding="utf-8")
+        self._expect("S06.9", "not listed in RELEASE.sha256")
+
+    def test_release_manifest_without_schema_rejected(self) -> None:          # CS-1.4
+        self._closed_scratch()
+        manifest = self.scratch.release_root / "RELEASE.sha256"
+        manifest.write_text("".join(line for line in manifest.read_text().splitlines(keepends=True)
+                                    if "schema.json" not in line), encoding="utf-8")
+        self._expect("S06.9", "schema")
+
+    def test_schema_set_digest_mismatch_rejected(self) -> None:               # CS-1.5
+        _, rec = self._closed_scratch()
+        rec["enforcement"]["protected_release"]["schema_set_sha256"] = "5" * 64
+        self._expect("S06.9", "schema_set_sha256")
+
+    def test_contract_policy_digest_mismatch_rejected(self) -> None:          # CS-1.5
+        _, rec = self._closed_scratch()
+        rec["enforcement"]["protected_release"]["contract_policy_sha256"] = "6" * 64
+        self._expect("S06.9", "contract_policy_sha256")
+
+    def test_schema_option_rejected(self) -> None:                            # CS-2.1
+        self.scratch.materialize()
+        self.scratch.commit()
+        code, out = run_validator(self.scratch.plan, "--schema", str(SCHEMA))
+        self.assertEqual(code, 2, out)
+
+    def test_git_root_option_rejected(self) -> None:                          # CS-2.1, CS-2.3
+        self.scratch.materialize()
+        self.scratch.commit()
+        code, out = run_validator(self.scratch.plan, "--git-root", str(self.scratch.root))
+        self.assertEqual(code, 2, out)
+
+    def test_schema_from_plan_tree_ignored(self) -> None:                     # CS-2.2
+        # A permissive schema above the plan must not change a rejection.
+        rec = self.scratch.records["CP-01"]
+        rec["admitted_inputs"] = [admitted_input(subject_sha256="sha256:abc")]
+        self.scratch.materialize()
+        permissive = self.scratch.root / "schemas" / "devforgeai" / "v1" / SCHEMA.name
+        permissive.write_text("{}\n", encoding="utf-8")
+        self.scratch.commit()
+        code, out = run_validator(self.scratch.plan)
+        self.assertEqual(code, 1, out)
+        self.assertIn("SCHEMA", out)
+
+    # -- CS-6: the record's release is the executing release --
+
+    def test_record_release_differs_from_executing_root_rejected(self) -> None:   # CS-6.2
+        # Two protected releases with the same identity; the record names the one
+        # that is not executing. Both verify; the record must still be rejected.
+        self._closed_scratch()
+        other = self.scratch.release_root.parent / "1.0.0-other"
+        self.scratch.write_release_tree(root=other)
+        rec = self.scratch.records["CP-00"]["enforcement"]["protected_release"]
+        rec["executable_path"] = str(other / "bin" / "devforge")
+        rec["executable_sha256"] = sha256(other / "bin" / "devforge")
+        problems = self._expect_inprocess("S06.9", "executing")
+        self.assertTrue(any("S06.9" in p and str(other) in p for p in problems), problems)
+
+    def test_release_identity_missing_rejected(self) -> None:                     # CS-6.3
+        self._closed_scratch()
+        self.scratch.write_release_tree(identity=False)
+        self._expect_inprocess("S06.9", "RELEASE-IDENTITY.json")
+
+    def test_release_identity_candidate_mismatch_rejected(self) -> None:          # CS-6.4
+        self._closed_scratch()
+        self.scratch.identity["candidate_source_commit"] = "f" * 40
+        self.scratch.write_release_tree()
+        self._expect_inprocess("S06.9", "candidate_source_commit")
+
+    def test_release_identity_version_mismatch_rejected(self) -> None:            # CS-6.4
+        self._closed_scratch()
+        self.scratch.identity["version"] = "9.9.9"
+        self.scratch.write_release_tree()
+        self._expect_inprocess("S06.9", "version")
+
+    def test_release_identity_devforge_commit_mismatch_rejected(self) -> None:    # CS-6.4
+        self._closed_scratch()
+        self.scratch.identity["devforge_commit"] = "e" * 40
+        self.scratch.write_release_tree()
+        self._expect_inprocess("S06.9", "devforge_commit")
+
+    def test_policy_not_candidate_manifest_rejected(self) -> None:                # CS-6.4
+        # The installed policy is a self-consistent file that is not the pinned
+        # candidate manifest: RELEASE.sha256 and the record both name its digest.
+        _, rec = self._closed_scratch()
+        root = self.scratch.release_root
+        policy = root / "contracts" / "MANIFEST.sha256"
+        policy.write_text("# not the candidate manifest\n", encoding="utf-8")
+        lines = [f"{sha256(q)}  {q.relative_to(root).as_posix()}"
+                 for q in sorted(root.rglob("*")) if q.is_file() and q.name != "RELEASE.sha256"]
+        (root / "RELEASE.sha256").write_text("\n".join(lines) + "\n", encoding="utf-8")
+        rec["enforcement"]["protected_release"]["contract_policy_sha256"] = sha256(policy)
+        self._expect_inprocess("S06.9", "contract_policy_sha256", "candidate")
+
+    # -- CS-7: Git identity is not caller-controlled --
+
+    def _alternate_repository(self) -> Path:
+        alt = Path(tempfile.mkdtemp(prefix="dfai-alt-", dir=self.scratch._ext.name))
+        subprocess.run(["git", "-C", str(alt), "init", "-q"], check=True)
+        subprocess.run(["git", "-C", str(alt), "-c", "user.email=a@b", "-c", "user.name=a",
+                        "commit", "-q", "--allow-empty", "-m", "alternate"], check=True)
+        return alt
+
+    def test_git_environment_ignored(self) -> None:                               # CS-7.1
+        # Canonical: an open plan with a staged candidate holds. Each Git control
+        # variable would redirect history to an alternate repository; the verdict
+        # must not change.
+        self.scratch.stage_candidate("CP-00")
+        self.scratch.materialize()
+        self.scratch.commit("pin")
+        code, canonical = run_validator(self.scratch.plan)
+        self.assertEqual(code, 0, canonical)
+        alt = self._alternate_repository()
+        cases = {
+            "GIT_DIR": {"GIT_DIR": str(alt / ".git"), "GIT_WORK_TREE": str(self.scratch.root)},
+            "GIT_OBJECT_DIRECTORY": {"GIT_OBJECT_DIRECTORY": str(alt / ".git" / "objects")},
+            "GIT_ALTERNATE_OBJECT_DIRECTORIES": {"GIT_ALTERNATE_OBJECT_DIRECTORIES": str(alt / ".git" / "objects")},
+            "GIT_CONFIG": {"GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "core.hooksPath",
+                           "GIT_CONFIG_VALUE_0": str(alt)},
+            "GIT_CEILING_DIRECTORIES": {"GIT_CEILING_DIRECTORIES": str(self.scratch.root.parent)},
+        }
+        for name, env in cases.items():
+            with self.subTest(variable=name):
+                code, out = run_validator(self.scratch.plan, env_extra=env)
+                self.assertEqual(code, 0, f"{name}: {out}")
+                self.assertIn("0 problem(s)", out)
+
+    def test_path_shadowed_git_ignored(self) -> None:                             # CS-7.1
+        self.scratch.stage_candidate("CP-00")
+        self.scratch.materialize()
+        self.scratch.commit("pin")
+        shadow = Path(tempfile.mkdtemp(prefix="dfai-shadow-", dir=self.scratch._ext.name))
+        (shadow / "git").write_text("#!/bin/sh\necho shadow git ran >&2\nexit 99\n", encoding="utf-8")
+        (shadow / "git").chmod(0o755)
+        env = {"PATH": f"{shadow}:{os.environ.get('PATH', '')}"}
+        code, out = run_validator(self.scratch.plan, env_extra=env)
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("shadow git ran", out)
+
+    # -- CS-9: closure range from a root-owned attestation (rule S14) --
+
+    def test_closed_record_without_attestation_rejected(self) -> None:            # CS-9.4
+        base, head = self._work_then_close("CP-00", attest=False)
+        report = run_inprocess(self.scratch.plan, f"{base}..{head}", self.scratch)
+        problems = [str(p) for p in report.problems]
+        self.assertTrue(any("S14" in p and "attestation" in p for p in problems), problems)
+
+    def test_attestation_user_owned_rejected(self) -> None:                       # CS-9.2
+        base, head = self._work_then_close("CP-00")
+        fs = self.scratch.fake(protected=[self.scratch.release_root.parent])   # attest_root stays user-owned
+        report = run_inprocess(self.scratch.plan, f"{base}..{head}", self.scratch, fs)
+        problems = [str(p) for p in report.problems]
+        self.assertTrue(any("S14" in p and "not owned by uid 0" in p for p in problems), problems)
+
+    def test_attestation_head_not_ancestor_rejected(self) -> None:                # CS-9.4
+        base, head = self._work_then_close("CP-00")
+        stray = self._alternate_repository()
+        stray_head = subprocess.run(["git", "-C", str(stray), "rev-parse", "HEAD"],
+                                    capture_output=True, text=True, check=True).stdout.strip()
+        self.scratch.attest("CP-00", base, head, head_commit=stray_head)
+        report = run_inprocess(self.scratch.plan, None, self.scratch)
+        problems = [str(p) for p in report.problems]
+        self.assertTrue(any("S14" in p and "head_commit" in p for p in problems), problems)
+
+    def test_attestation_record_digest_mismatch_rejected(self) -> None:           # CS-9.4
+        base, head = self._work_then_close("CP-00")
+        # the record is edited after the attestation was minted (still legal on its face)
+        self.scratch.records["CP-00"]["limitations"].append("Edited after attestation.")
+        self.scratch.materialize()
+        self.scratch.commit("record edited after attestation")
+        report = run_inprocess(self.scratch.plan, None, self.scratch)
+        problems = [str(p) for p in report.problems]
+        self.assertTrue(any("S14" in p and "record_sha256" in p for p in problems), problems)
+
+    def test_attestation_release_identity_mismatch_rejected(self) -> None:        # CS-9.4
+        base, head = self._work_then_close("CP-00")
+        self.scratch.attest("CP-00", base, head, release_identity_sha256="a" * 64)
+        report = run_inprocess(self.scratch.plan, None, self.scratch)
+        problems = [str(p) for p in report.problems]
+        self.assertTrue(any("S14" in p and "release_identity_sha256" in p for p in problems), problems)
+
+    def test_attestation_wrong_checkpoint_rejected(self) -> None:                 # CS-9.4
+        base, head = self._work_then_close("CP-00")
+        self.scratch.attest("CP-00", base, head, checkpoint_id="CP-01")
+        report = run_inprocess(self.scratch.plan, None, self.scratch)
+        problems = [str(p) for p in report.problems]
+        self.assertTrue(any("S14" in p and "checkpoint_id" in p for p in problems), problems)
+
+    def test_attestation_hostile_plan_id_rejected(self) -> None:                 # CS-9.7
+        # An agent-authored Plan ID must never steer the attestation lookup.
+        base, head = self._work_then_close("CP-00", attest=False)
+        readme = self.scratch.plan / "README.md"
+        readme.write_text(readme.read_text(encoding="utf-8").replace("`SCRATCH`", "`../x`"), encoding="utf-8")
+        head = self.scratch.commit("hostile plan id")
+        self.scratch.attest("CP-00", base, head)
+        report = run_inprocess(self.scratch.plan, None, self.scratch)
+        problems = [str(p) for p in report.problems]
+        self.assertTrue(any("S14" in p and "plan id" in p for p in problems), problems)
+
+    def test_diff_differs_from_attested_range_rejected(self) -> None:             # CS-9.5
+        base, head = self._work_then_close("CP-00")
+        for wrong in (f"{head}..{head}", f"{self.scratch.git('rev-parse', f'{base}~1')}..{head}"):
+            with self.subTest(range=wrong):
+                report = run_inprocess(self.scratch.plan, wrong, self.scratch)
+                problems = [str(p) for p in report.problems]
+                self.assertTrue(any("S14" in p and "attested" in p for p in problems), problems)
+
+    def test_post_closure_repin_rejected(self) -> None:                           # CS-9.5, the reviewer's reproduction
+        base, head = self._work_then_close("CP-00")
+        # implementation work and a candidate re-pin after the attested head ...
+        (self.scratch.root / "src" / "validator.py").write_text("print('changed after closure')\n", encoding="utf-8")
+        implementation = self.scratch.write_candidate("CP-00")
+        # ... then a record-only commit carrying the new pin, still closed
+        self.scratch.materialize()
+        repin = self.scratch.commit("re-pin")
+        for diff in (None, f"{implementation}..{repin}"):
+            with self.subTest(diff=diff):
+                report = run_inprocess(self.scratch.plan, diff, self.scratch)
+                self.assertEqual(report.outcome, "REJECTED", [str(p) for p in report.problems])
 
     # -- enforcement pins (amendment SDD-GAP-AMD-001) --
 

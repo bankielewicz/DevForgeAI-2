@@ -1,0 +1,8 @@
+relative invocation:
+devforge: invoke by absolute path (got 'components/devforge-release/bin/devforge')
+marker SHA-256: 25dbd4fa5b9f0710b9f27009c1e38969b8cbb2806502388beae5063d460a85f5
+
+absolute invocation:
+the constructor fired before the source-layout launcher failed its import; marker line count increased to 5
+No repository or protected file was modified.
+

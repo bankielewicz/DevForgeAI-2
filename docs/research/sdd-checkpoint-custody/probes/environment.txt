@@ -5,5 +5,5 @@ branch: research/cp-00-checkpoint-custody
 worktree_directory: .claude/worktrees/cp-00-checkpoint-custody (D-CP00-05)
 python: Python 3.12.3
 claude: 2.1.260 (Claude Code)
-codex: codex-cli 0.153.0
+codex: codex-cli 0.153.2
 git_status_at_setup: clean (## research/cp-00-checkpoint-custody...origin/main)

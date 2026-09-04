@@ -2,7 +2,7 @@
 # Section hashes (01 hash rule), checked by docs/design/specs/verify.py --only v3:
 #   docs/design/10-sequencer-and-contracts.md#2-cli-grammar  sha256:231b93094676198b131720e581f044d8c66b4f0b8dcd3dcb35e4350100807090
 #   docs/design/10-sequencer-and-contracts.md#3-status-vocabulary-and-gate-policy  sha256:2c6a74802ef62ff191f9f21b7822e5ff72dd2dbe68ee80188d2d3446f3e3323f
-# Slice 2 (CP-00 checkpoint validator, SDD-GAP-AMD-001): schema, validator package, CLI entry, tests, declaration. Pinned by the CP-00 record's enforcement.candidate.
+# Slice 2 (CP-00 checkpoint validator + devforge launcher + staged release scaffold, SDD-GAP-AMD-001 / SDD-GAP-CP00-SCOPE-001): schemas, package parent, validator, CLI entry, tests, declarations, components/devforge-release/** (launcher/target excluded). Pinned by the CP-00 record's enforcement.candidate.
 7560b879e66afb3a35d113c73e92abe3d2e96b0269526e9c37cc9f4f2220eb57  framework/contracts/error-taxonomy.yaml
 201263785b35244f3fb0d2d98e784dff73897fc43b065f514676d2abe0207e9b  schemas/devforgeai/v1/error-taxonomy.schema.json
 760ba9c632af70f01ee5fb62ecbb1b57875571523ad61b5cd0dd509953256199  schemas/devforgeai/v1/handoff.schema.json
@@ -11,8 +11,37 @@
 45b4d014ad4d2a3753c961b55dc96fc08fb4ebfbc51dc0be64fd1b0a5e64fef6  schemas/devforgeai/v1/stack.schema.json
 67bce4d09cbd18502a01b138675a4a9c3e402011c44081da6a0b7c0b040d974a  schemas/devforgeai/v1/worker-result.schema.json
 872084d7e541fbd07685e79788872bd02aabf533cdaec1669df0d9f256df7385  schemas/devforgeai/v1/research-gap-checkpoint.schema.json
+c66086e3c7efa4e0b319508c0c200978542b320df6a8da9309e0e291cd8db2fc  schemas/devforgeai/v1/release-identity.schema.json
+0774ff11ba51e3ddb6d23bffca7daf6d314a9f2aca0a58cd8c42b937e65ca0a9  schemas/devforgeai/v1/closure-attestation.schema.json
+ea5fc70d8b940e728bb88df05079014124d4e2b2a438a0d94754710b8410d02d  components/research-core/src/devforgeai/__init__.py
 4ebdaf37a1f6ed77e1271e0b8bebe40d04b6373f173d5bf6f07508d1c94d06ae  components/research-core/src/devforgeai/checkpoint/__init__.py
-39caff85526437681d0b3bc85c814e60c0255437dcf620122be23612fb135309  components/research-core/src/devforgeai/checkpoint/__main__.py
-d3cc818804d1b2e70a59bad3facd750a85f95eabf40a2332468ab418b5eef7aa  components/research-core/src/devforgeai/checkpoint/validate.py
-dbf2ac3e43abdab7f081405284c187513687cf35057062ede35fba88fd40f6f2  tests/research/test_gap_checkpoints.py
-bdd43f5325845be67c27d4858949d109c7b5bfeb7d1ed620371b224023b5e016  framework/contracts/PROMOTION-CANDIDATE.md
+ac9e1621dac2975b91bae988bf684f07d4b8746ed4b3880e0dbf05078d39b536  components/research-core/src/devforgeai/checkpoint/__main__.py
+8668427ee3f8ee1e230d95e600608afb0639a7a5ced4b9f99ea87f7cbaff62f8  components/research-core/src/devforgeai/checkpoint/validate.py
+59fe8d04d5b90397dbba60ef03650d1b10a6d065c676c8402c8e9b166ec9567b  tests/research/test_gap_checkpoints.py
+fdf4ed6720d5f994d917f7005b974237bfd4b1b8b20bcb64233ffba040eddd0f  framework/contracts/PROMOTION-CANDIDATE.md
+002910a1b63a826814876662f2a3506bf863432d3a74ead43c2b587107f2c538  components/devforge-release/INSTALLED-LAYOUT.md
+af177e88d9bca99298838836ef8ec24848978e5bdfbee0c4b77183c5fe636031  components/devforge-release/README.md
+cef2b56a17386915fee71fdb424dc7aa277a46f5767b083d9c1aac7987a97858  components/devforge-release/bin/devforge-checkpoint.py
+54f720a89cf5af4ac7eb16a1292b808f4328b6066a04a030c1a5a2f3287e1ab1  components/devforge-release/gen_release_identity.py
+13022445b09c8866794a8046ce5ec23e72ae7e51e62cf422c967537aeddd1359  components/devforge-release/gen_release_manifest.py
+e733913ef5cad580bc4ca57e0a91bf3e424e5aaf86172d2db78486d4de663a6e  components/devforge-release/install.sh
+77fed3d9450d0c517ae0b3c84d75bca8961097f69944ff19d14d233dd406f9b9  components/devforge-release/launcher/.cargo/config.toml
+b53ee26e6ff1da219b0563333a76d2c9ec19eec713d6ee54e11a1edacb0e9f3d  components/devforge-release/launcher/.gitignore
+d6b36fc642040ea6ba98ce75ea9d67bde69ae517ed97f4a7d0d98332a3bffc5f  components/devforge-release/launcher/BUILD-DIGEST.txt
+4c884c14bf0d2b6181a85d79032c0883efb69d8e5521be3ba06823f9ff2f2d98  components/devforge-release/launcher/Cargo.lock
+7748e270c8376038fbaeca514dab2f8a6c396757a8abb361ffdda38e3e039c63  components/devforge-release/launcher/Cargo.toml
+35d17404c8ae863b3c6712dc22db1a5925107426c99f8577add42ecb787f3331  components/devforge-release/launcher/build.sh
+bf6f91fc4894793e5afd987c954e853f5e2f7d31d9dcc54f5fd95ce3608f86e9  components/devforge-release/launcher/rust-toolchain.toml
+e01cec7546602c95346642af9d50c90cd495bae11e9b703797424ebe4eb04c70  components/devforge-release/launcher/src/main.rs
+b0485ef7292502ca3aa02fb09ad2f922bda720d8b10540346c169a376b66a52b  components/devforge-release/launcher/src/sha256.rs
+5aff747fdc19de133aa64ed1a52175151201ebdfd8aeef094c8ad8d408f24741  components/devforge-release/requirements.lock
+8ab17e0f5b82f23bbc577aa322dff8748ed7071e9ab9a7072a8487ded49fa45c  components/devforge-release/tests/test_devforge_release.py
+b42959851b6f80fc1ae995c550a2b51f9e7ff5c3866386dd4ee8ca533046667c  components/devforge-release/verify-release.sh
+c953b3c1203c002022dc48407b8a6be86b355c71c8d35a652f4d3724a304b244  components/devforge-release/wheels/PROVENANCE.md
+c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309  components/devforge-release/wheels/attrs-26.1.0-py3-none-any.whl
+d489f15263b8d200f8387e64b4c3a75f06629559fb73deb8fdfb525f2dab50ce  components/devforge-release/wheels/jsonschema-4.26.0-py3-none-any.whl
+98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe  components/devforge-release/wheels/jsonschema_specifications-2025.9.1-py3-none-any.whl
+ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc  components/devforge-release/wheels/pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
+381329a9f99628c9069361716891d34ad94af76e461dcb0335825aecc7692231  components/devforge-release/wheels/referencing-0.37.0-py3-none-any.whl
+ecabd69db66de867690f9797f2f8fa27ba501bbc24540cbdbdc649cd15888ba6  components/devforge-release/wheels/rpds_py-2026.6.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8  components/devforge-release/wheels/typing_extensions-4.16.0-py3-none-any.whl

@@ -2,6 +2,7 @@ run_at: 2026-09-04T13:14:41Z
 command: PYTHONPATH=components/research-core/src python3 -m pytest tests/research/test_gap_checkpoints.py -q
 exit: 0
 --- stdout ---
-...........................................................              [100%]
-59 passed in 10.89s
+............................................................... [ 66%]
+................................                                         [100%]
+95 passed, 9 subtests passed in 17.83s
 --- stderr ---

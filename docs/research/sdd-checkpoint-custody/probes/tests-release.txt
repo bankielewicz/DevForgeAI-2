@@ -1,0 +1,16 @@
+run_at: 2026-09-04T14:50:00Z
+command: python3 -m pytest components/devforge-release/tests -q
+exit: 0
+--- stdout ---
+..............................                                       [100%]
+30 passed, 4 subtests passed in 5.03s
+--- stderr ---
+
+=== launcher build check (sh components/devforge-release/launcher/build.sh, compares BUILD-DIGEST.txt) ===
+exit: 0
+--- stdout ---
+build: static: OK
+build: digest matches BUILD-DIGEST.txt (d2ad41b1939caa3633fa6b4230c11e8aabc5da3efcd29877d604f1580264f2c5)
+build: /home/bryan/Projects/DevForgeAI/.claude/worktrees/cp-00-fix1/components/devforge-release/launcher/target/x86_64-unknown-linux-musl/release/devforge
+--- stderr ---
+    Finished `release` profile [optimized] target(s) in 0.00s

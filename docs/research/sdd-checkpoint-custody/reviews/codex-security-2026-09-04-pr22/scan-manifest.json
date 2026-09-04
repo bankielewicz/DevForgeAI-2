@@ -1,0 +1,102 @@
+{
+  "documentType": "codex-security.scan-manifest",
+  "scan": {
+    "artifacts": [
+      {
+        "mediaType": "application/json",
+        "path": "findings.json",
+        "sha256": "ec018e06cca846c1c2c7ac2c996b9c514920ae07b0fc44d00d22604c563147ab"
+      },
+      {
+        "mediaType": "application/json",
+        "path": "coverage.json",
+        "sha256": "2f7ef8f63a217bc7537c6f014c66d8823dcae1610a79645ad5a3194d85ac8735"
+      },
+      {
+        "mediaType": "application/octet-stream",
+        "path": "artifacts/03_coverage/reviewed_surfaces.md",
+        "sha256": "3c060884943e1ff739023bd9ddd25f882958cb032ebf190847ff5b8347f1d703"
+      },
+      {
+        "mediaType": "application/octet-stream",
+        "path": "artifacts/05_findings/candidate-47705383ae3f38a3/attack_path_analysis_report.md",
+        "sha256": "245dc4a2c888cbf96c90788d26604bac4eb0d052bde0b59d792a9bcc8979498f"
+      },
+      {
+        "mediaType": "application/octet-stream",
+        "path": "artifacts/05_findings/candidate-47705383ae3f38a3/validation_report.md",
+        "sha256": "b7a822023ddcce1c31bfe54495f54ef02b94084b4d003f25beaba47882b4859b"
+      },
+      {
+        "mediaType": "application/octet-stream",
+        "path": "artifacts/05_findings/candidate-6a9bcf718aaa5828/attack_path_analysis_report.md",
+        "sha256": "f6fbb5eb05cd4a357110dd22c57b1ad0776520576d506a7a113e71748a18d6af"
+      },
+      {
+        "mediaType": "application/octet-stream",
+        "path": "artifacts/05_findings/candidate-6a9bcf718aaa5828/validation_report.md",
+        "sha256": "3e3f936fe6ba8a67f9da59c60420ccfc3c2c68a5b6f59d4c304b9023e2c747f0"
+      },
+      {
+        "mediaType": "application/octet-stream",
+        "path": "artifacts/05_findings/candidate-72d484d951dcef65/attack_path_analysis_report.md",
+        "sha256": "ed69a7f9af9c374049fb1b77f8355a28a257f1daa8500b43b7ce1b786ebc4de1"
+      },
+      {
+        "mediaType": "application/octet-stream",
+        "path": "artifacts/05_findings/candidate-72d484d951dcef65/validation_report.md",
+        "sha256": "1b5b7815dd4504d4941be134fc33c3e1de26507bf777366e6b3c0120853375a9"
+      },
+      {
+        "mediaType": "application/octet-stream",
+        "path": "artifacts/05_findings/candidate-fa00cbdf00fd925e/attack_path_analysis_report.md",
+        "sha256": "a8232dfddbc4c8b24f62822a70aaf6915481e175be43215167837ebad7fbbf84"
+      },
+      {
+        "mediaType": "application/octet-stream",
+        "path": "artifacts/05_findings/candidate-fa00cbdf00fd925e/validation_report.md",
+        "sha256": "0d728a9d0d8703ef4c32ab67da939fabbb23729e8126ec7965caf549fe4273de"
+      }
+    ],
+    "completedAt": "2026-09-04T16:54:36Z",
+    "coverageRef": "coverage.json",
+    "findingsRef": "findings.json",
+    "id": "pr22-257ba7d-20260904t164023z",
+    "producer": {
+      "name": "codex-security-plugin",
+      "version": "0.1.22"
+    },
+    "scope": {
+      "artifactsReviewed": [
+        "R/G/P commit boundaries",
+        "checkpoint validator and schema",
+        "release wrapper, launcher, installer, verifier, manifest generator, wheels and lockfile",
+        "CP-00 record, governing plan and dossier",
+        "all changed tests and manifests"
+      ],
+      "excludePaths": [],
+      "includePaths": [
+        "."
+      ],
+      "runtimeStatus": "244 research tests, 15 release tests, design verifier, 240 conformance rows, three manifests, checkpoint validator, and git diff check passed locally. Four targeted hostile reproductions also ran locally without sudo or installation.",
+      "summary": "Exact-head review of all 33 changed PR 22 paths plus directly supporting validator and plan contracts. D-CP00-11 prohibited DevForge writes, sudo, installation, probe authoring, and closure evidence.",
+      "validationMode": "focused dynamic reproductions plus exact source tracing"
+    },
+    "sealedAt": "2026-09-04T16:54:36Z",
+    "startedAt": "2026-09-04T16:40:23Z",
+    "status": "completed",
+    "target": {
+      "baseRevision": "0384446503fc4fd4605e8af5013975d54c279c0a",
+      "displayName": "DevForgeAI PR 22",
+      "headRevision": "257ba7dbf972d6591a2848bb97cfd9cb1a31033e",
+      "kind": "git_diff",
+      "remote": "https://github.com/bankielewicz/DevForgeAI",
+      "snapshotDigest": "codex-security-snapshot/v1:sha256:fa2e218fa6da5498e0eea5cc899a20bb1cdfca48fe70e14745ccaec64018a56b",
+      "targetId": "github.com/bankielewicz/DevForgeAI"
+    },
+    "threatModel": {
+      "summary": "# Threat Model: PR 22 checkpoint validator promotion candidate\n\nThe reviewed change stages a release scaffold and checkpoint-closure validator whose security purpose is to prevent Claude Code or Codex, running as the unprivileged repository user, from changing or gaming authoritative gates. The protected DevForge installation is expected to be root-owned outside every agent-writable workspace.\n\n## Assets and objectives\n\n- Integrity and identity of the validator, launcher, schema, policy, dependencies, and complete installed release.\n- Truth of checkpoint PASS and closure verdicts.\n- Exact candidate-to-DevForge-release provenance.\n- Closure-only history and authoritative base/head provenance.\n\n## Attacker capabilities\n\n- The workspace agent can edit checkpoint records, evidence, project-local code, and environment variables, and can invoke allowed commands as the ordinary user.\n- The agent can choose CLI arguments unless a protected host supplies them.\n- The agent cannot modify a correctly installed uid-0 release, obtain sudo non-interactively, or write the protected DevForge repository.\n- Multiple immutable DevForge releases may coexist.\n\n## Trust boundaries\n\n- Agent-controlled shell arguments and process environment enter the protected wrapper.\n- The wrapper launches the distro interpreter and imports the release-local validator.\n- The executing validator verifies its own release root.\n- Each record independently names a protected executable and associated release root.\n- Git subprocesses turn repository history and a caller-provided diff range into closure decisions.\n- Human promotion maps staged candidate bytes to a protected release.\n\n## Security objectives\n\n- The record executable must be exactly the executing release's own root/bin/devforge.\n- Release metadata and promotion evidence must bind the candidate manifest, DevForge commit/tag, release manifest, and executing root.\n- Caller environment must not redirect the interpreter, Git repository, object database, configuration, hooks, or output.\n- A protected host, not the workspace agent, must bind the reviewed closure base/head.\n- Staged candidate bytes must never be treated as protected.\n\n## Assumptions and limitations\n\n- POSIX uid/mode enforcement only.\n- /usr/bin/python3 and its standard library remain outside RELEASE.sha256 and require separately reviewed distro evidence.\n- No real root-owned install or two-terminal positive probe was authorized by D-CP00-11.\n- The installer assumes an immutable DevForge source/release; this review did not run it as root.\n- Codex Security advisory intelligence was unavailable after its authentication request, so no TAC result was incorporated.\n\nRepository: DevForgeAI\nVersion: 257ba7dbf972d6591a2848bb97cfd9cb1a31033e\n"
+    }
+  },
+  "schemaVersion": "1.0"
+}

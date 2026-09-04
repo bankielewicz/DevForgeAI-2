@@ -751,9 +751,24 @@ other checkpoint can claim completion.
   eleventh Research operation or another staging console script;
 - one record per ledger entry under this plan's `checkpoints/` directory;
 - positive and hostile subprocess tests;
+- the staged release scaffold at `components/devforge-release/` (scope
+  amendment `SDD-GAP-CP00-SCOPE-001`): the `devforge` launcher as a statically
+  linked Rust binary with its toolchain pin, lock, build script and build
+  digest; the Python launcher; installer, manifest and identity generators and
+  coreutils verifier; dependency lockfile and vendored wheels with provenance;
+  the installed-layout specification (release layout contract v2, with
+  `RELEASE-IDENTITY.json` binding the release to this candidate);
+- the closure-attestation contract: the schema
+  `schemas/devforgeai/v1/closure-attestation.schema.json`, the root-minted
+  attestation at `/var/lib/devforge/attest/…` written only by the protected
+  `devforge checkpoint attest`, and validator rule S14 that takes every closure
+  range from it (a caller `--diff` is optional and must equal the attested
+  range; the staged invocation above needs no range and rejects every closed
+  record, because closure condition 9 is decidable only by the installed
+  validator);
 - an updated promotion-candidate declaration and manifest pinning the exact
-  staged schema, validator, CLI integration, and tests for human promotion into
-  DevForge; and
+  staged schemas, validator, CLI integration, launcher, scaffold and tests for
+  human promotion into DevForge; and
 - an adjacent manifest that excludes itself.
 
 **Hostile cases:** `closed: true` with a missing authority, missing manifest,
@@ -764,7 +779,13 @@ complete staged-candidate pin; `proven: PASS` or `closed: true` with an
 unprotected or incomplete release pin; a candidate/release mapping mismatch;
 provider proofs bound to different releases; a relative or `PATH`-resolved
 executable; an agent-writable executable or schema; a project-local fallback;
-and executable, schema, or policy digest mismatch.
+executable, schema, or policy digest mismatch; a record naming a protected
+release other than the executing one; a release identity that does not bind
+the record's version, DevForge commit and candidate pin; caller-controlled Git
+environment or a `PATH`-shadowed `git`; `LD_PRELOAD`/`LD_AUDIT` against the
+launcher; a closed record without an attestation, with a stale, mismatched,
+user-owned or replayed one, or with a `--diff` that differs from the attested
+range; and a post-closure implementation change followed by a record re-pin.
 
 The CP-00 work PR may set `researched` and `implemented` to `PASS` after their
 independent evidence passes. It MUST leave `proven: NOT_RUN`,

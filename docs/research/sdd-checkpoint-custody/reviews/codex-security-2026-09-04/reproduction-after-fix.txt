@@ -1,0 +1,86 @@
+run_at: 2026-09-04T15:56:05Z
+subject: the corrected validator (corrective-spec-001, green commit), Codex's four proof scripts unchanged
+reading: exit 2 = usage refusal before validation (CS-2.1 for --schema/--git-root; CS-3.1 for a closed record without --diff);
+         the fail-open cases the scripts constructed (user-owned executable, missing executable) no longer reach S06.9 because the
+         scripts omit the range; the same cases with a range exit 1 under S06.9 in tests/research/test_gap_checkpoints.py
+         (test_user_owned_executable_rejected, test_missing_executable_rejected). diff_supplied exit 1 is S10 as before.
+--- output ---
+=== probe_git_root_override.py
+    actual_root exit=1
+    CP-00: S13: candidate bytes changed since source_commit acec7c17ee7a: src/validator.py
+    3 record(s), 1 problem(s); outcome REJECTED
+    caller_git_root exit=2
+    usage: python3 -m devforgeai.checkpoint [-h] {validate} ...
+    python3 -m devforgeai.checkpoint: error: unrecognized arguments: --git-root /tmp/dfai-cp00-alt-root-3jpy6xf2/clean
+    [probe exit 0 ]
+=== probe_optional_diff.py
+    diff_omitted exit=2
+    usage: closure validation requires --diff <base>..<head>
+    diff_supplied exit=1
+    CP-00: S06.9: RELEASE.sha256: ancestor is group or other writable (mode 1777): /tmp
+    CP-00: S06.9: RELEASE.sha256: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n
+    CP-00: S06.9: RELEASE.sha256: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge
+    CP-00: S06.9: RELEASE.sha256: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test
+    CP-00: S06.9: RELEASE.sha256: file not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test/RELEASE.sha256
+    CP-00: S06.9: executable: ancestor is group or other writable (mode 1777): /tmp
+    CP-00: S06.9: executable: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n
+    CP-00: S06.9: executable: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge
+    CP-00: S06.9: executable: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test
+    CP-00: S06.9: executable: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test/bin
+    CP-00: S06.9: executable: file not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test/bin/devforge
+    CP-00: S06.9: release entry bin/devforge: ancestor is group or other writable (mode 1777): /tmp
+    CP-00: S06.9: release entry bin/devforge: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n
+    CP-00: S06.9: release entry bin/devforge: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge
+    CP-00: S06.9: release entry bin/devforge: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test
+    CP-00: S06.9: release entry bin/devforge: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test/bin
+    CP-00: S06.9: release entry bin/devforge: file not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test/bin/devforge
+    CP-00: S06.9: release entry contracts/MANIFEST.sha256: ancestor is group or other writable (mode 1777): /tmp
+    CP-00: S06.9: release entry contracts/MANIFEST.sha256: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n
+    CP-00: S06.9: release entry contracts/MANIFEST.sha256: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge
+    CP-00: S06.9: release entry contracts/MANIFEST.sha256: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test
+    CP-00: S06.9: release entry contracts/MANIFEST.sha256: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test/contracts
+    CP-00: S06.9: release entry contracts/MANIFEST.sha256: file not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test/contracts/MANIFEST.sha256
+    CP-00: S06.9: release entry lib/devforgeai/__init__.py: ancestor is group or other writable (mode 1777): /tmp
+    CP-00: S06.9: release entry lib/devforgeai/__init__.py: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n
+    CP-00: S06.9: release entry lib/devforgeai/__init__.py: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge
+    CP-00: S06.9: release entry lib/devforgeai/__init__.py: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test
+    CP-00: S06.9: release entry lib/devforgeai/__init__.py: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test/lib
+    CP-00: S06.9: release entry lib/devforgeai/__init__.py: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test/lib/devforgeai
+    CP-00: S06.9: release entry lib/devforgeai/__init__.py: file not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test/lib/devforgeai/__init__.py
+    CP-00: S06.9: release entry lib/devforgeai/checkpoint/validate.py: ancestor is group or other writable (mode 1777): /tmp
+    CP-00: S06.9: release entry lib/devforgeai/checkpoint/validate.py: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n
+    CP-00: S06.9: release entry lib/devforgeai/checkpoint/validate.py: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge
+    CP-00: S06.9: release entry lib/devforgeai/checkpoint/validate.py: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test
+    CP-00: S06.9: release entry lib/devforgeai/checkpoint/validate.py: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test/lib
+    CP-00: S06.9: release entry lib/devforgeai/checkpoint/validate.py: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test/lib/devforgeai
+    CP-00: S06.9: release entry lib/devforgeai/checkpoint/validate.py: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test/lib/devforgeai/checkpoint
+    CP-00: S06.9: release entry lib/devforgeai/checkpoint/validate.py: file not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test/lib/devforgeai/checkpoint/val
+    CP-00: S06.9: release entry schemas/devforgeai/v1/research-gap-checkpoint.schema.json: ancestor is group or other writable (mode 1777): /tmp
+    CP-00: S06.9: release entry schemas/devforgeai/v1/research-gap-checkpoint.schema.json: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n
+    CP-00: S06.9: release entry schemas/devforgeai/v1/research-gap-checkpoint.schema.json: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge
+    CP-00: S06.9: release entry schemas/devforgeai/v1/research-gap-checkpoint.schema.json: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test
+    CP-00: S06.9: release entry schemas/devforgeai/v1/research-gap-checkpoint.schema.json: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test/schem
+    CP-00: S06.9: release entry schemas/devforgeai/v1/research-gap-checkpoint.schema.json: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test/schem
+    CP-00: S06.9: release entry schemas/devforgeai/v1/research-gap-checkpoint.schema.json: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test/schem
+    CP-00: S06.9: release entry schemas/devforgeai/v1/research-gap-checkpoint.schema.json: file not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test/schemas/d
+    CP-00: S06.9: release root: ancestor is group or other writable (mode 1777): /tmp
+    CP-00: S06.9: release root: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n
+    CP-00: S06.9: release root: ancestor not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge
+    CP-00: S06.9: release root: directory not owned by uid 0 (uid 1000): /tmp/dfai-cp00-ext-gf3an04n/devforge/1.0.0-test
+    CP-00: S10: closure-only diff bd15896cdc40bd79fe264a5769393a7ed3ddeaaf..54cfb2c7970fb85194212288f56f112426cc8aa5 also changes implementation.py
+    3 record(s), 51 problem(s); outcome REJECTED
+    [probe exit 0 ]
+=== probe_schema_override.py
+    protected_schema exit=2
+    usage: python3 -m devforgeai.checkpoint [-h] {validate} ...
+    python3 -m devforgeai.checkpoint: error: unrecognized arguments: --schema /home/bryan/Projects/DevForgeAI/.claude/worktrees/cp-00-fix1/schemas/devforgeai/v1/research-gap-checkpoint
+    caller_override exit=2
+    usage: python3 -m devforgeai.checkpoint [-h] {validate} ...
+    python3 -m devforgeai.checkpoint: error: unrecognized arguments: --schema /home/bryan/Projects/DevForgeAI/.claude/worktrees/cp-00-fix1/schemas/devforgeai/v1/research-gap-checkpoint
+    [probe exit 0 ]
+=== probe_validator_failopen.py
+    user_owned_executable uid=1000 mode=755 exit=2
+    usage: closure validation requires --diff <base>..<head>
+    missing_executable exit=2
+    usage: closure validation requires --diff <base>..<head>
+    [probe exit 0 ]

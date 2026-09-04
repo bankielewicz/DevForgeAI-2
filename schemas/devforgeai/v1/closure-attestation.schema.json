@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devforgeai.dev/schemas/devforgeai/v1/closure-attestation.schema.json",
+  "title": "DevForge closure attestation",
+  "description": "Minted by `devforge checkpoint attest` as uid 0 after the closure PR head is frozen (corrective-spec-002 CS-9). Stored at /var/lib/devforge/attest/<repository_identity[:32]>/<plan_id>/<checkpoint_id>.json and consumed by the validator's rule S14, which takes the closure range from it. Its own digest is recorded in the PR review, never in the attested commit.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "attestation_format",
+    "repository_identity",
+    "repository_root_commits",
+    "plan_path",
+    "plan_id",
+    "checkpoint_id",
+    "record_path",
+    "base_commit",
+    "head_commit",
+    "record_sha256",
+    "release_root",
+    "release_identity_sha256",
+    "authority_id",
+    "review_reference",
+    "minted_at",
+    "minted_by_uid"
+  ],
+  "properties": {
+    "attestation_format": {"const": "devforge-closure-attestation/v1"},
+    "repository_identity": {"$ref": "#/$defs/sha256", "description": "SHA-256 over the sorted root-commit SHAs joined by LF"},
+    "repository_root_commits": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/commit"}},
+    "plan_path": {"$ref": "#/$defs/relative_path"},
+    "plan_id": {"type": "string", "minLength": 1},
+    "checkpoint_id": {"type": "string", "pattern": "^CP-[0-9]{2}$"},
+    "record_path": {"$ref": "#/$defs/relative_path"},
+    "base_commit": {"$ref": "#/$defs/commit", "description": "the reviewed PR base; a proper ancestor of head_commit"},
+    "head_commit": {"$ref": "#/$defs/commit", "description": "the reviewed PR head; HEAD or an ancestor of HEAD at validation"},
+    "record_sha256": {"$ref": "#/$defs/sha256", "description": "digest of the record blob at head_commit; the record on disk must equal it"},
+    "release_root": {"type": "string", "pattern": "^/", "description": "the executing release root"},
+    "release_identity_sha256": {"$ref": "#/$defs/sha256", "description": "digest of <release_root>/RELEASE-IDENTITY.json"},
+    "authority_id": {"type": "string", "minLength": 1, "description": "equals the plan's decision authority"},
+    "review_reference": {"type": "string", "minLength": 1, "description": "where the independent review and this document's digest are recorded"},
+    "minted_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "minted_by_uid": {"type": "integer", "minimum": 0}
+  },
+  "$defs": {
+    "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "relative_path": {"type": "string", "pattern": "^(?!/)(?!.*(^|/)\\.\\.?(/|$)).+$"}
+  }
+}
