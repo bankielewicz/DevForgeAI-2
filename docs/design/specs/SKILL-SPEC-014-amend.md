@@ -18,7 +18,7 @@ depends_on:
     hash: sha256:7c1d67f1154e49247e5dc178fcc1512bdbd53af378c360aeafe69bffed1136ab
     excerpt: "| amend | document | `docs/architecture/**`, `docs/reports/impact-<arg>.md`, `.devforgeai/provenance/adr/**` | 4 |"
   - source: docs/design/10-sequencer-and-contracts.md#5-worker-result
-    hash: sha256:cd95bd6c0db2bda7a573665b73582c813c0c6cb01b7f3e9f7ed52a9d1afafe0c
+    hash: sha256:9a3b34599a10c9c34105dee5a9de75cc0511decc55a5f85794dcf0954b731507
     excerpt: "One schema, both providers, every skill. The worker's final message is exactly this object, with no Markdown fence and no surrounding prose."
   - source: docs/design/10-sequencer-and-contracts.md#3-status-vocabulary-and-gate-policy
     hash: sha256:1706823f7848f5cb6b23e68dfd783885fad3fdfa5d98fb6df0b90270a818fc20

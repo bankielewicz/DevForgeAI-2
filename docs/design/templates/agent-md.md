@@ -23,7 +23,8 @@ forbidden_text: ["TODO", "TBD", "{{", "}}", "<fill in>"]
 #   server patterns, never a command pattern, so the hook dispatcher is the only command-level
 #   bound. A judge's Bash runs `devforgeai status` and the dispatcher's read-only command set
 #   (cat cmp cut diff echo grep head jq ls pwd rg sha256sum tail test tr wc, plus read-only git
-#   subcommands inside the root) and nothing else; a producer's additionally runs
+#   subcommands inside the root, invoked as `git -C <candidate.root> <subcommand>`) and nothing
+#   else; a producer's additionally runs
 #   `devforgeai run KEY` for its granted keys. The Bash bound is restated in the body's ## Rules.
 # provenance: the skill-spec section 7 worker contract this was generated from (11 section 3).
 # == instance frontmatter: fill every field ==
