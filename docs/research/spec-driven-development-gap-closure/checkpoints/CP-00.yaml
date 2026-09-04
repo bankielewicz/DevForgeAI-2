@@ -8,7 +8,7 @@ base_commit: "6a446355605a06891cdeab1cc9d25f35309afba2"
 admitted_inputs: []
 closure_stages:
   researched: NOT_RUN
-  implemented: NOT_RUN
+  implemented: PASS
   proven: NOT_RUN
 research:
   dossier_path: "docs/research/sdd-checkpoint-custody"
@@ -42,11 +42,13 @@ implementation:
     - "docs/research/sdd-checkpoint-custody/probes/tests.txt"
     - "docs/research/sdd-checkpoint-custody/probes/claude-validate.txt"
 enforcement:
-  trust_stage: UNBOUND
+  trust_stage: STAGED_CANDIDATE
+  # Candidate pin (D-CP00-09): the commit that carries the candidate bytes,
+  # verified by rule S13 against framework/contracts/MANIFEST.sha256.
   candidate:
-    source_commit: null
-    manifest_path: null
-    manifest_sha256: null
+    source_commit: "c784ab703848130bff668d58a7bafecd269995f3"
+    manifest_path: framework/contracts/MANIFEST.sha256
+    manifest_sha256: "9a543818e21460e3139c3b87da1da19bdaddb32c880232cb477564985da190c5"
   protected_release:
     version: null
     source_commit: null
