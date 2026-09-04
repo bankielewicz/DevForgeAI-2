@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devforgeai.dev/schemas/devforgeai/v1/release-identity.schema.json",
+  "title": "DevForge release identity",
+  "description": "RELEASE-IDENTITY.json at the release root (installed-layout contract v2, corrective-spec-002 CS-6.3). Binds the installed release to its DevForge commit and tag and to the exact DevForgeAI candidate it was built from. It never carries the digest of RELEASE.sha256, which lists it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "identity_format",
+    "version",
+    "devforge_commit",
+    "devforge_tag",
+    "candidate_repository",
+    "candidate_checkpoint_id",
+    "candidate_source_commit",
+    "candidate_manifest_sha256",
+    "schema_set_version",
+    "contract_policy_version",
+    "launcher_toolchain",
+    "built_at"
+  ],
+  "properties": {
+    "identity_format": {"const": "devforge-release-identity/v1"},
+    "version": {"type": "string", "minLength": 1, "description": "the release version; equals the record's protected_release.version"},
+    "devforge_commit": {"$ref": "#/$defs/commit", "description": "the DevForge commit that carries the built tree; equals protected_release.source_commit"},
+    "devforge_tag": {"type": "string", "minLength": 1},
+    "candidate_repository": {"type": "string", "minLength": 1, "description": "the DevForgeAI repository the candidate was reviewed in"},
+    "candidate_checkpoint_id": {"type": "string", "pattern": "^CP-[0-9]{2}$", "description": "the checkpoint whose staged candidate this release was built from; that record's enforcement.candidate must equal the two fields below"},
+    "candidate_source_commit": {"$ref": "#/$defs/commit", "description": "equals that record's enforcement.candidate.source_commit"},
+    "candidate_manifest_sha256": {"$ref": "#/$defs/sha256", "description": "digest of the promoted candidate manifest, which is the installed contracts/MANIFEST.sha256; equals enforcement.candidate.manifest_sha256"},
+    "schema_set_version": {"type": "string", "minLength": 1},
+    "contract_policy_version": {"type": "string", "minLength": 1},
+    "launcher_toolchain": {"type": "string", "minLength": 1, "description": "the rustc identity that built bin/devforge (BUILD-DIGEST.txt)"},
+    "built_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"}
+  },
+  "$defs": {
+    "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

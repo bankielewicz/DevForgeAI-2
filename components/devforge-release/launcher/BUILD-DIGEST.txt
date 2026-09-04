@@ -1,0 +1,15 @@
+# BUILD-DIGEST.txt: the pinned launcher build (corrective-spec-002 CS-8.6).
+# DevForge rebuilds with the pinned toolchain and must reproduce this digest,
+# or record the deviation and its cause in the promotion record.
+target x86_64-unknown-linux-musl
+command cargo build --release --locked --offline --target x86_64-unknown-linux-musl
+rustflags -C target-feature=+crt-static -C relocation-model=static --remap-path-prefix /home=/remapped --remap-path-prefix /tmp=/remapped
+rustc rustc 1.94.0 (4a4ef493e 2026-03-02)
+rustc binary: rustc
+rustc commit-hash: 4a4ef493e3a1488c6e321570238084b38948f6db
+rustc commit-date: 2026-03-02
+rustc host: x86_64-unknown-linux-gnu
+rustc release: 1.94.0
+rustc LLVM version: 21.1.8
+cargo cargo 1.94.0 (85eff7c80 2026-01-15)
+sha256 d2ad41b1939caa3633fa6b4230c11e8aabc5da3efcd29877d604f1580264f2c5

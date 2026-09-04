@@ -14,26 +14,27 @@ Status: draft assembled 2026-09-03 in DevForgeAI. Not authoritative. Per `docs/d
 
 The two document sections are pinned by section hash under the rule in `01-skill-anatomy.md` (heading to next heading of the same or higher level, CRLF to LF, joined with LF plus one trailing LF). The files are pinned by `MANIFEST.sha256` beside this document.
 
-## Slice 2: research-gap checkpoint validator and its release scaffold (CP-00, staged 2026-09-04, corrected after the Codex security review)
+## Slice 2: research-gap checkpoint validator, `devforge` launcher and release scaffold (CP-00, staged 2026-09-04, corrected after the PR 20 and PR 22 reviews)
 
-Promotion candidate under plan `SDD-GAP-CLOSURE-2026-09-03` amendment `SDD-GAP-AMD-001` (section 4.2, staged-to-protected trust boundary) and CP-00 scope amendment `SDD-GAP-CP00-SCOPE-001`. The candidate is non-authoritative until a human promotes this exact set into protected DevForge, builds the release there, writes DevForge's own installed-layout `RELEASE.sha256`, and installs it root-owned at an absolute path from the immutable release; the CP-00 record pins the set by `enforcement.candidate` (source commit, this manifest, its digest) and cannot close until `enforcement.protected_release` names the installed release and the validator's fail-closed rules accept it (`docs/research/sdd-checkpoint-custody/corrective-spec-001.md`).
+Promotion candidate under plan `SDD-GAP-CLOSURE-2026-09-03` amendment `SDD-GAP-AMD-001` (section 4.2, staged-to-protected trust boundary) and CP-00 scope amendment `SDD-GAP-CP00-SCOPE-001`. The candidate is non-authoritative until a human promotes this exact set into protected DevForge, builds the release there (the static launcher with the pinned toolchain, the Python delegate, the schemas, the policy), writes DevForge's own `RELEASE-IDENTITY.json` and installed-layout `RELEASE.sha256`, and installs it root-owned at an absolute path from the immutable release; the CP-00 record pins the set by `enforcement.candidate` (source commit, this manifest, its digest) and cannot close until `enforcement.protected_release` names the installed release, the installed validator's fail-closed rules accept it as its own executing release, and a root-minted closure attestation exists (`docs/research/sdd-checkpoint-custody/corrective-spec-001.md`, `corrective-spec-002.md`).
 
 | Kind | Path in this repository | Destination in DevForge |
 |---|---|---|
-| Record schema, JSON Schema Draft 2020-12 | `schemas/devforgeai/v1/research-gap-checkpoint.schema.json` | `<root>/schemas/devforgeai/v1/` |
+| Record schema, release identity schema, closure attestation schema (JSON Schema Draft 2020-12) | `schemas/devforgeai/v1/research-gap-checkpoint.schema.json`, `release-identity.schema.json`, `closure-attestation.schema.json` | `<root>/schemas/devforgeai/v1/` |
 | Policy (this manifest, as promoted) | `framework/contracts/MANIFEST.sha256` | `<root>/contracts/MANIFEST.sha256` |
-| Package parent and validator modules (rules S01–S13) | `components/research-core/src/devforgeai/__init__.py`, `checkpoint/__init__.py`, `checkpoint/validate.py` | `<root>/lib/devforgeai/` |
+| Package parent and validator modules (rules S01–S14) | `components/research-core/src/devforgeai/__init__.py`, `checkpoint/__init__.py`, `checkpoint/validate.py` | `<root>/lib/devforgeai/` |
 | CLI integration (argparse, exit codes 0/1/2/3, no policy option) | `components/research-core/src/devforgeai/checkpoint/__main__.py` | `<root>/lib/devforgeai/checkpoint/` |
-| Wrapper and launcher | `components/devforge-release/bin/devforge`, `bin/devforge-checkpoint.py` | `<root>/bin/` |
-| Installed-layout specification | `components/devforge-release/INSTALLED-LAYOUT.md` | release documentation |
+| `devforge` launcher source, toolchain pin, lock, build script and build digest | `components/devforge-release/launcher/**` (`Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `.cargo/config.toml`, `src/main.rs`, `src/sha256.rs`, `build.sh`, `BUILD-DIGEST.txt`) | `<root>/bin/devforge` (built by DevForge, digest reproduced) |
+| Python launcher | `components/devforge-release/bin/devforge-checkpoint.py` | `<root>/bin/` |
+| Installed-layout specification (contract v2) | `components/devforge-release/INSTALLED-LAYOUT.md` | release documentation |
 | Dependency lockfile and offline artifacts with provenance | `components/devforge-release/requirements.lock`, `wheels/*.whl`, `wheels/PROVENANCE.md` | `<root>/lib/` (installed with `--no-index --require-hashes`) |
-| Manifest generator (never a verifier) | `components/devforge-release/gen_release_manifest.py` | DevForge build step |
+| Identity and manifest generators (never verifiers) | `components/devforge-release/gen_release_identity.py`, `gen_release_manifest.py` | DevForge build step |
 | Independent verifier (coreutils only) | `components/devforge-release/verify-release.sh` | human verification after install |
-| Root installer (immutable release in, no network, no pip) | `components/devforge-release/install.sh` | human installation step |
+| Root installer (immutable release in, no network, no pip, verifier required) | `components/devforge-release/install.sh` | human installation step |
 | Positive and hostile tests | `tests/research/test_gap_checkpoints.py`, `components/devforge-release/tests/test_devforge_release.py` | DevForge test suite |
 | Declarations | `framework/contracts/PROMOTION-CANDIDATE.md`, `components/devforge-release/README.md` | promotion record |
 
-Staged invocation, from the repository root (the staged module resolves its schema from this checkout, never from the plan's tree):
+Staged invocation, from the repository root (the staged module resolves its schemas from this checkout, never from the plan's tree, and rejects every closed record because condition 9 is decidable only by the installed validator):
 
 ```bash
 PYTHONPATH=components/research-core/src python3 -m devforgeai.checkpoint validate --plan docs/research/spec-driven-development-gap-closure
@@ -41,7 +42,7 @@ PYTHONPATH=components/research-core/src python3 -m pytest tests/research/test_ga
 python3 -m pytest components/devforge-release/tests -q
 ```
 
-Promotion maps the operation to `devforge checkpoint validate` without adding an eleventh Research operation or a second staging console script. Every file in the table is pinned by `MANIFEST.sha256` beside this document, which the validator checks against the CP-00 record's candidate pin (rule S13): every entry must verify at the pinned source commit and on disk, and every fenced file outside the records and the dossier must be listed. The installed release is pinned separately by DevForge's `RELEASE.sha256`, verified by the installed validator itself before it reads any record and by `verify-release.sh` independently.
+Promotion maps the operation to `devforge checkpoint validate` (and `devforge checkpoint attest` for the human) without adding an eleventh Research operation or a second staging console script. Every file in the table is pinned by `MANIFEST.sha256` beside this document, which the validator checks against the CP-00 record's candidate pin (rule S13): every entry must verify at the pinned source commit and on disk, and every fenced file outside the records and the dossier must be listed. The installed release is pinned separately by DevForge's `RELEASE.sha256`, verified by the installed validator itself before it reads any record and by `verify-release.sh` independently; `RELEASE-IDENTITY.json` binds the release back to this candidate's checkpoint, commit and manifest digest.
 
 ## How to verify before promoting
 

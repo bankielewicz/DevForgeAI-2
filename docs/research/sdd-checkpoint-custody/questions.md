@@ -10,7 +10,7 @@ Each question has a direct lane (what the plan and the repository require) and a
 - **Completion criteria:** every condition maps to a validator rule id with one positive and one hostile subprocess test.
 - **Direct lane:** read section 7.1, 7.2, 9 and 12 (S-01) and the CP-00 specification (S-01).
 - **Contrary lane:** find a condition that a structurally valid record could satisfy while still being illegal (self-review with a different string, an evidence commit that exists but is unmerged, a manifest that lists itself, a ledger that disagrees with the record).
-- **Disposition:** `ANSWERED`. Rules S01–S13 in `validate.py`; 79 subprocess and in-process tests (`probes/tests.txt`; 18 of them red first, `probes/red-corrective-001.txt`). Claims C-01 (narrowed after V-02: condition 7 is partly a reviewer judgement), C-04, C-05.
+- **Disposition:** `ANSWERED`. Rules S01–S13 in `validate.py`; 94 subprocess and in-process tests plus 29 release-component tests (`probes/tests.txt`; 18 red first in `probes/red-corrective-001.txt`, 38 failures red first in `probes/red-corrective-002.txt`). Claims C-01 (narrowed after V-02: condition 7 is partly a reviewer judgement), C-04, C-05.
 
 ## RQ-000002 — Where must the validator execute?
 

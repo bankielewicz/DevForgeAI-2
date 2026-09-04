@@ -6,8 +6,10 @@
 # DevForge release, never from a DevForgeAI worktree. It:
 #   1. refuses a release that looks like a DevForgeAI checkout, a release without
 #      RELEASE.sha256, or an existing target;
-#   2. verifies every entry, the absence of symbolic links, and full coverage
-#      before copying anything (sha256sum, find; no python, no pip, no network);
+#   0. refuses to run without verify-release.sh beside it (CS-10.1);
+#   2. verifies every entry, the absence of symbolic links, full coverage and the
+#      required layout-v2 entries before copying anything (sha256sum, find; no
+#      python, no pip, no network);
 #   3. copies into a temporary sibling of the target, sets root:root and modes,
 #      then renames atomically into place;
 #   4. re-verifies the installed tree with verify-release.sh.
@@ -26,6 +28,9 @@ done
 [ -n "$release" ] && [ -n "$target" ] || { echo "usage: install.sh --release <dir> --root <target>" >&2; exit 2; }
 here=$(cd "$(dirname "$0")" && pwd -P)
 
+# 0. the independent verifier must be beside this script (CS-10.1): no verifier, no install
+[ -r "$here/verify-release.sh" ] || { echo "install: verify-release.sh missing or unreadable beside install.sh; refusing (nothing copied)" >&2; exit 1; }
+
 # 1. refusals
 [ -d "$release" ] || { echo "install: release directory not found: $release" >&2; exit 2; }
 if [ -d "$release/.git" ] || [ -f "$release/install-manifest.yaml" ] || [ -d "$release/components" ]; then
@@ -43,7 +48,9 @@ if [ "$(find "$release" -type l | wc -l)" -ne 0 ]; then echo "install: release c
 listed=$( (cd "$release" && grep -v '^#' RELEASE.sha256 | sed 's/^[0-9a-f]*  //' | sed 's|^\./||' | sort) )
 present=$( (cd "$release" && find . -type f ! -name RELEASE.sha256 | sed 's|^\./||' | sort) )
 [ "$listed" = "$present" ] || { echo "install: RELEASE.sha256 does not cover exactly the files present; refusing" >&2; exit 1; }
-for name in bin/devforge bin/devforge-checkpoint.py schemas/devforgeai/v1/research-gap-checkpoint.schema.json contracts/MANIFEST.sha256; do
+for name in bin/devforge bin/devforge-checkpoint.py RELEASE-IDENTITY.json \
+            schemas/devforgeai/v1/research-gap-checkpoint.schema.json schemas/devforgeai/v1/release-identity.schema.json \
+            schemas/devforgeai/v1/closure-attestation.schema.json contracts/MANIFEST.sha256; do
   [ -f "$release/$name" ] || { echo "install: required file missing in release: $name" >&2; exit 1; }
 done
 
@@ -65,14 +72,12 @@ else
 fi
 mv "$tmp" "$target"
 
-# 4. independent re-verification
-if [ -x "$here/verify-release.sh" ]; then
-  if sh "$here/verify-release.sh" "$target"; then
-    echo "install: verified $target"
-  else
-    if [ "$protected" -eq 1 ]; then echo "install: verification FAILED after install; do not use $target" >&2; exit 1; fi
-    echo "install: verification reported failures (expected without root: OWNERSHIP)" >&2
-  fi
+# 4. independent re-verification (the verifier's presence was required in step 0)
+if sh "$here/verify-release.sh" "$target"; then
+  echo "install: verified $target"
+else
+  if [ "$protected" -eq 1 ]; then echo "install: verification FAILED after install; do not use $target" >&2; exit 1; fi
+  echo "install: verification reported failures (expected without root: OWNERSHIP)" >&2
 fi
 echo "install: done: $target (protected=$protected)"
 exit 0

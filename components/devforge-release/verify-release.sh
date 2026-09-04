@@ -1,6 +1,6 @@
 #!/bin/sh
 # verify-release.sh <root>: independent verification of an installed (or built)
-# release tree with coreutils only (INSTALLED-LAYOUT.md rules 2-3). Never uses
+# release tree with coreutils only (INSTALLED-LAYOUT.md v2 rules 2-3). Never uses
 # the generator or the validator. Prints one line per check and exits non-zero
 # if any check FAILs. On a user-owned build tree OWNERSHIP FAILs by design.
 set -u
@@ -41,12 +41,24 @@ else
   rm -f /tmp/verify-release.listed.$$ /tmp/verify-release.present.$$
 fi
 
-# 4. required entries
+# 4. required entries (layout v2)
 req=0
-for name in bin/devforge schemas/devforgeai/v1/research-gap-checkpoint.schema.json contracts/MANIFEST.sha256; do
+for name in bin/devforge bin/devforge-checkpoint.py RELEASE-IDENTITY.json \
+            schemas/devforgeai/v1/research-gap-checkpoint.schema.json schemas/devforgeai/v1/release-identity.schema.json \
+            schemas/devforgeai/v1/closure-attestation.schema.json contracts/MANIFEST.sha256; do
   grep -q "  $name\$" RELEASE.sha256 2>/dev/null || { echo "REQUIRED: FAIL (missing $name)"; req=1; }
 done
 [ "$req" -eq 0 ] && echo "REQUIRED: OK" || status=1
+
+# 4b. exact modes (layout v2 rule 2): directories 0755, files 0644, the two bin/ entries 0755
+loose=$( { find . -type d ! -perm 755 -printf '%m %p\n'; \
+           find . -type f ! -path ./bin/devforge ! -path ./bin/devforge-checkpoint.py ! -perm 644 -printf '%m %p\n'; \
+           find ./bin -maxdepth 1 -type f \( -name devforge -o -name devforge-checkpoint.py \) ! -perm 755 -printf '%m %p\n'; } | sed 's|^\([0-7]*\) \./|\1 |' )
+if [ -z "$loose" ]; then
+  echo "MODES: OK"
+else
+  echo "MODES: FAIL"; printf '%s\n' "$loose" | head -20; status=1
+fi
 
 # 5. ownership and modes: uid 0, no group/other write, on the root, every object under it, and every ancestor
 bad=$(find . \( ! -uid 0 -o -perm /022 \) -printf '%u %m %p\n' | wc -l)

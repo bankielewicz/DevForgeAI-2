@@ -13,21 +13,27 @@ or a reviewer can name it:
                        not contain ``..``
   S05 stages           closure stages legal for the checkpoint type when closed
   S06 closure          the nine ``closed: true`` conditions of section 7.1; S06.9 is
-                       the release pin, fail-closed (corrective-spec-001 CS-1): every
-                       release resource exists; the executable, ``RELEASE.sha256`` at
-                       the release root, every file it lists and every ancestor up to
-                       ``/`` are regular objects owned by uid 0 with no group/other
-                       write and no symbolic link; the release manifest verifies in
-                       both directions and lists the executable, the schema and the
-                       policy; the record's digests equal the installed bytes; both
-                       provider proofs are bound to the executable digest
+                       the release pin, fail-closed (corrective-spec-001 CS-1,
+                       corrective-spec-002 CS-6): decidable only by the installed
+                       validator, whose own verified release root R must be the
+                       record's release: ``executable_path`` equals ``<R>/bin/devforge``;
+                       every release resource exists; the executable, ``RELEASE.sha256``,
+                       every file it lists and every ancestor up to ``/`` are regular
+                       objects owned by uid 0 with no group/other write and no
+                       symbolic link; the release manifest verifies in both
+                       directions and lists the required entries; the record's digests
+                       equal the installed bytes; ``RELEASE-IDENTITY.json`` binds the
+                       record's version, DevForge commit, schema and policy versions
+                       and the candidate pin (the installed policy is the promoted
+                       candidate manifest); both provider proofs are bound to the
+                       executable digest
   S07 open record      an open record carries no human closure decision
   S08 admission        ``ADMITTED`` only after CP-00 closed; admitted entries carry evidence
   S09 dependencies     a closed checkpoint's dependencies are closed
-  S10 closure diff     a diff that closes a record touches closure paths only; the
-                       range is mandatory once any record is closed (RangeRequired,
-                       CLI exit 2), its head must be HEAD and its base a proper
-                       ancestor (CS-3)
+  S10 closure diff     the closure range of a closed record (from its attestation,
+                       S14; a caller ``--diff`` is used only by the staged validator,
+                       whose verdict on a closed record is already a rejection)
+                       touches closure paths only
   S11 manifest         ``checkpoints/MANIFEST.sha256`` exists, excludes itself, covers
                        every record, and every entry verifies
   S12 authority        every record's ``decision_authority_id`` equals the plan's
@@ -39,15 +45,28 @@ or a reviewer can name it:
                        commit and on disk and covers every fenced file outside the
                        records and the dossier; ``proven`` needs both provider proofs
                        and the release pin of S06.9
+  S14 attestation      a closed record has a closure attestation minted by the
+                       protected host (``devforge checkpoint attest``, uid 0) at the
+                       fixed location ``/var/lib/devforge/attest/<repository
+                       identity>/<plan id>/<checkpoint>.json`` on a protected path
+                       chain; it validates against its schema and binds the
+                       repository identity, plan, checkpoint, record path and digest
+                       (at the attested head and on disk), base (proper ancestor of
+                       head) and head (HEAD or an ancestor of HEAD), the executing
+                       release root and its identity digest, the authority and uid 0;
+                       a caller ``--diff`` must equal an attested range (CS-9)
 
-Rules S06 and S10 need Git; when Git or the repository is unavailable the run
-is ``COULD_NOT_RUN`` (exit 3), never a pass.
+Rules S06, S10, S13 and S14 need Git; when Git or the repository is unavailable
+the run is ``COULD_NOT_RUN`` (exit 3), never a pass. Git runs as
+``/usr/bin/git`` with an explicit minimal environment (CS-7.1); nothing from the
+caller's environment reaches it.
 
-Policy is never caller-selected (CS-2): the schema is resolved from the
+Policy is never caller-selected (CS-2): the schemas are resolved from the
 validator's own location (installed release root, else the checkout holding
 the module), the Git root from the plan directory alone, and the CLI carries
-no override. The filesystem view of protected paths is the ``ReleaseFS``
-seam, injectable in-process for tests only; the CLI always uses the real one.
+no override. The filesystem view of protected paths, the executing release
+root and the attestation directory form the ``ReleaseFS`` seam, injectable
+in-process for tests only; the CLI always uses the real one.
 """
 
 from __future__ import annotations
@@ -66,20 +85,37 @@ import yaml
 from jsonschema import Draft202012Validator
 
 SCHEMA_NAME = "research-gap-checkpoint.schema.json"
+IDENTITY_SCHEMA_NAME = "release-identity.schema.json"
+ATTESTATION_SCHEMA_NAME = "closure-attestation.schema.json"
+IDENTITY_NAME = "RELEASE-IDENTITY.json"
+ATTEST_ROOT = Path("/var/lib/devforge/attest")
+# Installed-layout contract v2: every entry RELEASE.sha256 must list.
+REQUIRED_RELEASE_ENTRIES = (
+    "bin/devforge", "bin/devforge-checkpoint.py", IDENTITY_NAME,
+    f"schemas/devforgeai/v1/{SCHEMA_NAME}", f"schemas/devforgeai/v1/{IDENTITY_SCHEMA_NAME}",
+    f"schemas/devforgeai/v1/{ATTESTATION_SCHEMA_NAME}", "contracts/MANIFEST.sha256",
+)
 PLACEHOLDERS = ("TODO", "TBD", "{{", "}}", "<fill in>", "lorem ipsum")
 CLOSURE_ONLY_SUFFIXES = ("README.md", "MANIFEST.sha256")
 LEDGER_HEADER = re.compile(r"^\|\s*ID\s*\|\s*Type\s*\|", re.I)
 LEDGER_ROW = re.compile(r"^\|\s*(CP-\d{2})\s*\|")
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
-
-
-class RangeRequired(Exception):
-    """A closed record is present and no ``<base>..<head>`` range was given (CS-3.1)."""
+SAFE_COMPONENT = re.compile(r"[A-Za-z0-9_][A-Za-z0-9._-]*")      # CS-9.7
+# CS-7.1: the only Git executable and the only environment it ever sees.
+GIT = "/usr/bin/git"
+GIT_ENV = {
+    "PATH": "/usr/bin:/bin", "HOME": "/nonexistent", "LC_ALL": "C",
+    "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_SYSTEM": "/dev/null", "GIT_CONFIG_NOSYSTEM": "1",
+    "GIT_TERMINAL_PROMPT": "0",
+}
 
 
 class ReleaseFS:
-    """Filesystem view of protected paths. Tests inject a fake in-process; the CLI
-    never exposes a way to select one."""
+    """Filesystem view of protected paths, the executing release root and the
+    attestation directory. Tests inject a fake in-process; the CLI never
+    exposes a way to select one."""
+
+    attest_root: Path = ATTEST_ROOT
 
     def lstat(self, path: Path) -> os.stat_result:
         return os.lstat(path)
@@ -89,6 +125,10 @@ class ReleaseFS:
 
     def walk(self, root: Path) -> list[Path]:
         return sorted(Path(root).rglob("*"))
+
+    def executing_root(self, module_file: Path) -> Path | None:
+        """Installed mode: the module lies under a release root holding RELEASE.sha256."""
+        return _release_root_of(module_file)
 
 
 class CouldNotRun(Exception):
@@ -135,29 +175,34 @@ def _release_root_of(module_file: Path) -> Path | None:
     return None
 
 
-def _locate_schema() -> tuple[Path, Path | None]:
-    """The schema comes from the validator's own location, never from the plan's
+def _schema_dir(release_root: Path | None) -> Path:
+    """The schemas come from the validator's own location, never from the plan's
     tree (CS-2.2): the installed release root, else the checkout holding the module."""
     here = Path(__file__)
-    root = _release_root_of(here)
-    if root is not None:
-        return root / "schemas" / "devforgeai" / "v1" / SCHEMA_NAME, root
+    if release_root is not None:
+        return release_root / "schemas" / "devforgeai" / "v1"
     for ancestor in here.absolute().parents:
-        candidate = ancestor / "schemas" / "devforgeai" / "v1" / SCHEMA_NAME
-        if candidate.is_file():
-            return candidate, None
+        candidate = ancestor / "schemas" / "devforgeai" / "v1"
+        if (candidate / SCHEMA_NAME).is_file():
+            return candidate
     raise CouldNotRun(f"{SCHEMA_NAME} not found above the validator module {here}")
 
 
-def _git(root: Path, *argv: str) -> tuple[int, str]:
+def _git_bytes(root: Path, *argv: str) -> tuple[int, bytes, bytes]:
+    """CS-7.1: absolute ``/usr/bin/git``, explicit environment, plumbing only."""
     try:
-        completed = subprocess.run(["git", "-C", str(root), *argv],
-                                   capture_output=True, text=True, timeout=60)
+        completed = subprocess.run([GIT, "-C", str(root), *argv], capture_output=True,
+                                   env=GIT_ENV, stdin=subprocess.DEVNULL, timeout=60)
     except FileNotFoundError as exc:
-        raise CouldNotRun("git is not installed") from exc
+        raise CouldNotRun(f"git is not installed at {GIT}") from exc
     except subprocess.TimeoutExpired as exc:
         raise CouldNotRun(f"git {argv[0]} timed out") from exc
-    return completed.returncode, (completed.stdout + completed.stderr).strip()
+    return completed.returncode, completed.stdout, completed.stderr
+
+
+def _git(root: Path, *argv: str) -> tuple[int, str]:
+    code, out, err = _git_bytes(root, *argv)
+    return code, (out.decode("utf-8", "replace") + err.decode("utf-8", "replace")).strip()
 
 
 def _git_root(plan: Path) -> Path:
@@ -207,16 +252,25 @@ def _read_manifest(manifest: Path) -> dict[str, str]:
 
 
 
+def _blob(git_root: Path, commit: str, name: str) -> bytes | None:
+    """The exact bytes of ``name`` at ``commit``; None when absent."""
+    code, out, _ = _git_bytes(git_root, "cat-file", "blob", f"{commit}:{name}")
+    return out if code == 0 else None
+
+
 def _blob_sha256(git_root: Path, commit: str, name: str) -> str | None:
     """SHA-256 of the exact bytes of ``name`` at ``commit``; None when absent."""
-    try:
-        completed = subprocess.run(["git", "-C", str(git_root), "show", f"{commit}:{name}"],
-                                   capture_output=True, timeout=60)
-    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
-        raise CouldNotRun(f"git show {commit}:{name} failed: {exc}") from exc
-    if completed.returncode != 0:
-        return None
-    return hashlib.sha256(completed.stdout).hexdigest()
+    blob = _blob(git_root, commit, name)
+    return hashlib.sha256(blob).hexdigest() if blob is not None else None
+
+
+def _repository_identity(git_root: Path) -> tuple[str, list[str]]:
+    """CS-9.1: SHA-256 over the sorted root-commit SHAs joined by LF."""
+    code, out = _git(git_root, "rev-list", "--max-parents=0", "HEAD")
+    if code != 0:
+        raise CouldNotRun(f"git rev-list --max-parents=0 HEAD failed: {out}")
+    roots = sorted(out.split())
+    return hashlib.sha256("\n".join(roots).encode()).hexdigest(), roots
 
 
 def _check_dossier(rec: dict[str, Any], git_root: Path, rule: str, reject: Any) -> None:
@@ -308,9 +362,9 @@ def _glob_to_regex(pattern: str) -> re.Pattern[str]:
     return re.compile("^" + out + "$")
 
 
-def _check_enforcement(rec: dict[str, Any], plan: Path, git_root: Path,
-                       closed: bool, reject: Any, fs: ReleaseFS) -> None:
+def _check_enforcement(rec: dict[str, Any], ctx: Context, closed: bool, reject: Any) -> None:
     """S13 (open record) and S06.9 (closure): the candidate and release pins."""
+    plan, git_root, fs = ctx.plan, ctx.git_root, ctx.fs
     enforcement = rec.get("enforcement", {})
     stage = enforcement.get("trust_stage", "UNBOUND")
     stages = rec.get("closure_stages", {})
@@ -345,7 +399,7 @@ def _check_enforcement(rec: dict[str, Any], plan: Path, git_root: Path,
         if missing:
             reject(closed_rule, f"release pin incomplete: {', '.join(missing)} null")
         else:
-            _check_release_pin(rec, release, git_root, closed_rule, reject, fs)
+            _check_release_pin(rec, release, ctx, closed_rule, reject)
 
 
 def _check_candidate_pin(rec: dict[str, Any], candidate: dict[str, Any], plan: Path,
@@ -512,10 +566,14 @@ def verify_release_tree(root: Path, fs: ReleaseFS) -> tuple[list[str], dict[str,
     return problems, entries
 
 
-def _check_release_pin(rec: dict[str, Any], release: dict[str, Any], git_root: Path,
-                       rule: str, reject: Any, fs: ReleaseFS) -> None:
-    """CS-1: fail-closed. Every resource mandatory; protected-path rule; release
-    manifest verified both ways; record digests bound to installed bytes."""
+def _check_release_pin(rec: dict[str, Any], release: dict[str, Any], ctx: Context,
+                       rule: str, reject: Any) -> None:
+    """CS-1 and CS-6: fail-closed. Condition 9 is decidable only by the installed
+    validator, whose executing release must be the record's release; every
+    resource mandatory; protected-path rule; release manifest verified both ways;
+    record digests bound to installed bytes; RELEASE-IDENTITY.json binds the
+    record's version, DevForge commit and candidate pin."""
+    fs, git_root = ctx.fs, ctx.git_root
     executable = str(release["executable_path"])
     if not executable.startswith("/") or ".." in PurePosixPath(executable).parts:
         reject(rule, f"executable_path must be absolute without `..` (no PATH resolution): {executable}")
@@ -523,6 +581,15 @@ def _check_release_pin(rec: dict[str, Any], release: dict[str, Any], git_root: P
     exe = Path(executable)
     if exe.is_relative_to(git_root.resolve()) or exe.resolve().is_relative_to(git_root.resolve()):
         reject(rule, f"executable_path is inside the repository (project-local fallback): {executable}")
+    # CS-6.1 / CS-6.2: the executing release decides, and it must be this one.
+    if ctx.release_root is None:
+        reject(rule, "condition 9 is decidable only by the installed validator: this validator runs "
+                     "from a checkout, not from a verified release root")
+    else:
+        own = ctx.release_root / "bin" / "devforge"
+        if executable != str(own):
+            reject(rule, f"executable_path {executable} is not the executing release's executable {own} "
+                         f"(executing root {ctx.release_root})")
     whys = _protected_path_problems(exe, fs)
     for why in whys:
         reject(rule, f"executable: {why}" if not why.startswith("file missing") else f"executable missing: {executable}")
@@ -535,20 +602,47 @@ def _check_release_pin(rec: dict[str, Any], release: dict[str, Any], git_root: P
         exe_rel = exe.relative_to(root).as_posix() if exe.is_relative_to(root) else None
         if exe_rel not in entries:
             reject(rule, f"RELEASE.sha256 does not list the executable {exe_rel}")
+        for required in REQUIRED_RELEASE_ENTRIES:
+            if required not in entries:
+                reject(rule, f"RELEASE.sha256 does not list the required entry {required}")
         schema_rel = f"schemas/devforgeai/v1/{SCHEMA_NAME}"
         policy_rel = "contracts/MANIFEST.sha256"
-        for label, rel, field in (("schema", schema_rel, "schema_set_sha256"),
-                                  ("policy", policy_rel, "contract_policy_sha256")):
-            if rel not in entries:
-                reject(rule, f"RELEASE.sha256 does not list the {label} {rel}")
-            elif entries[rel] != release[field]:
-                reject(rule, f"{field} does not equal the installed {label} digest")
+        for label, rel, field_name in (("schema", schema_rel, "schema_set_sha256"),
+                                       ("policy", policy_rel, "contract_policy_sha256")):
+            if rel in entries and entries[rel] != release[field_name]:
+                reject(rule, f"{field_name} does not equal the installed {label} digest")
     if exe_present:
         try:
             if hashlib.sha256(fs.read_bytes(exe)).hexdigest() != release["executable_sha256"]:
                 reject(rule, f"executable digest mismatch at {executable}")
         except OSError as exc:
             reject(rule, f"executable unreadable: {exc}")
+    # CS-6.3 / CS-6.4: the executing release's identity binds the record.
+    candidate = rec.get("enforcement", {}).get("candidate", {})
+    if ctx.release_root is not None:
+        for why in ctx.identity_problems:
+            reject(rule, why)
+        identity = ctx.identity
+        if identity is not None:
+            bindings = [
+                ("version", release.get("version"), "version"),
+                ("source_commit", release.get("source_commit"), "devforge_commit"),
+                ("schema_set_version", release.get("schema_set_version"), "schema_set_version"),
+                ("contract_policy_version", release.get("contract_policy_version"), "contract_policy_version"),
+                ("contract_policy_sha256", release.get("contract_policy_sha256"), "candidate_manifest_sha256"),
+            ]
+            if rec.get("checkpoint_id") == identity.get("candidate_checkpoint_id"):
+                # The release was built from this record's candidate: its pin can never move.
+                bindings += [
+                    ("candidate.source_commit", candidate.get("source_commit"), "candidate_source_commit"),
+                    ("candidate.manifest_sha256", candidate.get("manifest_sha256"), "candidate_manifest_sha256"),
+                ]
+            for record_field, record_value, identity_field in bindings:
+                if record_value != identity.get(identity_field):
+                    suffix = (": the installed policy must be the promoted candidate manifest"
+                              if record_field == "contract_policy_sha256" else "")
+                    reject(rule, f"{record_field} {record_value!r} does not equal {IDENTITY_NAME} "
+                                 f"{identity_field} {identity.get(identity_field)!r}{suffix}")
     for label in ("promotion_evidence_path", "permissions_evidence_path"):
         value = str(release[label])
         digest = release[label.replace("_path", "_sha256")]
@@ -567,7 +661,7 @@ def _check_release_pin(rec: dict[str, Any], release: dict[str, Any], git_root: P
             continue
         if _sha256(target) != digest:
             reject(rule, f"{label} digest mismatch: {value}")
-    if not rec.get("enforcement", {}).get("candidate", {}).get("source_commit"):
+    if not candidate.get("source_commit"):
         reject(rule, "release pin without the retained candidate pin (candidate/release mapping)")
     proofs = rec.get("provider_proof", {})
     passing = {name: proof for name, proof in proofs.items() if proof.get("status") == "PASS"}
@@ -578,6 +672,120 @@ def _check_release_pin(rec: dict[str, Any], release: dict[str, Any], git_root: P
         reject(rule, "provider proofs are not both bound to the release executable digest")
 
 
+def _read_release_identity(root: Path, fs: ReleaseFS, schema_dir: Path) -> tuple[dict[str, Any] | None, list[str]]:
+    """CS-6.3: parse and validate <root>/RELEASE-IDENTITY.json of the executing release."""
+    path = root / IDENTITY_NAME
+    problems = [f"{IDENTITY_NAME}: {why}" for why in _protected_path_problems(path, fs)]
+    if problems:
+        return None, [f"{IDENTITY_NAME} missing from the executing release {root}"
+                      if "missing" in problems[0] else problems[0]]
+    try:
+        document = json.loads(fs.read_bytes(path).decode("utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return None, [f"{IDENTITY_NAME} unreadable: {exc}"]
+    schema_path = schema_dir / IDENTITY_SCHEMA_NAME
+    if not schema_path.is_file():
+        return None, [f"{IDENTITY_SCHEMA_NAME} missing beside the validator's schemas"]
+    validator = Draft202012Validator(json.loads(schema_path.read_text(encoding="utf-8")))
+    errors = [f"{IDENTITY_NAME} invalid: {'/'.join(str(p) for p in e.path) or '<root>'}: {e.message[:160]}"
+              for e in sorted(validator.iter_errors(document), key=lambda e: list(e.path))]
+    if errors or not isinstance(document, dict):
+        return None, errors or [f"{IDENTITY_NAME} is not an object"]
+    return document, []
+
+
+def _check_attestation(cp: str, rec: dict[str, Any], ctx: Context, reject: Any) -> None:
+    """S14 (CS-9.4): the closure attestation of a closed record, at the fixed
+    location on a protected path chain, binds this repository, plan, record,
+    range and the executing release. On success the attested range is kept for S10."""
+    rule = "S14"
+    if ctx.release_root is None:
+        reject(rule, "closure attestation is checked only by the installed validator")
+        return
+    if ctx.attestation_validator is None:
+        reject(rule, f"{ATTESTATION_SCHEMA_NAME} missing beside the validator's schemas")
+        return
+    fs, git_root = ctx.fs, ctx.git_root
+    identity, roots = _repository_identity(git_root)
+    plan_id = ctx.header.plan_id
+    if not plan_id:
+        reject(rule, "plan README names no `Plan ID`; the attestation location needs it")
+        return
+    # CS-9.7: neither the plan id (agent-authored README) nor the checkpoint id
+    # may steer the lookup under the fixed attestation root.
+    for label, value in (("plan id", plan_id), ("checkpoint id", cp)):
+        if not SAFE_COMPONENT.fullmatch(value):
+            reject(rule, f"{label} {value!r} is unsafe as a path component under the attestation root")
+            return
+    path = fs.attest_root / identity[:32] / plan_id / f"{cp}.json"
+    whys = _protected_path_problems(path, fs)
+    if whys:
+        for why in whys:
+            reject(rule, f"closure attestation missing at {path}" if why.startswith("file missing")
+                   else f"closure attestation {path}: {why}")
+        return
+    try:
+        document = json.loads(fs.read_bytes(path).decode("utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        reject(rule, f"closure attestation unreadable: {exc}")
+        return
+    errors = sorted(ctx.attestation_validator.iter_errors(document), key=lambda e: list(e.path))
+    if errors:
+        for error in errors:
+            reject(rule, f"closure attestation invalid: {'/'.join(str(p) for p in error.path) or '<root>'}: "
+                         f"{error.message[:160]}")
+        return
+    plan_rel = ctx.plan.resolve().relative_to(git_root).as_posix()
+    record_rel = f"{plan_rel}/checkpoints/{cp}.yaml"
+    expected = {
+        "repository_identity": identity, "repository_root_commits": roots, "plan_path": plan_rel,
+        "plan_id": plan_id, "checkpoint_id": cp, "record_path": record_rel,
+        "release_root": str(ctx.release_root), "authority_id": ctx.header.decision_authority,
+        "minted_by_uid": 0,
+    }
+    ok = True
+    for name, want in expected.items():
+        if document.get(name) != want:
+            reject(rule, f"closure attestation {name} {document.get(name)!r} does not equal {want!r}")
+            ok = False
+    identity_file = ctx.release_root / IDENTITY_NAME
+    try:
+        identity_digest = hashlib.sha256(fs.read_bytes(identity_file)).hexdigest()
+    except OSError:
+        identity_digest = None
+    if document.get("release_identity_sha256") != identity_digest:
+        reject(rule, f"closure attestation release_identity_sha256 does not equal the digest of {identity_file}")
+        ok = False
+    head, base = str(document.get("head_commit")), str(document.get("base_commit"))
+    code, _ = _git(git_root, "cat-file", "-e", f"{head}^{{commit}}")
+    if code != 0:
+        reject(rule, f"closure attestation head_commit {head} does not exist in the repository")
+        return
+    code, _ = _git(git_root, "merge-base", "--is-ancestor", head, "HEAD")
+    if code != 0:
+        reject(rule, f"closure attestation head_commit {head[:12]} is neither HEAD nor an ancestor of HEAD")
+        ok = False
+    code, _ = _git(git_root, "cat-file", "-e", f"{base}^{{commit}}")
+    if code != 0:
+        reject(rule, f"closure attestation base_commit {base} does not exist in the repository")
+        return
+    code, _ = _git(git_root, "merge-base", "--is-ancestor", base, head)
+    if code != 0 or base == head:
+        reject(rule, f"closure attestation base_commit {base[:12]} is not a proper ancestor of head_commit {head[:12]}")
+        ok = False
+    at_head = _blob_sha256(git_root, head, record_rel)
+    on_disk = _sha256(ctx.plan / "checkpoints" / f"{cp}.yaml")
+    if at_head != document.get("record_sha256"):
+        reject(rule, f"closure attestation record_sha256 does not equal the record blob at head_commit {head[:12]}")
+        ok = False
+    if on_disk != document.get("record_sha256"):
+        reject(rule, "closure attestation record_sha256 does not equal the record on disk: "
+                     "the record changed after the attestation was minted")
+        ok = False
+    if ok:
+        ctx.attested[cp] = (base, head)
+
+
 # ---------- plan README ----------
 
 @dataclass
@@ -585,16 +793,35 @@ class PlanHeader:
     decision_authority: str | None
     base_commit: str | None
     ledger: dict[str, dict[str, str]]   # id -> {"closed": "true"/"false", "depends": "…"}
+    plan_id: str | None = None
+
+
+@dataclass
+class Context:
+    """What one validation run knows beyond the record: the seam, the plan and
+    its repository, the executing release (installed mode) and its identity, the
+    attestation schema, and the attested closure ranges S14 collects for S10."""
+    fs: ReleaseFS
+    plan: Path
+    git_root: Path
+    header: PlanHeader
+    release_root: Path | None
+    identity: dict[str, Any] | None
+    identity_problems: list[str]
+    attestation_validator: Draft202012Validator | None
+    attested: dict[str, tuple[str, str]] = field(default_factory=dict)
 
 
 def _parse_readme(readme: Path) -> PlanHeader:
-    authority = base = None
+    authority = base = plan_id = None
     ledger: dict[str, dict[str, str]] = {}
     in_ledger = False
     columns: list[str] = []
     for line in readme.read_text(encoding="utf-8").splitlines():
         stripped = line.strip()
-        if stripped.startswith("| Decision authority |"):
+        if stripped.startswith("| Plan ID |"):
+            plan_id = stripped.split("|")[2].strip().strip("`")
+        elif stripped.startswith("| Decision authority |"):
             authority = stripped.split("|")[2].strip().strip("`")
         elif stripped.startswith("| Amendment base |") or (
                 stripped.startswith("| Base commit |") and base is None):
@@ -618,17 +845,17 @@ def _parse_readme(readme: Path) -> PlanHeader:
                 "closed": row.get("closed", "").strip().lower(),
                 "depends": row.get("depends on", "").strip(),
             }
-    return PlanHeader(authority, base, ledger)
+    return PlanHeader(authority, base, ledger, plan_id)
 
 
 # ---------- rules ----------
 
-def _check_record(cp: str, rec: dict[str, Any], header: PlanHeader, plan: Path,
-                  git_root: Path, records: dict[str, dict[str, Any]],
-                  problems: list[Problem], fs: ReleaseFS) -> None:
+def _check_record(cp: str, rec: dict[str, Any], ctx: Context, records: dict[str, dict[str, Any]],
+                  problems: list[Problem]) -> None:
     def reject(rule: str, message: str) -> None:
         problems.append(Problem(cp, rule, message))
 
+    header, plan, git_root = ctx.header, ctx.plan, ctx.git_root
     closed = bool(rec.get("closed"))
     ctype = rec.get("checkpoint_type")
 
@@ -685,7 +912,7 @@ def _check_record(cp: str, rec: dict[str, Any], header: PlanHeader, plan: Path,
         if rec.get("human_closure", {}).get("decision") is not None:
             reject("S07", "an open record carries a human closure decision")
         # S13 pins of an open record
-        _check_enforcement(rec, plan, git_root, False, reject, fs)
+        _check_enforcement(rec, ctx, False, reject)
         return
 
     # ---- closed: S05, S06, S09 ----
@@ -760,7 +987,10 @@ def _check_record(cp: str, rec: dict[str, Any], header: PlanHeader, plan: Path,
             reject("S06.8", f"reopen_if condition is not concrete: {condition!r}")
 
     # S06.9 release pin (closure condition 9) and the retained candidate pin
-    _check_enforcement(rec, plan, git_root, True, reject, fs)
+    _check_enforcement(rec, ctx, True, reject)
+
+    # S14 closure attestation (corrective-spec-002 CS-9)
+    _check_attestation(cp, rec, ctx, reject)
 
     # S09 dependencies
     if row is not None and row["depends"] not in ("", "—", "-"):
@@ -770,51 +1000,34 @@ def _check_record(cp: str, rec: dict[str, Any], header: PlanHeader, plan: Path,
                 reject("S09", f"depends on {dep}, which is not closed")
 
 
-def _check_diff(plan: Path, git_root: Path, checkpoints: Path, records: dict[str, dict[str, Any]],
-                diff_range: str, problems: list[Problem]) -> None:
-    """S10: a diff that flips any record to closed may touch closure paths only."""
-    if ".." not in diff_range:
-        raise CouldNotRun(f"--diff needs <base>..<head>, got {diff_range!r}")
-    base, _, head = diff_range.partition("..")
-    code, head_sha = _git(git_root, "rev-parse", "--verify", f"{head}^{{commit}}")
+def _closure_only_problems(plan: Path, git_root: Path, records: dict[str, dict[str, Any]],
+                           base: str, head: str, only: str | None = None) -> list[Problem]:
+    """S10 over ``base..head``: if the range flips a closed record (or creates it
+    closed) it may touch closure paths only. ``only`` restricts the records
+    considered to one checkpoint (an attested range belongs to its record)."""
+    code, out = _git(git_root, "diff-tree", "-r", "--name-only", base, head)
     if code != 0:
-        problems.append(Problem("PLAN", "S10", f"range head {head!r} does not resolve: {head_sha}"))
-        return
-    code, base_sha = _git(git_root, "rev-parse", "--verify", f"{base}^{{commit}}")
-    if code != 0:
-        problems.append(Problem("PLAN", "S10", f"range base {base!r} does not resolve: {base_sha}"))
-        return
-    _, current = _git(git_root, "rev-parse", "HEAD")
-    if head_sha != current:
-        problems.append(Problem("PLAN", "S10", f"range head {head_sha[:12]} is not HEAD ({current[:12]}); "
-                                              "closure validation runs at the reviewed head"))
-        return
-    code, _ = _git(git_root, "merge-base", "--is-ancestor", base_sha, head_sha)
-    if code != 0 or base_sha == head_sha:
-        problems.append(Problem("PLAN", "S10", f"range base {base_sha[:12]} is not a proper ancestor of head"))
-        return
-    code, out = _git(git_root, "diff", "--name-only", diff_range)
-    if code != 0:
-        raise CouldNotRun(f"git diff {diff_range} failed: {out}")
-    changed = [line.strip() for line in out.splitlines() if line.strip()]
+        raise CouldNotRun(f"git diff-tree {base[:12]} {head[:12]} failed: {out}")
+    changed = [line.strip() for line in out.splitlines() if line.strip() and not HEX40.match(line.strip())]
     plan_rel = plan.resolve().relative_to(git_root).as_posix()
     closing: list[str] = []
     for cp, rec in records.items():
-        if not rec.get("closed"):
+        if not rec.get("closed") or (only is not None and cp != only):
             continue
         rel = f"{plan_rel}/checkpoints/{cp}.yaml"
-        code, before = _git(git_root, "show", f"{base}:{rel}")
-        if code != 0:
-            closing.append(cp)      # record created closed inside the diff
+        before = _blob(git_root, base, rel)
+        if before is None:
+            closing.append(cp)      # record created closed inside the range
             continue
         try:
-            before_closed = bool(yaml.safe_load(before).get("closed"))
-        except Exception:      # noqa: BLE001 - an unreadable base record is a closing diff
+            before_closed = bool(yaml.safe_load(before.decode("utf-8")).get("closed"))
+        except Exception:      # noqa: BLE001 - an unreadable base record is a closing range
             before_closed = False
         if not before_closed:
             closing.append(cp)
     if not closing:
-        return
+        return []
+    problems: list[Problem] = []
     allowed_prefix = f"{plan_rel}/"
     for path in changed:
         inside = path.startswith(allowed_prefix)
@@ -823,9 +1036,50 @@ def _check_diff(plan: Path, git_root: Path, checkpoints: Path, records: dict[str
             or path.endswith(CLOSURE_ONLY_SUFFIXES) and path.count("/") == plan_rel.count("/") + 1
         )
         if not closure_file:
-            problems.append(Problem(
-                ",".join(closing), "S10",
-                f"closure-only diff {diff_range} also changes {path}"))
+            problems.append(Problem(",".join(closing), "S10",
+                                    f"closure-only diff {base[:12]}..{head[:12]} also changes {path}"))
+    return problems
+
+
+def _resolve_range(git_root: Path, diff_range: str) -> tuple[str, str]:
+    if ".." not in diff_range:
+        raise CouldNotRun(f"--diff needs <base>..<head>, got {diff_range!r}")
+    base, _, head = diff_range.partition("..")
+    code, base_sha = _git(git_root, "rev-parse", "--verify", f"{base}^{{commit}}")
+    if code != 0:
+        raise CouldNotRun(f"range base {base!r} does not resolve: {base_sha}")
+    code, head_sha = _git(git_root, "rev-parse", "--verify", f"{head}^{{commit}}")
+    if code != 0:
+        raise CouldNotRun(f"range head {head!r} does not resolve: {head_sha}")
+    return base_sha, head_sha
+
+
+def _check_diff(ctx: Context, records: dict[str, dict[str, Any]], diff_range: str | None,
+                problems: list[Problem]) -> None:
+    """S10 and the CS-9.5 range rule. Installed mode: every attested range is
+    checked and a caller range must equal one of them. Staged mode (no
+    attestation can be checked, and every closed record is already rejected): a
+    caller range, if any, is checked as before, for the reviewer's information."""
+    plan, git_root = ctx.plan, ctx.git_root
+    caller: tuple[str, str] | None = None
+    if diff_range:
+        caller = _resolve_range(git_root, diff_range)
+    for cp, (base, head) in ctx.attested.items():
+        problems.extend(_closure_only_problems(plan, git_root, records, base, head, only=cp))
+    if caller is None:
+        return
+    if ctx.release_root is not None:
+        if caller not in ctx.attested.values():
+            attested = ", ".join(f"{b[:12]}..{h[:12]}" for b, h in ctx.attested.values()) or "none"
+            problems.append(Problem("PLAN", "S14", f"--diff {caller[0][:12]}..{caller[1][:12]} differs from every "
+                                                   f"attested closure range ({attested})"))
+        return
+    base, head = caller
+    code, _ = _git(git_root, "merge-base", "--is-ancestor", base, head)
+    if code != 0 or base == head:
+        problems.append(Problem("PLAN", "S10", f"range base {base[:12]} is not a proper ancestor of head"))
+        return
+    problems.extend(_closure_only_problems(plan, git_root, records, base, head))
 
 
 # ---------- entry ----------
@@ -833,7 +1087,8 @@ def _check_diff(plan: Path, git_root: Path, checkpoints: Path, records: dict[str
 def validate_plan(plan: Path, diff_range: str | None = None,
                   release_fs: ReleaseFS | None = None) -> Report:
     """Validate every record of ``plan``. ``release_fs`` is the in-process test seam
-    of CS-1.7; the CLI never sets it."""
+    of CS-1.7 (filesystem view, executing root, attestation directory); the CLI
+    never sets it."""
     fs = release_fs or ReleaseFS()
     plan = Path(plan)
     readme = plan / "README.md"
@@ -842,19 +1097,34 @@ def validate_plan(plan: Path, diff_range: str | None = None,
         raise CouldNotRun(f"plan README not found: {readme}")
     if not checkpoints.is_dir():
         raise CouldNotRun(f"checkpoints directory not found: {checkpoints}")
-    schema_path, release_root = _locate_schema()
+    release_root = fs.executing_root(Path(__file__))
+    identity: dict[str, Any] | None = None
+    identity_problems: list[str] = []
+    schema_dir = _schema_dir(release_root)
     if release_root is not None:
         # Installed mode: the release verifies itself before any record is read.
-        tree_problems, _ = verify_release_tree(release_root, ReleaseFS())
+        tree_problems, _ = verify_release_tree(release_root, fs)
         if tree_problems:
             raise CouldNotRun("installed release fails verification: " + "; ".join(tree_problems[:5]))
+        identity, identity_problems = _read_release_identity(release_root, fs, schema_dir)
+    schema_path = schema_dir / SCHEMA_NAME
     if not schema_path.is_file():
         raise CouldNotRun(f"schema not found: {schema_path}")
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     Draft202012Validator.check_schema(schema)
     validator = Draft202012Validator(schema)
+    attestation_validator = None
+    attestation_schema = schema_dir / ATTESTATION_SCHEMA_NAME
+    if attestation_schema.is_file():
+        try:
+            attestation_validator = Draft202012Validator(json.loads(attestation_schema.read_text(encoding="utf-8")))
+        except (json.JSONDecodeError, Exception):      # noqa: BLE001 - an unusable schema means no attestation passes
+            attestation_validator = None
     root = _git_root(plan)
     header = _parse_readme(readme)
+    ctx = Context(fs=fs, plan=plan, git_root=root, header=header, release_root=release_root,
+                  identity=identity, identity_problems=identity_problems,
+                  attestation_validator=attestation_validator)
     problems: list[Problem] = []
 
     # S01 plan header
@@ -888,10 +1158,6 @@ def validate_plan(plan: Path, diff_range: str | None = None,
             continue
         records[cp] = data
 
-    # CS-3.1: a closed record makes the range mandatory.
-    if not diff_range and any(rec.get("closed") for rec in records.values()):
-        raise RangeRequired("closure validation requires --diff <base>..<head>")
-
     # S03: every ledger row has a record
     for cp in header.ledger:
         if cp not in records and not any(p.checkpoint == cp for p in problems):
@@ -916,10 +1182,9 @@ def validate_plan(plan: Path, diff_range: str | None = None,
                 problems.append(Problem("PLAN", "S11", f"manifest entry missing on disk: {name}"))
 
     for cp, rec in records.items():
-        _check_record(cp, rec, header, plan, root, records, problems, fs)
+        _check_record(cp, rec, ctx, records, problems)
 
-    if diff_range:
-        _check_diff(plan, root, checkpoints, records, diff_range, problems)
+    _check_diff(ctx, records, diff_range, problems)
 
     problems.sort(key=lambda p: (p.checkpoint, p.rule, p.message))
     return Report(plan=str(plan), records=len(records), problems=problems)
