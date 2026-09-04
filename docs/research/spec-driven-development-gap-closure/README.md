@@ -742,12 +742,15 @@ other checkpoint can claim completion.
 **Required outputs:**
 
 - `schemas/devforgeai/v1/research-gap-checkpoint.schema.json`;
-- a staged semantic validator exposed as
-  `devforgeai-research validate-checkpoints` from
-  `components/research-core/`, rejecting a structurally valid but illegally
-  closed checkpoint;
+- a staged semantic-validator package at
+  `components/research-core/src/devforgeai/checkpoint/`, invoked from the
+  repository root as
+  `PYTHONPATH=components/research-core/src python3 -m devforgeai.checkpoint validate --plan docs/research/spec-driven-development-gap-closure`,
+  rejecting a structurally valid but illegally closed checkpoint; promotion
+  maps this operation to `devforge checkpoint validate` without adding an
+  eleventh Research operation or another staging console script;
 - one record per ledger entry under this plan's `checkpoints/` directory;
-- positive and hostile subprocess tests; and
+- positive and hostile subprocess tests;
 - an updated promotion-candidate declaration and manifest pinning the exact
   staged schema, validator, CLI integration, and tests for human promotion into
   DevForge; and
