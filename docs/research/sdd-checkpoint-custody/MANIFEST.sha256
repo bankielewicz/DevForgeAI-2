@@ -1,7 +1,7 @@
-470d7fec6825bb29b43e16fff1d5e0866b8902dbeacec4eaf0b60987471737a0  ./README.md
+8fdda2b833ee7f5c3b82edd70bf812c8cca4ada798e41d239d8840451a888b7d  ./README.md
 40a29884d2cb8125f6b604522df0ec0f196c237078fd6e43b7bcdb848b369a46  ./claims.jsonl
 d2943489f9d845e2bcaf69f8ca55f8afdc2cf43319f3613300dd40423c5ededf  ./contradictions.jsonl
-a17a2eed23ec4773a6e67e9e06e6bb735030911d203bf2d4621fb58b90da3f65  ./decisions.md
+d3758c9176b952e6987eed314603ce0d7f4abe679d25ba22c24bbe528e6052be  ./decisions.md
 928ec1866161976835c76934453beb4280931c583ed422bb746f3ec0810d54e4  ./evidence.jsonl
 2f919d8f012b6defa5a7e569722549b19d40f43bf8d057512219ee17a283bed3  ./probes/claude-validate.txt
 d70c0617292f47a119967ac80e67aafe4d28cb7d6b1777cf9491f6b6d1d24ff4  ./probes/codex-validate.txt
@@ -10,5 +10,15 @@ f22d3390666bd2b3a082e217c7c2126021fa16df387dbef0b164ff993ffbb6a8  ./probes/tests
 f5cfe3422fb71a384d1522334c895b695508ee2703d014278eaa2989f01f056a  ./query-log.jsonl
 fd26c4098f255045359583c8b7db875a43d916e5fef776eab5556dcfa220e065  ./questions.md
 c769b8ef071b6b8571077aa687a5729f7ee731026350babd888ba54639cd7521  ./request.json
+d7433a61d75e7cdf6d8302680427f9bf1a26c6833cbbca47690c69612a5dad3b  ./reviews/codex-security-2026-09-04/README.md
+a3e40448f4e710958ac6d9311eb81049b6e883ad559ae4efbe0711b9183be5ae  ./reviews/codex-security-2026-09-04/coverage.json
+10d552bfb83ea8efb35f1f62d22971c0bead60962d3eb98d290d27d645eb89be  ./reviews/codex-security-2026-09-04/findings.json
+4b3bfeac33d398c3e94b78ed05c700ce78286315da4babc3e2d1a2c66f7060f5  ./reviews/codex-security-2026-09-04/probes/probe_git_root_override.py
+f75e18b742e104a5023f22327c343e498525f0f45ed2088bf98b312d9f2f36a1  ./reviews/codex-security-2026-09-04/probes/probe_optional_diff.py
+3e4a55103ddf41fcffe73825e7252745f361ad6b5232e4115d62797002620074  ./reviews/codex-security-2026-09-04/probes/probe_schema_override.py
+77d0f5f72185c4b5fd7cb515ce950b6b56a9ad6fd52d4620bb44346e8110d310  ./reviews/codex-security-2026-09-04/probes/probe_validator_failopen.py
+772075f046b29df2552bf12300ebb6b939e96ad8aaf32ef243213204ed00e31f  ./reviews/codex-security-2026-09-04/report.md
+398ad6e86f2c25a2b944b01378afb5963689c750ac397e33148c98f75a849b10  ./reviews/codex-security-2026-09-04/reproduction.txt
+d1e826ec036ab976cd189592bc4a75cf1a4640ff7727ff719f4086125a91868b  ./reviews/codex-security-2026-09-04/scan-manifest.json
 8bf66e1cdd87d5be40b0dfaea6a25288e9bbed670b75acfa6ad45eccdf8e34d3  ./sources.jsonl
 f06530860148c6d4423670abe96af50c4ab15930b0c8bb23c50b9dd4599689f9  ./verification.jsonl

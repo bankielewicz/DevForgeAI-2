@@ -1,0 +1,92 @@
+{
+  "documentType": "codex-security.scan-manifest",
+  "scan": {
+    "artifacts": [
+      {
+        "mediaType": "application/json",
+        "path": "findings.json",
+        "sha256": "10d552bfb83ea8efb35f1f62d22971c0bead60962d3eb98d290d27d645eb89be"
+      },
+      {
+        "mediaType": "application/json",
+        "path": "coverage.json",
+        "sha256": "a3e40448f4e710958ac6d9311eb81049b6e883ad559ae4efbe0711b9183be5ae"
+      }
+    ],
+    "completedAt": "2026-09-04T15:12:25.414395Z",
+    "coverageRef": "coverage.json",
+    "findingsRef": "findings.json",
+    "id": "devforgeai-pr20-security-review",
+    "producer": {
+      "name": "codex-security-plugin",
+      "version": "0.1.22"
+    },
+    "scope": {
+      "artifactsReviewed": [
+        "PR 20 base 9305715da59e179a89ea847caeb046fadde0c30a and head b9998de92a821efa85f31497ee5b22f8fd97bf56",
+        "components/research-core/src/devforgeai/checkpoint/__main__.py",
+        "components/research-core/src/devforgeai/checkpoint/validate.py",
+        "tests/research/test_gap_checkpoints.py",
+        "framework/contracts/MANIFEST.sha256",
+        "Four local subprocess proof scripts under artifacts/05_findings"
+      ],
+      "context": "The human owner asked whether Claude's proposed promotion, root install, and two-terminal proof sequence is safe and conforms to DevForgeAI's spec-driven trust boundary.",
+      "excludePaths": [],
+      "includePaths": [
+        "CLAUDE.md",
+        "docs/CHECKPOINT.md"
+      ],
+      "limitations": [
+        "The separate DevForge repository and any future release artifact were not available for review.",
+        "Claude Code and Codex live probes were intentionally not run because the candidate gate is unsafe before remediation.",
+        "Codex Security TAC display status could not be verified after two accepted authentication retries; this did not affect local evidence."
+      ],
+      "runtimeStatus": "Targeted tests pass 59/59 and the staged plan reports 15 records with 0 problems, but hostile subprocess proofs reproduce three fail-open behaviors.",
+      "summary": "Exact-diff security review of PR 20's CP-00 promotion, protected-install, provider-probe, evidence, and closure instructions, with supporting review of the validator and its tests.",
+      "validationMode": "Exact-source inspection plus deterministic local subprocess proofs; no root installation or live provider session was performed."
+    },
+    "sealedAt": "2026-09-04T15:12:25.414395Z",
+    "startedAt": "2026-09-04T15:04:25Z",
+    "status": "completed",
+    "target": {
+      "baseRevision": "9305715da59e179a89ea847caeb046fadde0c30a",
+      "displayName": "bankielewicz/DevForgeAI PR 20",
+      "headRevision": "b9998de92a821efa85f31497ee5b22f8fd97bf56",
+      "kind": "git_diff",
+      "remote": "https://github.com/bankielewicz/DevForgeAI",
+      "snapshotDigest": "codex-security-snapshot/v1:sha256:55f244705de1243a43ef6c6882165f642a8020659c71fd4ab9d597e42892e92b",
+      "targetId": "devforgeai-pr20-9305715-b9998de"
+    },
+    "threatModel": {
+      "assets": [
+        "Root-owned DevForge executable and its complete release manifest",
+        "Installed checkpoint schema and policy bytes",
+        "CP-00 evidence and closure decision",
+        "Human release, root-install, and acceptance authority"
+      ],
+      "assumptions": [
+        "The human controls DevForge promotion, sudo, and final acceptance",
+        "Agent sessions do not possess passwordless sudo or equivalent root capability"
+      ],
+      "attackerCapabilities": [
+        "Modify repository-local validator, schema, records, and evidence",
+        "Choose or omit CLI options and influence environment variables",
+        "Invoke the protected executable without sudo",
+        "Interrupt a probe after a destructive step"
+      ],
+      "securityObjectives": [
+        "No agent-selected schema, repository root, or validation mode can weaken closure",
+        "Every executed and imported release byte is reviewed, pinned, and root-owned",
+        "Missing or mutable protected resources always reject",
+        "Negative probes preserve protected and canonical bytes even when a control is broken"
+      ],
+      "summary": "An AI worker can control workspace files, checkpoint data, process arguments, environment variables, and user-owned evidence, but must not be able to alter or select the protected validator, schema, policy, release manifest, or closure oracle. Human sudo and release authority are trusted. The protected boundary must fail closed when installed resources are missing, mutable, mismatched, caller-overridden, or incompletely invoked.",
+      "trustBoundaries": [
+        "Agent-writable DevForgeAI workspace to root-owned DevForge installation",
+        "Caller-controlled CLI arguments and environment to protected validation policy",
+        "User-writable probe output to independently reviewed closure evidence"
+      ]
+    }
+  },
+  "schemaVersion": "1.0"
+}

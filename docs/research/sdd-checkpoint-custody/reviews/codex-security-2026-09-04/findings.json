@@ -1,0 +1,469 @@
+{
+  "documentType": "codex-security.findings",
+  "findings": [
+    {
+      "attackPath": {
+        "dataflow": {
+          "evidenceRefs": [
+            "release.conditional-executable-check"
+          ],
+          "outcome": "Unprotected or absent enforcement can be recorded as a protected release",
+          "sink": "Zero-problem validator verdict",
+          "source": "Checkpoint YAML protected_release fields",
+          "summary": "Agent-controlled release record and path -> `_check_release_pin` -> `is_file()` false or digest-only true -> no rejection -> CP-00 closure validation passes."
+        },
+        "reachability": {
+          "attacker": "Workspace-capable Claude Code or Codex worker",
+          "entrypoint": "Checkpoint protected_release record",
+          "evidenceRefs": [
+            "release.conditional-executable-check"
+          ],
+          "outcome": "False proof of protected enforcement",
+          "preconditions": [
+            "The closure command runs the current staged validator"
+          ],
+          "sink": "CP-00 validator PASS",
+          "summary": "An AI worker preparing the closure PR controls record bytes and can point them at a user-owned or absent absolute path; the human may see a passing gate unless filesystem truth is independently checked."
+        }
+      },
+      "codeEvidence": [
+        {
+          "code": "exe = Path(executable)\nif exe.is_file() and _sha256(exe) != release[\"executable_sha256\"]:\n    reject(rule, f\"executable digest mismatch at {executable}\")",
+          "endLine": 391,
+          "explanation": "The `is_file()` guard converts absence into success and performs no ownership or permission validation when a file exists.",
+          "id": "release.conditional-executable-check",
+          "label": "Missing executable skips validation",
+          "language": "python",
+          "path": "components/research-core/src/devforgeai/checkpoint/validate.py",
+          "role": "root_control",
+          "startLine": 389
+        },
+        {
+          "code": "self._ext = tempfile.TemporaryDirectory(prefix=\"dfai-cp00-ext-\")\nself.executable = Path(self._ext.name) / \"devforge\"\nself.executable.write_text(\"#!/bin/sh\\nexit 0\\n\", encoding=\"utf-8\")\nself.exe_sha = sha256(self.executable)",
+          "endLine": 110,
+          "explanation": "The passing test labels a normal user-owned temporary file as protected, so it cannot distinguish the required root-owned state.",
+          "id": "release.user-owned-positive-fixture",
+          "label": "Positive fixture is user-owned",
+          "language": "python",
+          "path": "tests/research/test_gap_checkpoints.py",
+          "role": "evidence",
+          "startLine": 103
+        }
+      ],
+      "confidence": {
+        "level": "high",
+        "rationale": "Direct source inspection and a deterministic subprocess PoC both show exit 0 for a uid-1000 mode-0644 executable and for a nonexistent executable."
+      },
+      "extensions": {
+        "candidateId": "candidate-da74cfa48f4dac85"
+      },
+      "findingId": "csf_e46367d6eee16d69c675266f",
+      "fingerprints": {
+        "algorithm": "codex-security/v1",
+        "primary": "codex-security/v1:sha256:c646561cf0cbaa4848a1d7a95a58a4a7b866479913846a69b2bc2b05e2e751b1"
+      },
+      "identity": {
+        "anchor": "protected-release-missing-owner-check"
+      },
+      "locations": [
+        {
+          "endLine": 23,
+          "path": "docs/CHECKPOINT.md",
+          "role": "entrypoint",
+          "startLine": 20
+        },
+        {
+          "endLine": 415,
+          "path": "components/research-core/src/devforgeai/checkpoint/validate.py",
+          "role": "root_control",
+          "startLine": 377
+        },
+        {
+          "endLine": 110,
+          "path": "tests/research/test_gap_checkpoints.py",
+          "role": "evidence",
+          "startLine": 100
+        }
+      ],
+      "occurrenceId": "occ_23408d8c32dd193668b31b5a",
+      "preventiveControls": [
+        "Use one protected release manifest covering every executed/imported byte and verify it before validation."
+      ],
+      "provenance": {
+        "source": "local_plugin"
+      },
+      "remediation": "Make every protected resource mandatory and fail closed on `lstat` or hash errors. Verify uid 0, required modes, non-writable parent directories, no unexpected symlink traversal or ACL write grant, and actual executable, schema-set, policy, dependency, and release-manifest digests. Do not trust `installation_owner` as proof.",
+      "remediationTests": [
+        "Reject missing executable, schema, manifest, promotion evidence, and permissions evidence.",
+        "Reject uid-nonzero, group/other-writable file or ancestor, symlink substitution, ACL write grant, and digest mismatch.",
+        "Run the positive integration test through the actual protected executable rather than `sys.executable` plus workspace `PYTHONPATH`."
+      ],
+      "rootCause": {
+        "evidenceRefs": [
+          "release.conditional-executable-check",
+          "release.user-owned-positive-fixture"
+        ],
+        "summary": "The record's declaration `installation_owner: root` is trusted as metadata instead of being checked against the installed filesystem object, and resource existence is treated as optional."
+      },
+      "ruleId": "protection-mechanism.release-pin-fail-open",
+      "severity": {
+        "changeConditions": "Severity would fall after the validator rejects absent resources and independently verifies root ownership, non-writability, symlink ancestry, and every installed release digest against a protected manifest.",
+        "level": "high",
+        "rationale": "This is the root integrity gate for CP-00; a local agent that controls record fields can obtain a passing validation without the promised protected installation.",
+        "score": 8.1,
+        "scoringSystem": "CVSS:3.1"
+      },
+      "summary": "PR 20 makes the staged validator the gate for a root-owned DevForge release, but `_check_release_pin` verifies a digest only when an executable or absolute evidence path happens to exist and never verifies owner, mode, parent-directory writability, symlinks, or the installed schema and policy bytes. An agent-writable executable can therefore satisfy the same closure record as a protected one, and a nonexistent executable is silently skipped.",
+      "taxonomy": {
+        "category": "protection mechanism failure",
+        "cwe": [
+          "CWE-693"
+        ]
+      },
+      "title": "Protected-release validation accepts missing or user-owned enforcement bytes",
+      "validation": {
+        "assertions": [
+          "A uid-1000 mode-0644 executable produced 3 records, 0 problems and exit 0.",
+          "A nonexistent executable path produced 3 records, 0 problems and exit 0."
+        ],
+        "disposition": "reportable",
+        "evidence": [
+          "artifacts/05_findings/probe_validator_failopen.py"
+        ],
+        "evidenceRefs": [
+          "release.conditional-executable-check",
+          "release.user-owned-positive-fixture"
+        ],
+        "limitations": [
+          "No root-owned installation was needed to prove the fail-open branches."
+        ],
+        "method": "Constructed valid closed scratch records, then substituted a user-owned executable and a nonexistent absolute executable while retaining matching record metadata.",
+        "status": "confirmed"
+      }
+    },
+    {
+      "attackPath": {
+        "dataflow": {
+          "evidenceRefs": [
+            "schema.public-override"
+          ],
+          "outcome": "Hostile checkpoint passes",
+          "sink": "Schema selection",
+          "source": "Caller arguments",
+          "summary": "Agent CLI arguments -> duplicate `--schema` -> argparse last-value selection -> `validate_plan(schema_path=...)` -> permissive validation verdict."
+        },
+        "reachability": {
+          "attacker": "Workspace agent",
+          "entrypoint": "Protected CLI",
+          "evidenceRefs": [
+            "schema.public-override"
+          ],
+          "outcome": "Policy bypass",
+          "preconditions": [
+            "Wrapper forwards arbitrary trailing arguments"
+          ],
+          "sink": "Checkpoint validation",
+          "summary": "Any unprivileged caller allowed to invoke `/usr/local/bin/devforge` can append this option; root access is unnecessary."
+        }
+      },
+      "codeEvidence": [
+        {
+          "code": "validate.add_argument(\"--git-root\", type=Path, default=None,\n                      help=\"repository root for Git rules (default: the plan's repository)\")\nvalidate.add_argument(\"--schema\", type=Path, default=None,\n                      help=\"override the checkpoint schema path (tests only)\")\n...\nreport = validate_plan(args.plan, git_root=args.git_root, schema_path=args.schema,\n                       diff_range=args.diff)",
+          "endLine": 39,
+          "explanation": "Caller-controlled configuration flows unchanged into the validation authority; argparse's default duplicate-option behavior selects the last value.",
+          "id": "schema.public-override",
+          "label": "Tests-only override is exposed in production parser",
+          "language": "python",
+          "path": "components/research-core/src/devforgeai/checkpoint/__main__.py",
+          "role": "root_control",
+          "startLine": 23
+        }
+      ],
+      "confidence": {
+        "level": "high",
+        "rationale": "A deterministic subprocess test changed only the final `--schema` argument and changed the same hostile record from exit 1 to exit 0."
+      },
+      "extensions": {
+        "candidateId": "candidate-5304ad3d7e3e11c6"
+      },
+      "findingId": "csf_034041928ad217531865c9e9",
+      "fingerprints": {
+        "algorithm": "codex-security/v1",
+        "primary": "codex-security/v1:sha256:8e26f5f3228ada012a0e9a1e9249085f1765ee1f9ae210bd21b738c1d664ad46"
+      },
+      "identity": {
+        "anchor": "caller-overrides-protected-schema"
+      },
+      "locations": [
+        {
+          "endLine": 23,
+          "path": "docs/CHECKPOINT.md",
+          "role": "entrypoint",
+          "startLine": 19
+        },
+        {
+          "endLine": 39,
+          "path": "components/research-core/src/devforgeai/checkpoint/__main__.py",
+          "role": "root_control",
+          "startLine": 23
+        }
+      ],
+      "occurrenceId": "occ_32069d61859fb47524d39a56",
+      "preventiveControls": [
+        "Keep test-only dependency injection callable from Python tests, not from the installed user-facing CLI."
+      ],
+      "provenance": {
+        "source": "local_plugin"
+      },
+      "remediation": "Separate production and test entrypoints. Production code must select the installed schema and Git root internally and reject `--schema`, `--git-root`, and duplicate protected options. If a wrapper remains, place no security decision in shell argument order.",
+      "remediationTests": [
+        "Assert production CLI rejects `--schema` and `--git-root` with exit 2.",
+        "Append duplicate protected options and prove they cannot change the verdict."
+      ],
+      "rootCause": {
+        "evidenceRefs": [
+          "schema.public-override"
+        ],
+        "summary": "A test seam is part of the production CLI and the wrapper does not terminate option parsing or reject duplicate protected options."
+      },
+      "ruleId": "configuration.cli-schema-override",
+      "severity": {
+        "changeConditions": "Severity would fall after production invocation removes or rejects caller-supplied schema and repository-root overrides and binds policy selection inside protected code.",
+        "level": "high",
+        "rationale": "A non-root workspace agent can directly choose the policy used by the root-owned validator and turn invalid closure records into PASS without modifying protected files.",
+        "score": 8.0,
+        "scoringSystem": "CVSS:3.1"
+      },
+      "summary": "The proposed wrapper injects the root-owned `--schema` before forwarding caller arguments. The existing argparse interface accepts duplicate `--schema` options and keeps the last value, so an agent can append a permissive project-local schema and remove enforcement constraints while still invoking the absolute protected executable.",
+      "taxonomy": {
+        "category": "external control of configuration",
+        "cwe": [
+          "CWE-15"
+        ]
+      },
+      "title": "Caller arguments can replace the protected validation schema",
+      "validation": {
+        "assertions": [
+          "Protected schema rejected with exit 1.",
+          "Caller override accepted with exit 0 and 3 records, 0 problems."
+        ],
+        "disposition": "reportable",
+        "evidence": [
+          "artifacts/05_findings/probe_schema_override.py"
+        ],
+        "evidenceRefs": [
+          "schema.public-override"
+        ],
+        "method": "Ran the validator on one hostile record with the installed schema and again with a permissive final schema option.",
+        "status": "confirmed"
+      }
+    },
+    {
+      "attackPath": {
+        "dataflow": {
+          "evidenceRefs": [
+            "diff.optional-argument"
+          ],
+          "outcome": "Mixed change is accepted",
+          "sink": "Closure-only fence",
+          "source": "Caller omission",
+          "summary": "Agent prepares mixed closure/implementation PR -> invokes validator without range -> S10 has no diff -> PASS."
+        },
+        "reachability": {
+          "attacker": "Workspace agent",
+          "entrypoint": "Protected CLI",
+          "evidenceRefs": [
+            "diff.optional-argument"
+          ],
+          "outcome": "Self-accepting implementation change",
+          "preconditions": [
+            "Closure gate does not independently supply or require the range"
+          ],
+          "sink": "Closure decision",
+          "summary": "The worker or human can invoke the documented executable while omitting one optional flag; no protected state is modified."
+        }
+      },
+      "codeEvidence": [
+        {
+          "code": "validate.add_argument(\"--diff\", default=None,\n                      help=\"Git range <base>..<head>; a diff that closes a record may touch closure paths only\")\n...\nreport = validate_plan(args.plan, git_root=args.git_root, schema_path=args.schema,\n                       diff_range=args.diff)",
+          "endLine": 39,
+          "explanation": "The nullable range makes the closure-only oracle caller-optional.",
+          "id": "diff.optional-argument",
+          "label": "Closure diff has a nullable default",
+          "language": "python",
+          "path": "components/research-core/src/devforgeai/checkpoint/__main__.py",
+          "role": "root_control",
+          "startLine": 29
+        }
+      ],
+      "confidence": {
+        "level": "high",
+        "rationale": "The same scratch closure plus implementation change passed with no range and was rejected by S10 when the range was supplied."
+      },
+      "extensions": {
+        "candidateId": "candidate-b1649310efe835ba"
+      },
+      "findingId": "csf_fe6e542c4d97d519509e14a8",
+      "fingerprints": {
+        "algorithm": "codex-security/v1",
+        "primary": "codex-security/v1:sha256:06b0a3c43610d47b2580db121925d56d72c62c41873bf40320fcd4fbadb2235e"
+      },
+      "identity": {
+        "anchor": "closure-diff-check-omittable"
+      },
+      "locations": [
+        {
+          "endLine": 23,
+          "path": "docs/CHECKPOINT.md",
+          "role": "entrypoint",
+          "startLine": 22
+        },
+        {
+          "endLine": 39,
+          "path": "components/research-core/src/devforgeai/checkpoint/__main__.py",
+          "role": "root_control",
+          "startLine": 29
+        }
+      ],
+      "occurrenceId": "occ_9b3ea5ca5cc9150c1ab23c82",
+      "preventiveControls": [
+        "Represent validation mode and immutable base/head as protected invocation context rather than optional user flags."
+      ],
+      "provenance": {
+        "source": "local_plugin"
+      },
+      "remediation": "Make transition validation explicit and mandatory. A protected host should derive or receive an independently pinned base/head pair, refuse a closure transition without it, and reject ranges not matching the reviewed PR base and head.",
+      "remediationTests": [
+        "A closed-record transition without a range must exit 2 or 3, never 0.",
+        "A wrong or caller-substituted range must fail closed.",
+        "A closure-only range passes and a range containing any implementation path rejects."
+      ],
+      "rootCause": {
+        "evidenceRefs": [
+          "diff.optional-argument"
+        ],
+        "summary": "Security-relevant transition context is optional caller input rather than a mandatory property of validating a closed-record change."
+      },
+      "ruleId": "workflow.closure-diff-optional",
+      "severity": {
+        "changeConditions": "Severity would fall if closure mode is derived from the record transition and requires a trusted base/head range supplied by the protected host rather than the workspace caller.",
+        "level": "high",
+        "rationale": "The omission defeats the two-PR closure rule that keeps an AI-authored implementation from manufacturing its own acceptance evidence, directly weakening the framework's decision boundary.",
+        "score": 7.5,
+        "scoringSystem": "CVSS:3.1"
+      },
+      "summary": "S10 only runs when the caller supplies a Git range. PR 20 documents a correct closure command containing `--diff`, but the installed enforcement interface still accepts a closure validation without it, allowing implementation changes and closure metadata to land together without detection.",
+      "taxonomy": {
+        "category": "improper workflow enforcement",
+        "cwe": [
+          "CWE-841"
+        ]
+      },
+      "title": "Omitting `--diff` bypasses the closure-only change fence",
+      "validation": {
+        "assertions": [
+          "Without `--diff`, validation returned exit 0.",
+          "With the exact range, S10 rejected the implementation change with exit 1."
+        ],
+        "disposition": "reportable",
+        "evidence": [
+          "artifacts/05_findings/probe_optional_diff.py"
+        ],
+        "evidenceRefs": [
+          "diff.optional-argument"
+        ],
+        "method": "Committed an implementation change alongside closure metadata in a scratch Git repository and ran both invocation forms.",
+        "status": "confirmed"
+      }
+    },
+    {
+      "attackPath": {
+        "dataflow": {
+          "outcome": "Enforcement integrity loss",
+          "sink": "/usr/local/bin/devforge",
+          "source": "Provider-run probe",
+          "summary": "Probe shell redirection -> writable live executable -> appended byte -> validator corruption."
+        },
+        "reachability": {
+          "attacker": "Unprivileged provider session executing the approved probe",
+          "entrypoint": "Committed probe script",
+          "outcome": "Corruption or dirty state",
+          "preconditions": [
+            "The protection under test is broken or the probe is interrupted"
+          ],
+          "sink": "Live control or canonical repository files",
+          "summary": "The path is reached precisely when installation permissions are wrong; interruption can occur after mutation and before restoration."
+        }
+      },
+      "confidence": {
+        "level": "high",
+        "rationale": "The destructive commands are prescribed verbatim in the changed checkpoint and their failure mode follows directly from shell redirection semantics."
+      },
+      "extensions": {
+        "candidateId": "candidate-fe08100400e1c72e"
+      },
+      "findingId": "csf_4f62296c2326af09a5e982c2",
+      "fingerprints": {
+        "algorithm": "codex-security/v1",
+        "primary": "codex-security/v1:sha256:74d0310a6810ce844bb8529a20eb0cdba4ad2ecda39c3a8e64e7a569e0cfac4f"
+      },
+      "identity": {
+        "anchor": "probe-mutates-live-control"
+      },
+      "locations": [
+        {
+          "endLine": 23,
+          "path": "docs/CHECKPOINT.md",
+          "role": "root_control",
+          "startLine": 20
+        }
+      ],
+      "occurrenceId": "occ_d2867d1276fe54150d921282",
+      "preventiveControls": [
+        "Require negative probes to be idempotent and non-destructive on both expected-pass and expected-fail paths."
+      ],
+      "provenance": {
+        "source": "local_plugin"
+      },
+      "remediation": "For protected files, attempt a write-capable open without writing and close immediately; any successful open fails the probe while preserving bytes. Prefer a root-owned versioned canary when ACL behavior must be tested. Perform all project-local hostile mutations in provider-specific disposable fixture worktrees with traps and before/after digests; never edit the canonical checkout.",
+      "remediationTests": [
+        "Misconfigured writable canary is detected while its digest stays unchanged.",
+        "Abrupt probe termination leaves protected and canonical trees byte-identical.",
+        "Claude and Codex use distinct clean worktrees pinned to the same commit."
+      ],
+      "rootCause": {
+        "summary": "The proof assumes the security control works before testing whether it works, so its failure path is mutating rather than observational."
+      },
+      "ruleId": "test-safety.destructive-security-probe",
+      "severity": {
+        "changeConditions": "Severity would fall to informational when probes use non-writing open checks or disposable root-owned canaries and mutate only synthetic isolated fixture repositories.",
+        "level": "medium",
+        "rationale": "Exploitation is limited to a deliberately run proof session, but failure causes integrity loss in the enforcement binary or shared workspace and can invalidate all later evidence.",
+        "score": 6.0,
+        "scoringSystem": "CVSS:3.1"
+      },
+      "summary": "PR 20 tells provider sessions to append bytes to `/usr/local/bin/devforge` and edit canonical staged validator/schema files. If root ownership or permissions are wrong\u2014the exact condition being tested\u2014the first operation corrupts the protected executable. An interrupted restore can also leave the repository modified or overwrite another session's changes.",
+      "taxonomy": {
+        "category": "unsafe security test",
+        "cwe": [
+          "CWE-693"
+        ]
+      },
+      "title": "The proposed negative probe can corrupt the live control it tests",
+      "validation": {
+        "assertions": [
+          "A successful append means the test has already changed the executable.",
+          "Canonical checkout edits require a restore and can collide with concurrent work."
+        ],
+        "disposition": "reportable",
+        "evidence": [
+          "docs/CHECKPOINT.md:20-23"
+        ],
+        "method": "Reviewed the prescribed shell and repository mutations against their stated negative-test purpose.",
+        "status": "confirmed"
+      }
+    }
+  ],
+  "scanId": "devforgeai-pr20-security-review",
+  "schemaVersion": "1.0"
+}
