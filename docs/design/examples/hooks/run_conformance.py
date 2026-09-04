@@ -359,6 +359,28 @@ def materialize(root: Path, spec):
     if spec == "CODEX_RUN":
         return event("PreToolUse", "Bash", {"command": "devforgeai run test"},
                      cwd=str(croot(root))), cleanup
+    if spec.startswith("GIT_C_"):
+        # D17 item 1: read-only git is named with -C <candidate.root>, because a
+        # worker's cwd is the canonical checkout.
+        target = croot(root)
+        lease = record(root).get("lease") or {}
+        holder = {"agent_id": lease.get("agent_id", ""), "agent_type": lease.get("agent", "")}
+        cases = {
+            "GIT_C_ROOT_STATUS_JUDGE": (f"git -C {target} status --short", SMOKE),
+            "GIT_C_ROOT_DIFF_PRODUCER": (f"git -C {target} diff --stat", holder),
+            "GIT_C_ROOT_LOG_PRIMARY": (f"git -C {target} log --oneline -3", None),
+            "GIT_C_ATTACHED_ROOT": (f"git -C{target} status", SMOKE),
+            "GIT_C_CANONICAL": (f"git -C {root} status --short", holder),
+            "GIT_C_ELSEWHERE": ("git -C /tmp status", holder),
+            "GIT_C_ROOT_COMMIT": (f"git -C {target} commit -m x", holder),
+            "GIT_C_ROOT_RESET": (f"git -C {target} reset --hard", holder),
+            "GIT_C_ROOT_OUTPUT": (f"git -C {target} diff --output=x", holder),
+            "GIT_C_TWICE": (f"git -C {target} -C /tmp status", holder),
+            "GIT_C_LATE": (f"git status -C {target}", holder),
+            "GIT_C_NO_PATH": ("git -C", holder),
+        }
+        command, sub = cases[spec]
+        return event("PreToolUse", "Bash", {"command": command}, sub), cleanup
     if spec.startswith("WRITE_"):
         target = croot(root)
         subs = {"WRITE_EVIDENCE": SMOKE, "WRITE_EVIDENCE_FOREIGN": SMOKE}
@@ -2825,6 +2847,20 @@ DISPATCHER_CASES = [
     ("git branch delete denied", 2, event("PreToolUse", "Bash", {"command": "git branch -D main"}, RED), "red", "claude"),
     ("git output option denied", 2, event("PreToolUse", "Bash", {"command": "git diff --output=tests/test_text.py"}, RED), "red", "claude"),
     ("chained rm denied", 2, event("PreToolUse", "Bash", {"command": "git status && rm -rf tests"}, RED), "red", "claude"),
+    # D17 item 1: `git -C <candidate.root>` is the worker's read-only route
+    ("judge reads git status with -C the candidate root", 0, "GIT_C_ROOT_STATUS_JUDGE", "smoke", "claude"),
+    ("producer reads git diff with -C the candidate root", 0, "GIT_C_ROOT_DIFF_PRODUCER", "red", "claude"),
+    ("primary reads git log with -C the candidate root", 0, "GIT_C_ROOT_LOG_PRIMARY", "red", "claude"),
+    ("attached -C<root> form accepted", 0, "GIT_C_ATTACHED_ROOT", "smoke", "codex"),
+    ("git -C the canonical checkout denied to a worker", 2, "GIT_C_CANONICAL", "red", "claude"),
+    ("git -C the canonical checkout denied on Codex, where PreToolUse carries no identity", 2, "GIT_C_CANONICAL", "red", "codex"),
+    ("git -C elsewhere denied", 2, "GIT_C_ELSEWHERE", "red", "codex"),
+    ("git -C root commit denied", 2, "GIT_C_ROOT_COMMIT", "red", "claude"),
+    ("git -C root reset denied", 2, "GIT_C_ROOT_RESET", "red", "claude"),
+    ("git -C root with --output denied", 2, "GIT_C_ROOT_OUTPUT", "red", "claude"),
+    ("a second -C denied", 2, "GIT_C_TWICE", "red", "claude"),
+    ("-C after the subcommand denied", 2, "GIT_C_LATE", "red", "claude"),
+    ("bare git -C denied", 2, "GIT_C_NO_PATH", "red", "claude"),
 
     # Sequencer grammar as seen by the Bash gate.
     ("primary status allowed", 0, event("PreToolUse", "Bash", {"command": "devforgeai status"}), "red", "claude"),
@@ -3028,7 +3064,42 @@ def granted_keys_backstop() -> tuple[bool, str]:
                     f"{build_out.strip()}\n{narrow_out.strip()}\n{none_out.strip()}")
 
 
+def oracle_record_backstop() -> tuple[bool, str]:
+    """D17 item 4: `<phase>-result.json#oracle` and the report's `## Oracle` come from
+    the sequencer's own ingest-time run, never from the worker's note."""
+    root = started_project("oracle")
+    code, output = deliver(root, RED, "red", {"tests/test_text.py": RED_TEXT},
+                           note="devforgeai run test: 99 passed, classification PASS")
+    result = json.loads((root / ".devforgeai/work/STORY-001/red-result.json").read_text())
+    report = (root / ".devforgeai/work/STORY-001/red-report.md").read_text()
+    oracle = result.get("oracle") or {}
+    runs = oracle.get("runs") or []
+    section = report.split("## Oracle", 1)[-1] if "## Oracle" in report else ""
+    rec = record(root)
+    passed = all((
+        code == 0,
+        oracle.get("kind") == "red" and oracle.get("verdict") == "pass",
+        oracle.get("checkpoint_read") == "base",
+        len(runs) == 1 and runs[0]["key"] == "test",
+        runs[0]["classification"] == "EXPECTED_TEST_FAILURE",
+        [t["status"] for t in runs[0]["tests"]] == ["failed", "failed", "failed"],
+        [t["criterion"] for t in runs[0]["tests"]] == [1, 2, 3],
+        "## Oracle problems" not in report,
+        "test: EXPECTED_TEST_FAILURE" in section,
+        "criterion 1 test_slugify_basic: failed" in section,
+        "99 passed" not in section,          # the worker's note never reaches the section
+        "99 passed" in report.split("## Oracle", 1)[0],   # but is still in ## Note
+        "_oracle_runs" not in rec,           # the scratch list never reaches run.yaml
+        rec["phase"] == "green",
+    ))
+    return passed, (f"stop={code} kind={oracle.get('kind')} verdict={oracle.get('verdict')} "
+                    f"runs={[(r['key'], r['classification']) for r in runs]} phase={rec.get('phase')}\n"
+                    f"{section.strip()[:300]}")
+
+
 BACKSTOPS = [
+    ("the oracle record is the sequencer's own run, rendered as ## Oracle, never the worker's note",
+     oracle_record_backstop),
     ("granted_keys is run_keys ∩ commands.use, stored once, printed and enforced alike",
      granted_keys_backstop),
     ("the oracle catches ORM drift inside the candidate root", transition_backstop),

@@ -399,27 +399,52 @@ def check_research(argv: list[str], in_subagent: bool) -> None:
 
 
 def check_git(enf: dict, argv: list[str], ev: dict) -> None:
-    """Read-only git inside the candidate root; every mutating form is denied."""
-    subcommand = argv[1] if len(argv) > 1 else ""
+    """Read-only git inside the candidate root; every mutating form is denied.
+
+    A worker's cwd is the canonical checkout (a subagent inherits the primary's),
+    so the root is named with `-C <candidate.root>`: accepted once, only as the
+    first option, and only for that exact path (D17 item 1). `-C` anywhere else,
+    or naming any other path, is denied.
+    """
+    args = argv[1:]
+    target: Path | None = None
+    if args and args[0] == "-C":
+        if len(args) < 2:
+            raise Block("git -C needs a path, and the only admitted path is the candidate root")
+        target, args = Path(args[1]), args[2:]
+    elif args and args[0].startswith("-C"):
+        target, args = Path(args[0][2:]), args[1:]
+    subcommand = args[0] if args else ""
     if subcommand not in GIT_READ_ONLY:
         raise Block(
             f"git {subcommand or '(no subcommand)'} mutates history or the tree; the sequencer "
             "owns the candidate root's branch, its checkpoints and its promotion"
         )
     dangerous = ("--config-env", "--exec", "--ext-diff", "--output", "--textconv")
-    if any(arg == "-c" or arg.startswith(dangerous) for arg in argv[2:]):
+    if any(arg == "-c" or arg.startswith(dangerous) for arg in args[1:]):
         raise Block("git option can execute a helper or write output and is denied")
-    if enf.get("run"):
-        root = candidate_root(enf)
-        cwd = Path(str(ev.get("cwd") or root)).resolve()
-        try:
-            cwd.relative_to(root)
-        except ValueError:
-            if ev.get("agent_id") or ev.get("agent_type"):
-                raise Block(
-                    f"a phase worker reads git inside its candidate root ({root}), not in the "
-                    "canonical checkout"
-                ) from None
+    if any(arg == "-C" or arg.startswith("-C") for arg in args[1:]):
+        raise Block("git -C is admitted once, before the subcommand, naming the candidate root")
+    if not enf.get("run"):
+        if target is not None:
+            raise Block("git -C names a candidate root, and no run is active")
+        return
+    root = candidate_root(enf)
+    if target is not None:
+        if target.resolve() != Path(root).resolve():
+            raise Block(
+                f"git -C must name the candidate root {root}; {target} is not it"
+            )
+        return
+    cwd = Path(str(ev.get("cwd") or root)).resolve()
+    try:
+        cwd.relative_to(root)
+    except ValueError:
+        if ev.get("agent_id") or ev.get("agent_type"):
+            raise Block(
+                f"a phase worker reads git inside its candidate root: run "
+                f"`git -C {root} <subcommand>`, not git in the canonical checkout"
+            ) from None
 
 
 def check_bash(enf: dict, command: str, in_subagent: bool, agent_type: str,

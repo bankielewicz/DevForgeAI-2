@@ -1520,6 +1520,80 @@ def write_json_atomic(path: Path, value: dict) -> None:
     os.replace(tmp, path)
 
 
+def record_oracle_run(e: dict, outcome: dict) -> None:
+    """Append one brokered run to the ingest-time oracle record (D17 item 4).
+
+    Sequencer-owned: it comes from the sequencer's own `run_key` at ingest, never
+    from a worker's note. `<phase>-result.json#oracle` and the report's
+    `## Oracle` section are rendered from it.
+    """
+    junit = outcome.get("junit") or {}
+    tests = []
+    if outcome["key"] == "test":
+        tests = [{"criterion": row["criterion"], "name": row["name"], "status": junit.get(row["name"])}
+                 for row in e.get("test_plan") or []]
+    e.setdefault("_oracle_runs", []).append({
+        "key": outcome["key"],
+        "classification": outcome["classification"],
+        "exit": outcome["exit"],
+        "counts": outcome.get("counts") or {},
+        "tests": tests,
+    })
+
+
+def oracle_record(e: dict, problems: list[str]) -> dict:
+    """The transition check as the sequencer performed it, for the result file."""
+    kind = (phase_spec(e["skill"], e["phase"]) or {}).get("oracle", "report_only")
+    runs = e.pop("_oracle_runs", [])
+    if any(p.startswith("COULD_NOT_RUN") for p in problems):
+        verdict = "could_not_run"
+    else:
+        verdict = "pass" if not problems else "fail"
+    record = {
+        "kind": kind,
+        "phase": e["phase"],
+        "checkpoint_read": (e.get("candidate") or {}).get("checkpoint"),
+        "runs": runs,
+        "problems": list(problems),
+        "verdict": verdict,
+    }
+    if not runs:
+        record["carried_forward"] = e.get("last_oracle")
+    return record
+
+
+def render_oracle_section(oracle: dict | None, problems: list[str] | None) -> list[str]:
+    """`## Oracle`, from the sequencer's record only: the keys it brokered at ingest,
+    each classification and exit, the per-criterion outcomes, and the problem rows
+    that decided the verdict. Nothing here is copied from the worker's note."""
+    lines = ["## Oracle", ""]
+    if oracle:
+        lines.append(
+            f"- kind: {oracle.get('kind')}; read at checkpoint {oracle.get('checkpoint_read')}; "
+            f"verdict: {oracle.get('verdict')}"
+        )
+        for run in oracle.get("runs") or []:
+            counts = run.get("counts") or {}
+            summary = ", ".join(f"{k} {v}" for k, v in sorted(counts.items())) or "no counts"
+            lines.append(f"- {run['key']}: {run['classification']}, exit {run['exit']} ({summary})")
+            for row in run.get("tests") or []:
+                lines.append(
+                    f"  - criterion {row['criterion']} {row['name']}: {row['status'] or 'not found'}"
+                )
+        if not oracle.get("runs"):
+            carried = oracle.get("carried_forward") or {}
+            lines.append(
+                "- no key brokered at this phase"
+                + (f"; last sequencer oracle: {carried.get('key')} {carried.get('classification')}, "
+                   f"exit {carried.get('exit')}" if carried else "")
+            )
+    else:
+        lines.append("- no oracle record: the receipt was refused before the transition check ran")
+    for p in problems or []:
+        lines.append(f"- problem: {p}")
+    return lines + [""]
+
+
 def write_phase_report(e: dict, result: dict, problems: list[str] | None = None) -> Path:
     path = work(e["run"]) / f"{e['phase']}-report.md"
     lines = [
@@ -1550,8 +1624,7 @@ def write_phase_report(e: dict, result: dict, problems: list[str] | None = None)
                   f"- persisted verbatim at {result['findings_path']}", ""]
     if result.get("evidence_refs"):
         lines += ["## Evidence", ""] + [f"- {ref}" for ref in result["evidence_refs"]] + [""]
-    if problems:
-        lines += ["## Oracle problems", ""] + [f"- {p}" for p in problems] + [""]
+    lines += render_oracle_section(result.get("oracle"), problems)
     path.write_text("\n".join(lines))
     return path
 
@@ -1599,6 +1672,7 @@ def compiled_build(e: dict) -> list[str]:
     if "build" not in ((e.get("commands") or {}).get("use") or []):
         return ["compiled stack section requires the run to authorise the build key"]
     outcome = run_key(e, "build")
+    record_oracle_run(e, outcome)
     if outcome["classification"] in ("INFRA_FAILURE", "TIMEOUT"):
         return ["COULD_NOT_RUN: " + outcome["output"].strip().splitlines()[-1]]
     if outcome["exit"] != 0:
@@ -1613,6 +1687,7 @@ def check_red(e: dict) -> list[str]:
     if any(p.startswith("COULD_NOT_RUN") for p in problems):
         return problems
     outcome = run_key(e, "test")
+    record_oracle_run(e, outcome)
     e["last_oracle"] = {k: outcome[k] for k in ("key", "classification", "exit")}
     if outcome["classification"] in ("INFRA_FAILURE", "TIMEOUT"):
         return ["COULD_NOT_RUN: " + outcome["output"].strip().splitlines()[-1]]
@@ -1641,6 +1716,7 @@ def check_red(e: dict) -> list[str]:
         problems.append(f"tests outside test_plan: {sorted(extra)}")
     if not problems:
         e["last_oracle"]["classification"] = "EXPECTED_TEST_FAILURE"
+        e["_oracle_runs"][-1]["classification"] = "EXPECTED_TEST_FAILURE"
     hashes = candidate_hashes(e)
     e["red_hashes"] = {t: hashes.get(t) for t in e["test_paths"]}
     return problems
@@ -1657,6 +1733,7 @@ def check_green(e: dict, phase: str) -> list[str]:
     if any(p.startswith("COULD_NOT_RUN") for p in problems):
         return problems
     outcome = run_key(e, "test")
+    record_oracle_run(e, outcome)
     e["last_oracle"] = {k: outcome[k] for k in ("key", "classification", "exit")}
     if outcome["classification"] in ("INFRA_FAILURE", "TIMEOUT"):
         return ["COULD_NOT_RUN: " + outcome["output"].strip().splitlines()[-1]]
@@ -1675,6 +1752,7 @@ def check_green(e: dict, phase: str) -> list[str]:
             )
     if phase == "refactor" and "lint" in ((e.get("commands") or {}).get("use") or []):
         lint = run_key(e, "lint")
+        record_oracle_run(e, lint)
         if lint["classification"] in ("INFRA_FAILURE", "TIMEOUT"):
             problems.append("COULD_NOT_RUN: " + lint["output"].strip().splitlines()[-1])
         elif lint["exit"] != 0:
@@ -2871,7 +2949,16 @@ def advance(state: dict, e: dict, result: dict | None = None) -> None:
         return block(state, e, [reason], "REQUIRE_HUMAN")
 
     problems = list(result.get("pre_oracle_problems") or [])
-    problems += run_oracle(e, result)
+    e["_oracle_runs"] = []
+    try:
+        problems += run_oracle(e, result)
+    except BaseException:
+        e.pop("_oracle_runs", None)      # the scratch list never reaches run.yaml
+        raise
+    # The record is the sequencer's own account of the check it just ran; it is
+    # written to the result file before anything else reads it (D17 item 4).
+    result["oracle"] = oracle_record(e, problems)
+    write_json_atomic(work(e["run"]) / f"{phase}-result.json", result)
     if result["status"] != "pass":
         problems.insert(0, f"{result['agent']} reported {result['status']}")
     write_phase_report(e, result, problems)
