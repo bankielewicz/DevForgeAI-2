@@ -1,0 +1,140 @@
+# DevForgeAI error taxonomy. DRAFT 2026-09-04, taxonomy_version 2.
+#
+# The one closed vocabulary for every outcome the framework reports: hook
+# decisions, sequencer refusals, worker statuses and reason codes, oracle
+# classifications, gate policies, run states and the phase outcome a human sees.
+# Runtime code reads this file; docs cite it. A code not listed here is a bug
+# in the emitter, not a new category. Adding a code is a taxonomy_version bump
+# once this file is released. Version 2 adds the PR range run and its external
+# completion state without changing the frozen version-1 promotion candidate.
+#
+# Installed to .devforgeai/contracts/error-taxonomy-v2.yaml (see README.md).
+# Validated by schemas/devforgeai/v2/error-taxonomy.schema.json.
+#
+# Every code carries:
+#   layer     which component emits it
+#   emitter   the operation or event that produces it
+#   meaning   one sentence, no synonyms elsewhere
+#   protocol  how it reaches the caller (exit code, stderr, JSON field, file)
+#   outcome   the phase-level outcome it rolls up to (see phase_outcomes)
+#   next      the recovery route, as the handoff prints it
+taxonomy_version: 2
+
+# Phase-level outcomes. This is the roll-up every lower code maps to, and the
+# only vocabulary a handoff's `outcome` line and a human need. The three
+# failure-shaped values are deliberately distinct (research decision D-023):
+#   COULD_NOT_RUN  the phase could not validly start or execute because a
+#                  required capability, tool or environment was unavailable
+#   INFRA_FAILURE  execution was attempted and a harness, runner, resource or
+#                  timeout fault made the verdict invalid
+#   BLOCKED        the phase can execute but cannot complete without an external
+#                  decision, authority, dependency, conflict or input
+phase_outcomes:
+  COMPLETE:       {meaning: "every check passed and the run is ready_to_promote, promoted, or complete_external"}
+  NEEDS_DECISION: {meaning: "a worker or gate asked the user something; the run stays active at blocked_at"}
+  BLOCKED:        {meaning: "the phase can run but an external condition stops it: attempt limit, lease, fence, base moved, dirty target"}
+  FAILED:         {meaning: "a check or oracle produced a verdict of failure that the framework does not retry"}
+  COULD_NOT_RUN:  {meaning: "a prerequisite was unavailable before any check could execute"}
+  INFRA_FAILURE:  {meaning: "a check was attempted and its harness, runner or timeout invalidated the verdict"}
+
+# Process exit codes of the `devforgeai` command (10 section 2). Fixed.
+exit_codes:
+  # keys are quoted: the schema requires string property names, and a YAML
+  # loader in any language would otherwise read them as integers
+  "0": {meaning: "done, or no decision", protocol: "exit"}
+  "1": {meaning: "refused: a precondition or invariant did not hold; the reason row on stderr names a sequencer_refusal", protocol: "exit + stderr"}
+  "2": {meaning: "usage: unknown operation, bad arguments, malformed stdin", protocol: "exit + stderr"}
+  "3": {meaning: "could not run: a runner, git, or a hook prerequisite is missing", protocol: "exit + stderr", outcome: COULD_NOT_RUN}
+
+# Provider hook layer (components/hook-runtime). What a hook may say back.
+hook_decisions:
+  none:    {meaning: "no decision; the host's normal permission flow applies", protocol: "exit 0, no stdout"}
+  deny:    {meaning: "the action must not run", protocol: "exit 2, reason on stderr", outcome: BLOCKED}
+  ask:     {meaning: "the user decides", protocol: "exit 0, JSON hookSpecificOutput.permissionDecision=ask", outcome: NEEDS_DECISION}
+  context: {meaning: "information for the model, no decision", protocol: "exit 0, JSON hookSpecificOutput.additionalContext"}
+  # `allow` is intentionally absent: it bypasses the user's permission prompt.
+
+# How the hook layer itself fails, and what that becomes.
+hook_failures:
+  check_error_critical:  {meaning: "a critical check raised", becomes: deny, protocol: "exit 2 + stderr 'check failed closed'", outcome: BLOCKED}
+  check_error_advisory:  {meaning: "a non-critical check raised", becomes: none, protocol: "log line with error"}
+  malformed_input:       {meaning: "stdin was not a hook event", becomes: deny, protocol: "exit 2 + stderr", outcome: BLOCKED}
+  budget_exceeded:       {meaning: "a check hit the wall-clock alarm before the host timeout", becomes: deny, protocol: "exit 2 + stderr", outcome: BLOCKED}
+  host_fail_open:        {meaning: "the host ran the tool because the hook timed out, errored without exit 2, or was disabled; the framework cannot see this at the time", becomes: none, protocol: "invisible; caught later by DIRTY_TARGET or the promotion diff", outcome: BLOCKED}
+
+# Sequencer refusals (10 section 2). Exit 1 with the token first on stderr.
+sequencer_refusals:
+  STORY_IN_FLIGHT:  {emitter: "phase start", meaning: "a run that is active or ready_to_promote already names this story", outcome: BLOCKED, next: "finish or promote that run, or `devforgeai phase fail --reason` to abandon it"}
+  FENCE_OVERLAP:    {emitter: "phase start", meaning: "the requested write_fence intersects an active or ready_to_promote run's fence, producer-exception paths included", outcome: BLOCKED, next: "wait for that run, or re-slice the story"}
+  LEASE_HELD:       {emitter: "SubagentStart", meaning: "a producer already holds the run's write lease", outcome: BLOCKED, next: "let the lease holder finish; the sequencer releases it at ingest"}
+  UNCLAIMED_CHANGE: {emitter: "ingest-result", meaning: "the checkpoint diff contains a path the receipt did not claim, or a path outside the fence", outcome: FAILED, next: "the phase retries with the paths named; attempts increment"}
+  STALE_BASE:       {emitter: "promote", meaning: "canonical HEAD (worktree mode) or the canonical manifest (copy mode) no longer matches candidate.base_ref", outcome: BLOCKED, next: "worktree mode: the sequencer rebases once and retries; copy mode: resolve the named paths, then `devforgeai promote <run>`"}
+  MERGE_CONFLICT:   {emitter: "promote", meaning: "the rebase inside the root conflicted, or the rebased candidate failed its last oracle; the rebase was aborted", outcome: BLOCKED, next: "resolve the named canonical paths, then `devforgeai promote <run>`"}
+  DIRTY_TARGET:     {emitter: "promote", meaning: "a canonical file among the changed paths has uncommitted edits, or a canonical path outside the change set became dirty since candidate open", outcome: BLOCKED, next: "commit or discard the named canonical edits, then `devforgeai promote <run>`"}
+  NO_CANDIDATE:     {emitter: "promote, candidate abandon", meaning: "the named run has no candidate root", outcome: BLOCKED, next: "check `devforgeai status`; the run may be promoted or abandoned already"}
+  PR_RANGE:         {emitter: "phase start pr, PR completion", meaning: "the supplied full commit range or repository identity did not satisfy the exact-range gate", outcome: BLOCKED, next: "correct the named repository or pin defect and invoke `/pr` with current full commit IDs"}
+  PR_DRAFT_PATHS:   {emitter: "PR draft oracle", meaning: "the draft changed a path outside the two fixed PR artifact paths, omitted one, or added an extra path", outcome: FAILED, next: "retry pr_drafter with only the fixed title and body paths"}
+  PR_TITLE:         {emitter: "PR draft oracle", meaning: "the title was empty, multiline, untrimmed, or longer than 72 characters", outcome: FAILED, next: "retry pr_drafter with one conforming title line"}
+  PR_BODY:          {emitter: "PR draft oracle", meaning: "the body lacked ordered required headings, full commit pins, or contained unresolved placeholder text", outcome: FAILED, next: "retry pr_drafter with the fixed body contract"}
+  PR_ENCODING:      {emitter: "PR draft oracle", meaning: "one of the two draft artifacts was absent, unreadable, or not UTF-8", outcome: FAILED, next: "retry pr_drafter with two readable UTF-8 files"}
+  PR_PACKET:        {emitter: "PR external completion", meaning: "the installed packet schema was unavailable or the generated packet failed it", outcome: BLOCKED, next: "restore the digest-pinned schema or correct the sequencer packet defect before retrying"}
+  REFUSED:          {emitter: "any", meaning: "a precondition not covered by a named token did not hold; stderr carries the specific reason", outcome: BLOCKED, next: "as stderr says"}
+
+# What a worker's receipt may say (10 section 5).
+worker_statuses:
+  pass:          {meaning: "the worker believes the phase's work is done; the sequencer verifies", outcome: COMPLETE}
+  fail:          {meaning: "the worker could not finish; with `next`, a rewind request", outcome: FAILED}
+  needs_user:    {meaning: "a human decision is required; never retried", outcome: NEEDS_DECISION}
+  could_not_run: {meaning: "the worker could not attempt the work; reason_code says why", outcome: "by reason_code"}
+
+worker_reason_codes:
+  runner_missing: {meaning: "a stack command's runner is absent", outcome: COULD_NOT_RUN, gate_policy_key: test_runner_missing}
+  timeout:        {meaning: "a granted command exceeded its budget", outcome: INFRA_FAILURE}
+  network:        {meaning: "a granted command needed the network and had none", outcome: INFRA_FAILURE}
+  hook_fault:     {meaning: "the sequencer synthesised the result because a hook event lacked identity or the receipt was malformed; reserved for those two causes", outcome: INFRA_FAILURE}
+  prerequisite_missing: {meaning: "a project prerequisite for the candidate mode is absent (git HEAD, ignored .devforgeai/work, tracked settings or stack.yaml); sequencer-synthesised at phase start", outcome: COULD_NOT_RUN}
+  checkpoint_fault:     {meaning: "the sequencer could not take or diff a checkpoint; sequencer-synthesised at ingest", outcome: INFRA_FAILURE}
+  provider_tool_refused: {meaning: "the provider refused a tool call before any DevForgeAI hook ran, so the worker could not attempt the work", outcome: INFRA_FAILURE}
+
+# Oracle classifications of a brokered stack command (10 section 3).
+oracle_classifications:
+  PASS:                  {meaning: "the command exited 0 and, when a JUnit file is declared, every test passed"}
+  EXPECTED_TEST_FAILURE: {meaning: "red oracle: every required test failed on its assertion", outcome: COMPLETE}
+  TEST_FAILURE:          {meaning: "a test failed where the oracle required a pass", outcome: FAILED}
+  NO_TESTS:              {meaning: "junit_path present but no test cases", outcome: FAILED}
+  COLLECTION_ERROR:      {meaning: "tests did not collect or the JUnit file did not parse", outcome: FAILED}
+  INFRA_FAILURE:         {meaning: "the runner itself failed", outcome: INFRA_FAILURE}
+  TIMEOUT:               {meaning: "the command exceeded timeout_s", outcome: INFRA_FAILURE}
+
+# Gate policy: a defect-to-action map an artifact author sets (10 section 3).
+gate_policies:
+  BLOCK:         {meaning: "the transition fails; the run stays active for retry within attempts"}
+  REQUIRE_HUMAN: {meaning: "the run blocks at the phase with blocked_at set; a human acts, then `phase start` resumes"}
+  WARN:          {meaning: "recorded and relabelled; the run continues"}
+  "OFF":         {meaning: "not checked"}
+
+# Run states in canonical state.yaml#runs (10 section 12).
+run_states:
+  active:           {meaning: "a phase is running, or the run is blocked at blocked_at"}
+  ready_to_promote: {meaning: "the last phase passed; nothing reaches canonical until `devforgeai promote <run>`"}
+  promoted:         {meaning: "the candidate was fast-forwarded or copied into canonical"}
+  complete_external: {meaning: "the sequencer persisted an external-action packet and removed the candidate without promotion"}
+  abandoned:        {meaning: "`phase fail --reason` removed the root; run.yaml survives"}
+
+# Roll-up rules the handoff renderer applies, first match wins.
+rollup:
+  - {when: "run_state == promoted", outcome: COMPLETE}
+  - {when: "run_state == ready_to_promote", outcome: COMPLETE}
+  - {when: "run_state == complete_external", outcome: COMPLETE}
+  - {when: "worker_status == needs_user", outcome: NEEDS_DECISION}
+  - {when: "worker_status == could_not_run and reason_code == runner_missing", outcome: COULD_NOT_RUN}
+  - {when: "worker_status == could_not_run", outcome: INFRA_FAILURE}
+  - {when: "oracle in (INFRA_FAILURE, TIMEOUT)", outcome: INFRA_FAILURE}
+  - {when: "sequencer_refusal == UNCLAIMED_CHANGE or oracle in (TEST_FAILURE, NO_TESTS, COLLECTION_ERROR)", outcome: FAILED}
+  - {when: "any sequencer_refusal, hook deny, attempt limit or lease condition", outcome: BLOCKED}
+
+# Divergences carried into taxonomy_version 2; each needs a later governed change.
+open_items:
+  - "10 section 3 folds timeout/network/hook_fault/provider_tool_refused into one worker status `could_not_run`; the roll-up above splits them into INFRA_FAILURE while keeping the wire format. Decide whether the receipt gains an explicit `infra_failure` status."
+  - "10 section 6 handoff `outcome` uses `pass|BLOCK|REQUIRE_HUMAN|WARN|OFF` (a gate-policy vocabulary); phase_outcomes above is the human-facing set. Decide whether handoff carries both or migrates."
+  - "hook_failures.host_fail_open has no emitter; it is inferred at promotion. Decide whether SessionStart should record hook health so its absence is reportable."

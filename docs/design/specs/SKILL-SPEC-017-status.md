@@ -9,22 +9,22 @@ author: "DevForgeAI spec author (wave 2)"
 date: 2026-09-02
 depends_on:
   - source: docs/design/10-sequencer-and-contracts.md#2-cli-grammar
-    hash: sha256:808848a3cd77c93dfa2a03846c5e1619417f20e8d05482cfb94a7aecd26be5da
+    hash: sha256:3162dcab3fffc6dd2aa362e73bc14d7591348f74d8d447d2b831a58910c10eec
     excerpt: |
       | `devforgeai status` | none | none | nothing | `0` | model |
   - source: docs/design/10-sequencer-and-contracts.md#9-enforcement-block
-    hash: sha256:c4ef5db527d878b1b1302d8912abfe770cc2f5da41917033dba11494461dcfbf
+    hash: sha256:c9d19b1d5b6ca97110a14668d937b2011b0003412eb7680db35296c629af5c0d
     excerpt: "`.devforgeai/work/<run>/run.yaml`, `schemas/devforgeai/v1/run.schema.json`. Written by the sequencer at `devforgeai phase start` and updated at every transition. It outlives the candidate root: promotion and abandonment remove the root, branch, tags and copy-aside, and leave `run.yaml` with the final status so `devforgeai status`, inspection and `NO_CANDIDATE` still resolve."
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:52cf474c332c7d8a02ad1b1abac51d852d5f54c30bf5126deb8a5b18cde77206
+    hash: sha256:fa55ff391a00f9b6c93ab76cd26b305bc16b2617aa714f90501b571e8f68f32f
     excerpt: |
       | 7 | The run-end block and the `devforgeai status` block are the same rendering of the same file. |
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:7c1d67f1154e49247e5dc178fcc1512bdbd53af378c360aeafe69bffed1136ab
+    hash: sha256:ac18004be37ef017e4d4abf8c6303e096d64dbbc0ae0c37e6288230473caaf66
     excerpt: |
       | status | none | — | none; the command is a thin wrapper over `devforgeai status` |
   - source: docs/design/01-skill-anatomy.md#state-file
-    hash: sha256:b6afd02f6be66c6d1f475f84e66e384d4613a92706e71e849dc091610de8b25a
+    hash: sha256:5ff3d2480bc71373ac10df92968dc548ead129769b4e1c2227acff93905540c5
     excerpt: "`/status` renders this file. Only the `devforgeai` sequencer writes it, and only at `phase start` (registering the run), at promotion or abandonment, and at `phase fail`; Research state is written only by Research Core."
   - source: docs/design/01-skill-anatomy.md#handoff-template
     hash: sha256:69eaf61097311ab55d3f940d03a4d1694e58658a11da3f41cd12a51d216b762a
@@ -35,15 +35,15 @@ depends_on:
     excerpt: |
       - Zero LLM workers. `SKILL.md` is a thin wrapper over `devforgeai status`, which renders `.devforgeai/work/<run>/handoff.json` and the `next` recorded in `state.yaml`. It writes nothing.
   - source: docs/design/02-skill-roster.md#handoff-decision-tables
-    hash: sha256:1dac784b4670cc7559f323011dfe304dfe8c0baf349063162f90d76d902c5d3c
+    hash: sha256:d05a2cd65bcfabdfae43ce112a3b0b26019ad9a38bea5256c8a049e922d03d16
     excerpt: |
       | status | any | the `next` recorded in `state.yaml`; status decides nothing itself |
   - source: docs/design/11-artifact-registry.md#4-upstream-and-downstream-per-skill
-    hash: sha256:cfcaef76005176490e96b9e67c8fa4f0b7a6a2e13b6badf856468881fbe25200
+    hash: sha256:b2725079ec12ced201d2d57c7ddcb9819d7a4617feb5d6692d48c4fd6f3b06c5
     excerpt: |
       | status | — | `state.yaml`, `handoff.json` | nothing | — |
   - source: docs/design/05-subagent-sets.md#sets-per-skill
-    hash: sha256:f2957217c9af147e4a7ea03749cbe6efda266bd56d403f39aa25c9a655872609
+    hash: sha256:2bb8ba434c56127d48d09179d742bf0f2f284f18363e7c2e911b1f2211ba3a7e
     excerpt: |
       | status | none; `SKILL.md` is a thin wrapper over `devforgeai status` |
   - source: docs/design/12-post-mvp.md#pm-05
@@ -695,6 +695,6 @@ The DevForgeAI `skill-validator` checks for anatomy skills — all sub-phase kin
 | `docs/design/01-skill-anatomy.md#handoff-template` | sha256:69eaf61097311ab55d3f940d03a4d1694e58658a11da3f41cd12a51d216b762a | sections 6 (assets template), 8, 9 |
 | `docs/design/02-skill-roster.md#status` | sha256:8968e9247f9909e6289d81f659686f5a38eb79169c8a1ae9ce955537c5d01c1b | sections 2, 9 (the handoff.json claim) |
 | `docs/design/02-skill-roster.md#handoff-decision-tables` | sha256:c0893be957755c72c7cd3f92ac38d90455ee02aec7ed2f672fbe8c6dc6ac142c | section 7 (handoff outcomes) |
-| `docs/design/11-artifact-registry.md#4-upstream-and-downstream-per-skill` | sha256:cfcaef76005176490e96b9e67c8fa4f0b7a6a2e13b6badf856468881fbe25200 | sections 6 (outputs), 11 |
+| `docs/design/11-artifact-registry.md#4-upstream-and-downstream-per-skill` | sha256:b2725079ec12ced201d2d57c7ddcb9819d7a4617feb5d6692d48c4fd6f3b06c5 | sections 6 (outputs), 11 |
 | `docs/design/05-subagent-sets.md#sets-per-skill` | sha256:9e12f3beb236a025c18d40e741c09ba675bd71d2d87f56e2b205c7556b944bf9 | sections 7 (no workers), 8 |
 | `docs/design/12-post-mvp.md#pm-05` | sha256:67f35ed73777ffd7e03bb3e4b72cedf6057331e8f8033f6e2b7005f877edc591 | sections 9, 11 (deferred dependencies) |

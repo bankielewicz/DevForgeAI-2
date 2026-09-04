@@ -228,7 +228,7 @@ def v4(specs: list[Path]) -> list[str]:
     for name in sorted(set(producers) | set(consumers)):
         if name not in producers:
             errors.append(f"V4 template {name}: consumed but no producer")
-        if name not in consumers and name not in {"handoff", "validate-report"}:
+        if name not in consumers and name not in {"handoff", "validate-report", "pr-packet"}:
             errors.append(f"V4 template {name}: produced but no consumer")
     skills = {s["name"] for s in reg.get("skills", [])} if reg.get("skills") else set()
     commands: set[str] = set()

@@ -40,11 +40,11 @@ depends_on:
     hash: sha256:c846323d4b8fb69de9d553453b1ff29ead6ab80b44091eee6474d49370a38d7d
     excerpt: "1. Close the run-directory file set: validate against an explicit allowlist per phase, reject unknown paths before seal, cover with a test that plants a stray file."
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:7c1d67f1154e49247e5dc178fcc1512bdbd53af378c360aeafe69bffed1136ab
+    hash: sha256:ac18004be37ef017e4d4abf8c6303e096d64dbbc0ae0c37e6288230473caaf66
     excerpt: |
       | research | external | runner `devforgeai-research`; fence `docs/research/<arg>/**` | none here; the Research Core CLI executes it under `framework/skills/research/`, and `devforgeai phase start` refuses it (exit 3 when the runner is absent) |
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:52cf474c332c7d8a02ad1b1abac51d852d5f54c30bf5126deb8a5b18cde77206
+    hash: sha256:fa55ff391a00f9b6c93ab76cd26b305bc16b2617aa714f90501b571e8f68f32f
     excerpt: |
       Research is the exception. Its typed handoff contract is `framework/skills/research/contracts/handoff.md`; on the successful path Research Core writes it and the framework does not restate it.
   - source: docs/design/02-skill-roster.md#research
@@ -52,11 +52,11 @@ depends_on:
     excerpt: |
       - Research defines contracts for read-only discovery, evidence-extraction, contrary-evidence, and fresh-verification workers. Core 0.1.0 does not launch provider workers or validate the illustrative worker-result objects. Research Core remains the sole canonical writer.
   - source: docs/design/11-artifact-registry.md#4-upstream-and-downstream-per-skill
-    hash: sha256:cfcaef76005176490e96b9e67c8fa4f0b7a6a2e13b6badf856468881fbe25200
+    hash: sha256:b2725079ec12ced201d2d57c7ddcb9819d7a4617feb5d6692d48c4fd6f3b06c5
     excerpt: |
       | research | any skill, by explicit human request | a confirmed `research-request/v1` | sealed dossier under `docs/research/<slug>/` | every skill, by reference |
   - source: docs/design/05-subagent-sets.md#sets-per-skill
-    hash: sha256:f2957217c9af147e4a7ea03749cbe6efda266bd56d403f39aa25c9a655872609
+    hash: sha256:2bb8ba434c56127d48d09179d742bf0f2f284f18363e7c2e911b1f2211ba3a7e
     excerpt: "| research | contracts for discovery, evidence-extractor, contrary-evidence, verifier, none of which write a canonical artifact; current Core does not launch them; deterministic Research Core is the sole canonical writer |"
   - source: docs/design/12-post-mvp.md#pm-07
     hash: sha256:6c32fea4129fbc79560090c5cb0cf1363916773b878572351fe441a0a3fcdac2
@@ -722,7 +722,7 @@ Research is validated against `framework/skills/research/` and its typed schemas
 | `docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry` | sha256:7d655abc79fb1789e37a57227eecc279faf035a0359ffa76e93b24b56796498e | sections 2 (R8), 7 (zero registry phases), 9 |
 | `docs/design/10-sequencer-and-contracts.md#6-handoff-envelope` | sha256:de637edceb588df104a40b57738eb263989f6603f90ece6f4d0e64fef07ffb6a | sections 7 (handoff outcomes), 9 |
 | `docs/design/02-skill-roster.md#research` | sha256:c09858d8ebe3bd88b0e5035cf27bbf8aefbe9f681243983fd7784005b1f07b0d | sections 7 (sub-phase exemption), 9, 11 |
-| `docs/design/11-artifact-registry.md#4-upstream-and-downstream-per-skill` | sha256:cfcaef76005176490e96b9e67c8fa4f0b7a6a2e13b6badf856468881fbe25200 | section 6 (inputs and outputs) |
+| `docs/design/11-artifact-registry.md#4-upstream-and-downstream-per-skill` | sha256:b2725079ec12ced201d2d57c7ddcb9819d7a4617feb5d6692d48c4fd6f3b06c5 | section 6 (inputs and outputs) |
 | `docs/design/05-subagent-sets.md#sets-per-skill` | sha256:9e12f3beb236a025c18d40e741c09ba675bd71d2d87f56e2b205c7556b944bf9 | sections 7 (worker contracts), 8 |
 | `docs/design/12-post-mvp.md#pm-07` | sha256:6c32fea4129fbc79560090c5cb0cf1363916773b878572351fe441a0a3fcdac2 | section 11 (deferred dependencies) |
 | `docs/design/12-post-mvp.md#pm-02` | sha256:7d833d522429737e51786da3a4b15c2dcc5cc935ebd3e336639da0431919c6b8 | sections 10, 11 (deferred dependencies) |

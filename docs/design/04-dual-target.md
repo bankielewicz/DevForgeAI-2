@@ -182,6 +182,13 @@ Claude and `$research <slug> --request <request-file> --confirm-request
 <sha256>` for Codex. Implicit selection may not open a run or write durable
 Research state.
 
+Pull-request preparation is explicit-only for the same authority reason. Its
+Claude adapter accepts `/pr --base <40hex> --head <40hex> [--draft]`; its Codex
+adapter is installed as the `pr` skill with `allow_implicit_invocation: false`.
+Both invoke the same range-kind sequencer run and compile `pr_drafter` as a
+producer plus `pr_critic` as a judge. Neither adapter carries a GitHub token or
+permission to push, submit, merge, release, or install.
+
 A generated Research adapter is an uninstalled candidate until its required
 provider-native agent profiles, invocation controls, and hooks are present and
 independently validated. Installation is a human release action, not a
@@ -225,7 +232,7 @@ The state schema, the handoff envelope and its renderer, `stack.yaml`, and each 
 skill-validator runs after every compile and checks:
 
 1. For non-Research anatomy skills, anatomy compliance: all seven sub-phase kinds present; Gate, Slice, Record and Handoff bound to the sequencer operations that perform them; Work, Write and Review each bound to a named worker; persona and critic separated; Work may repeat. Research is checked against `framework/skills/research/` instead.
-2. For non-Research anatomy skills, the primary window contract: compiled SKILL.md reads nothing but `state.yaml`, contains no inline content prompts, dispatches every LLM sub-phase, and exposes a Bash grammar no wider than `devforgeai status | phase start <skill> <arg> | phase fail --reason | validate | promote <run>`. Every worker profile declares `writes: candidate` or `writes: none` and a tool list matching that role. Research uses its uninstalled provider-adapter source contract and deterministic Core contract instead; live provider execution remains unavailable.
+2. For non-Research anatomy skills, the primary window contract: compiled SKILL.md reads nothing but `state.yaml`, contains no inline content prompts, dispatches every LLM sub-phase, and exposes a Bash grammar no wider than `devforgeai status | phase start <skill> <arg> [--draft] | phase fail --reason | validate | promote <run>`. `--draft` is accepted only for `pr`; `pr` has no promotion path. Every worker profile declares `writes: candidate` or `writes: none` and a tool list matching that role. Research uses its uninstalled provider-adapter source contract and deterministic Core contract instead; live provider execution remains unavailable.
 3. Provider best practices for the target, including the six-field portable frontmatter rule and target-side placement of provider-specific keys.
 4. Conformance to the originating spec document (for project-specific skills).
 5. Handoff block present, `handoff.outcomes` covers every status the skill can return including `could_not_run`, no outcome has an empty next-steps list, and every command referenced exists in the target.

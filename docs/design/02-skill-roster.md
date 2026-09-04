@@ -2,7 +2,7 @@
 
 All skills except Research share the anatomy in `01-skill-anatomy.md`. Research is governed by the normative P0-P9 contract under `framework/skills/research/`. This document lists what each skill adds. `05-subagent-sets.md` is authoritative for worker names; the "Extra workers" column below is a strict subset of it.
 
-Every anatomy-governed non-Research skill owns its templates under `.devforgeai/skills/<name>/templates/`. The template a skill *produces* is the template the next skill *gates on*. Research uses the contracts and typed schemas under `framework/skills/research/`.
+Every anatomy-governed non-Research skill except `pr` owns its templates under `.devforgeai/skills/<name>/templates/`. The template a skill *produces* is the template the next skill *gates on*. `pr` produces typed external-completion records governed by `pr-packet.schema.json`; Research uses the contracts and typed schemas under `framework/skills/research/`.
 
 | Skill | Gates incoming | Produces (templates) |
 |-------|----------------|----------------------|
@@ -23,6 +23,7 @@ Every anatomy-governed non-Research skill owns its templates under `.devforgeai/
 | amend | constitution doc | adr.md, impact-report.md |
 | retro | sprint.md, qa/review reports | retro-report.md |
 | drift | sourcetree.md, techstack.md, architecture.md | drift-report.md |
+| pr | exact committed Git range and its repository identity | checked title/body, `pr-request.json`, `pr-packet.json`; no GitHub mutation |
 | status | — (read-only over `state.yaml`) | rendered handoff block only; writes nothing |
 
 `plan` is the sole owner of the skill-spec template. `architect` writes mandates to `constitution.md#mandates`; `plan` turns each mandate that needs a skill into a `SKILL-SPEC-NNN.md`.
@@ -52,6 +53,7 @@ Every anatomy-governed non-Research skill owns its templates under `.devforgeai/
 | amend | — | Architect | `/amend <doc> "<change>"` | constitution change | updated doc, ADR, impact list | impact-analyzer, resync-slicer | `/plan {slug} --reslice {story}` for each impacted story |
 | retro | — | Scrum Master | `/retro <sprint>` | sprint results | lessons, archive | lesson-extractor, amendment-proposer | `/amend {doc} "{change}"` for each approved amendment |
 | drift | — | Auditor | `/drift` | code + docs | drift report | code-mapper | — |
+| pr | — | Release Coordinator | `/pr --base <40hex> --head <40hex> [--draft]` | exact committed range, repository identity, prior continuation | external PR packet under `.devforgeai/work/<run>/output/` | pr-drafter, pr-critic | human pushes the named branch and submits the saved request; then runs the saved continuation |
 | status | — | — | `/status` | state | rendered handoff block | none (thin wrapper over `devforgeai status`) | — |
 
 ## Handoff decision tables
@@ -112,6 +114,8 @@ Every anatomy-governed skill ends in a Handoff. Research produces its typed Hand
 | retro | none | `/plan {slug} --next-sprint` |
 | drift | clean | `/status` |
 | drift | drift found | `/amend {doc} "{change}"` (architect has no `--update`; re-run `/architect {slug}` for a full redesign) |
+| pr | packet complete | human runs the rendered `git push`, submits `.devforgeai/work/{run}/output/pr-request.json`, then runs the saved continuation |
+| pr | range or artifact refusal | correct the named defect and rerun `/pr --base {base} --head {head}`; changed pins require a new invocation |
 | status | any | the `next` recorded in `state.yaml`; status decides nothing itself |
 | any | `could_not_run` | the repair route for `reason_code`, then `/{skill} {args}` |
 | any | unhandled error | `/status`; `/{skill} {args} --retry` |
@@ -218,6 +222,13 @@ Then hands off: the pass row's first `next` step is `/analyze {slug}`, and the s
 ### drift
 - Re-runs onboard's code-mapper and diffs against sourcetree, techstack, architecture.
 - Reports where docs no longer match code. Handoff suggests `/amend {doc} "{change}"` or a full `/architect {slug}` re-run.
+
+### pr
+- Explicit-only on Claude and Codex. It requires two full lower-case commit IDs; no branch name, abbreviation, merge-base, default range or implicit invocation is accepted.
+- The sequencer verifies the checkout head, remote default tip, ancestry, named topic branch, GitHub origin and non-empty committed diff before it creates a candidate root.
+- `pr_drafter` writes only `pr-artifacts/title.txt` and `pr-artifacts/body.md` in that root. `pr_critic` writes nothing and may rewind the draft through its receipt.
+- Passing critique persists byte-identical title/body plus `pr-request.json` and schema-valid `pr-packet.json` under `.devforgeai/work/<run>/output/`, removes the candidate, and records `complete_external`. It never promotes a tree, pushes, calls GitHub, merges or releases.
+- Project policy requests this boundary after accepted architecture, analyzed plan, validated generated skill, passing QA and accepted governance amendments. Automatic handoff insertion is not implemented because remote-default advancement has no approved rebind rule; until then the human invokes `/pr` with current pins.
 
 ### status
 - Zero LLM workers. `SKILL.md` is a thin wrapper over `devforgeai status`, which renders `.devforgeai/work/<run>/handoff.json` and the `next` recorded in `state.yaml`. It writes nothing.

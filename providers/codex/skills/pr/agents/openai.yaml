@@ -1,0 +1,6 @@
+interface:
+  display_name: "Pull Request Packet"
+  short_description: "Review an exact range and package PR text"
+  default_prompt: "Use $pr to package an exact base and head commit range for human publication."
+policy:
+  allow_implicit_invocation: false

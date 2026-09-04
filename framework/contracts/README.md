@@ -5,8 +5,19 @@ Machine-readable contracts the runtime reads and the documents cite. Nothing und
 | File | Purpose | Validated by |
 |---|---|---|
 | `error-taxonomy.yaml` | The closed vocabulary of every outcome the framework reports, with emitter, protocol, roll-up and recovery route per code | `schemas/devforgeai/v1/error-taxonomy.schema.json` |
+| `error-taxonomy-v2.yaml` | Staged version-2 vocabulary for range-kind PR runs and `complete_external`; it does not alter the frozen version-1 promotion candidate | `schemas/devforgeai/v2/error-taxonomy.schema.json` |
 | `PROMOTION-CANDIDATE.md` | What a human reviews and promotes into the protected DevForge repository as contract v1, with the verification commands | reviewer |
 | `MANIFEST.sha256` | Digests of the candidate files plus the two pinned document sections; `sha256sum -c` verifies | `sha256sum -c`, `verify.py --only v3` |
+
+`schemas/devforgeai/v1/pr-packet.schema.json` is installed beside this tree as
+`.devforgeai/contracts/schemas/pr-packet.schema.json` by a separate verbatim,
+digest-pinned manifest entry. It remains in the repository's schema tree so
+source and runtime validators share one canonical file.
+
+Range-kind PR run records use `schemas/devforgeai/v2/run.schema.json`. The
+version-2 run and taxonomy schemas are separate digest-pinned manifest entries;
+story and document records remain on the frozen version-1 run schema. These
+version-2 files are staging contracts, not additions to the CP-00 candidate.
 
 ## Install guidance for the future installer
 

@@ -31,7 +31,7 @@ The draft landscape comparison in `docs/research/sdd-landscape-comparison-2026-0
 | 7 | QA | QA Engineer | `/qa <story>` | pass/fail, fix guidance |
 | 8 | Close | Scrum Master / Architect | `/retro`, `/amend`, `/drift` | lessons, amendments, drift report |
 
-Cross-cutting persistent Research accepts only `/research <slug> --request <request-file> --confirm-request <sha256>` on Claude and `$research <slug> --request <request-file> --confirm-request <sha256>` on Codex. Other entries use their target-specific adapter form for `clarify`, `analyze`, `skill-gen`, `skill-validate`, and `status`.
+Cross-cutting persistent Research accepts only `/research <slug> --request <request-file> --confirm-request <sha256>` on Claude and `$research <slug> --request <request-file> --confirm-request <sha256>` on Codex. Pull-request preparation accepts only explicit full commit pins through `/pr --base <40hex> --head <40hex> [--draft]`; it prepares a checked external packet and never calls GitHub. Other entries use their target-specific adapter form for `clarify`, `analyze`, `skill-gen`, `skill-validate`, and `status`.
 
 ## Phase diagram
 
@@ -93,6 +93,13 @@ flowchart TD
         C4[drift check]
     end
 
+    subgraph PR["pr  (Release Coordinator)"]
+        PR0[gate exact committed base..head] --> PR1[pr-drafter writes title + body]
+        PR1 --> PR2[pr-critic reads and judges]
+        PR2 --> PR3[sequencer persists packet + request]
+        PR3 --> PR4[REQUIRE_HUMAN: push and create PR]
+    end
+
     I4 -->|greenfield| BS
     I4 -->|brownfield| ONB
     ONB --> ARCH
@@ -107,6 +114,11 @@ flowchart TD
     SG -.-> DEV
     Q2 -->|fail: /dev story --fix| DEV
     Q2 -->|pass| CLOSE
+    ARCH -.->|accepted boundary| PR
+    PLAN -.->|analyzed boundary| PR
+    SG -.->|validated boundary| PR
+    Q2 -.->|passing QA boundary| PR
+    C2 -.->|accepted amendment boundary| PR
     C3 -.->|affected stories| PLAN
     C4 -.-> ARCH
 ```
@@ -122,6 +134,7 @@ Everything under canonical `.devforgeai/` is written by the `devforgeai` sequenc
   hooks/                  # dispatch.py, policy.py, devforgeai.py; installed by init
   work/<run>/             # evidence home: <phase>-report.md, <phase>-result.json, handoff.json
   work/<run>/run.yaml     # per-run enforcement: phase, fence, granted keys, lease (gitignored)
+  work/pr-*/output/       # accepted external title/body, pr-request.json and pr-packet.json; never promoted
   work/<run>/evidence/<agent>/  # findings.md, written by the sequencer from a judge's receipt (gitignored, never promoted)
   work/<run>/wt/          # the run's candidate root, where producers write (gitignored)
   sessions/<session_id>.json  # session evidence, written once by hook-only session-start

@@ -9,34 +9,34 @@ author: "DevForgeAI plan skill (wave 2 spec authoring)"
 date: 2026-09-02
 depends_on:
   - source: docs/design/01-skill-anatomy.md#primary-window-contract
-    hash: sha256:6556607035516c49ee43fe2bbeffe1a74e898889d84be00c9a05fdf751d209b6
+    hash: sha256:721c5d5e73f2678f565b23284f78cffe26b62919c6d652aa7756f13a9a0f064e
     excerpt: "**The model dispatches, the sequencer decides.** For an anatomy-governed skill, the primary window (provider entry adapter + skill orchestration) does light, trivial work only."
   - source: docs/design/01-skill-anatomy.md#evidence-home
-    hash: sha256:15bc1303729e997b8eeeefab8f9a406f5c8568e4f0932a28da3f02c14199a469
+    hash: sha256:7cdc1abd0c12fcc39bc134838d5f4b63883cd0c4b5290faba29122c80f3df7ec
     excerpt: "There is one home for a run's evidence, and the sequencer writes every file in it:"
   - source: docs/design/10-sequencer-and-contracts.md#4-per-skill-phase-registry
-    hash: sha256:7c1d67f1154e49247e5dc178fcc1512bdbd53af378c360aeafe69bffed1136ab
+    hash: sha256:ac18004be37ef017e4d4abf8c6303e096d64dbbc0ae0c37e6288230473caaf66
     excerpt: "| retro | document | `docs/reports/retro-<arg>.md` | 4 |"
   - source: docs/design/10-sequencer-and-contracts.md#5-worker-result
-    hash: sha256:9a3b34599a10c9c34105dee5a9de75cc0511decc55a5f85794dcf0954b731507
+    hash: sha256:a27553487d0bfd28fe9329ef145aa47fd00138ec923cf737e3e5e94f7ff212a4
     excerpt: "One schema, both providers, every skill. The worker's final message is exactly this object, with no Markdown fence and no surrounding prose."
   - source: docs/design/10-sequencer-and-contracts.md#3-status-vocabulary-and-gate-policy
-    hash: sha256:1706823f7848f5cb6b23e68dfd783885fad3fdfa5d98fb6df0b90270a818fc20
+    hash: sha256:5e1b603b96613581b8d9010526f504e445cbf524de972ea7a999ac0c127b6667
     excerpt: "A document run carries the fixed map `{unresolvable_source: BLOCK}`, because it has no story to declare a wider one."
   - source: docs/design/10-sequencer-and-contracts.md#10-evidence-files
     hash: sha256:b15253fbdd40635f95f116d473af2336ef37b76b960d909d0153a12ca7e04b1f
     excerpt: "| `docs/reports/<skill>-<run>-<phase>.md` | Markdown | sequencer at a passing transition | the human, `retro` `collect`, `review` |"
   - source: docs/design/10-sequencer-and-contracts.md#6-handoff-envelope
-    hash: sha256:52cf474c332c7d8a02ad1b1abac51d852d5f54c30bf5126deb8a5b18cde77206
+    hash: sha256:fa55ff391a00f9b6c93ab76cd26b305bc16b2617aa714f90501b571e8f68f32f
     excerpt: "| document run, promoted, no verdict or `verdict: pass` | `/status` |"
   - source: docs/design/11-artifact-registry.md#1-template-registry
-    hash: sha256:fabb8d2f142dcde1a31bc53768f8a46d01cac3ea4a7f6b73db22479cc89b5553
+    hash: sha256:cb9cad97fcdd0d5b5da645e2d16f43c665f935174f52f9ba3c2858c004f3e894
     excerpt: "| `retro-report` | `.devforgeai/skills/retro/templates/retro-report.md` | 1 | `^LESS-[0-9]{3}$` | sprint, template, template_version, status, depends_on | Outcomes, Lessons, Proposed Amendments, Archive |"
   - source: docs/design/02-skill-roster.md#retro
     hash: sha256:f2a88c7bda36610205f8044bbc8314c9c65c0f72339ba2445ccb6eba3675e17e
     excerpt: "- Collects QA reports, review findings, and dev notes for the sprint."
   - source: docs/design/05-subagent-sets.md#sets-per-skill
-    hash: sha256:f2957217c9af147e4a7ea03749cbe6efda266bd56d403f39aa25c9a655872609
+    hash: sha256:2bb8ba434c56127d48d09179d742bf0f2f284f18363e7c2e911b1f2211ba3a7e
     excerpt: "| retro | report-collector, lesson-extractor, amendment-proposer, archiver |"
 ---
 
