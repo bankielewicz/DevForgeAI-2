@@ -1,0 +1,89 @@
+checkpoint_id: CP-00
+checkpoint_type: RESEARCH_AND_IMPLEMENTATION
+closed: false
+attempt_outcome: null
+owner_id: "agent:claude-fable-5.1/session-01Q1TK69vPB4KT763iv2dwQM"
+decision_authority_id: "github:bankielewicz"
+base_commit: "6a446355605a06891cdeab1cc9d25f35309afba2"
+admitted_inputs: []
+closure_stages:
+  researched: NOT_RUN
+  implemented: PASS
+  proven: NOT_RUN
+research:
+  dossier_path: "docs/research/sdd-checkpoint-custody"
+  manifest_sha256: "2adca93970302226e72be79eb92369052b1d9c3ec0d9868bcb34ac43429d3554"
+  verification_ids: []
+implementation:
+  governing_decision_ids:
+    - D-CP00-01
+    - D-CP00-02
+    - D-CP00-03
+    - D-CP00-04
+    - D-CP00-05
+    - D-CP00-06
+    - D-CP00-08
+    - D-CP00-09
+  # Write fence, recorded before the first other write (plan section 5).
+  changed_contracts:
+    - schemas/devforgeai/v1/research-gap-checkpoint.schema.json
+    - docs/research/spec-driven-development-gap-closure/checkpoints/**
+    # Added under amendment SDD-GAP-AMD-001 (merged PR 18), which made the
+    # updated promotion-candidate declaration and manifest CP-00 outputs; the
+    # merged amendment is the decision authority's scope amendment (section 5).
+    - framework/contracts/PROMOTION-CANDIDATE.md
+    - framework/contracts/MANIFEST.sha256
+  changed_runtime_paths:
+    - components/research-core/src/devforgeai/checkpoint/**
+    - tests/research/test_gap_checkpoints.py
+    - docs/research/sdd-checkpoint-custody/**
+  test_evidence:
+    - "tests/research/test_gap_checkpoints.py"
+    - "docs/research/sdd-checkpoint-custody/probes/tests.txt"
+    - "docs/research/sdd-checkpoint-custody/probes/claude-validate.txt"
+enforcement:
+  trust_stage: STAGED_CANDIDATE
+  # Candidate pin (D-CP00-09): the commit that carries the candidate bytes,
+  # verified by rule S13 against framework/contracts/MANIFEST.sha256.
+  candidate:
+    source_commit: "c784ab703848130bff668d58a7bafecd269995f3"
+    manifest_path: framework/contracts/MANIFEST.sha256
+    manifest_sha256: "9a543818e21460e3139c3b87da1da19bdaddb32c880232cb477564985da190c5"
+  protected_release:
+    version: null
+    source_commit: null
+    promotion_evidence_path: null
+    promotion_evidence_sha256: null
+    executable_path: null
+    executable_sha256: null
+    schema_set_version: null
+    schema_set_sha256: null
+    contract_policy_version: null
+    contract_policy_sha256: null
+    installation_owner: null
+    permissions_evidence_path: null
+    permissions_evidence_sha256: null
+provider_proof:
+  claude: {status: NOT_RUN, evidence_path: null, subject_sha256: null}
+  codex: {status: NOT_RUN, evidence_path: null, subject_sha256: null}
+independent_review:
+  reviewer_id: null
+  verdict: null
+  evidence_path: null
+human_closure:
+  authority_id: null
+  decision: null
+  rationale: null
+  decided_at: null
+evidence_merge_commits: []
+limitations:
+  - "The validator is a staged promotion candidate (plan section 4.2), invoked as `PYTHONPATH=components/research-core/src python3 -m devforgeai.checkpoint validate --plan docs/research/spec-driven-development-gap-closure`; the authoritative executable is the future protected DevForge `devforge checkpoint validate`, so `proven` requires that pinned, root-owned install and CP-00 stays open until it exists (D-CP00-08)."
+  - "Release-pin digests (executable, promotion and permissions evidence) are verified against local bytes only when the pinned path exists on the validating machine; on a machine without the protected install the validator checks the pin's shape, absoluteness and location, not its bytes."
+  - "The candidate pin names a commit, so it is recorded in a second commit on the work branch (D-CP00-09); the work PR must merge with a merge commit, not a squash, or the pinned source commit disappears from the history."
+  - "Reviewer independence is checked as inequality over self-reported identifier strings; the validator does not authenticate identities."
+  - "The work happened in the Claude Code worktree directory `.claude/worktrees/cp-00-checkpoint-custody` rather than the plan's `worktrees/cp-00-checkpoint-custody`, because the Claude Code worktree tool only enters directories under `.claude/worktrees/`; the branch name `research/cp-00-checkpoint-custody` is the one the plan fixes."
+  - "The schema is resolved from the repository checkout, not from wheel data-files, because the Research Core packaging contract freezes the shipped schema set; DevForge embeds the schema when it takes the validator."
+reopen_if:
+  - "DevForge releases a checkpoint validator whose embedded schema digest differs from `schemas/devforgeai/v1/research-gap-checkpoint.schema.json` at the closure commit."
+  - "Claude Code or Codex CLI changes version before the two-terminal validator probe recorded under `docs/research/sdd-checkpoint-custody/probes/` is repeated on the new version."
+  - "Any checkpoint record under this plan is accepted as `closed: true` by a path that did not run this validator with exit 0."

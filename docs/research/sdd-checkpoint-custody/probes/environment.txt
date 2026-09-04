@@ -1,0 +1,9 @@
+recorded_at: 2026-09-04T13:14:41Z
+base_commit: 6a446355605a06891cdeab1cc9d25f35309afba2
+worktree_head_at_setup: 6a446355605a06891cdeab1cc9d25f35309afba2
+branch: research/cp-00-checkpoint-custody
+worktree_directory: .claude/worktrees/cp-00-checkpoint-custody (D-CP00-05)
+python: Python 3.12.3
+claude: 2.1.260 (Claude Code)
+codex: codex-cli 0.153.0
+git_status_at_setup: clean (## research/cp-00-checkpoint-custody...origin/main)

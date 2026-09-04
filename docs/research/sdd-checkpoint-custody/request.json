@@ -1,0 +1,81 @@
+{
+  "schema_version": "research-request/v1",
+  "request_id": "RSR-000100",
+  "project_id": "project:devforgeai",
+  "slug": "sdd-checkpoint-custody",
+  "mode": "STANDALONE",
+  "caller": {
+    "workflow": "research-gap-closure",
+    "requesting_phase": "CP-00",
+    "return_route": "docs/research/spec-driven-development-gap-closure/checkpoints/CP-00.yaml"
+  },
+  "questions": [
+    {"question_id": "RQ-000001", "text": "Which closure conditions of plan section 7.1 must be machine-checked, and what exact rejection set do the hostile cases of CP-00 define?", "completion_criteria": ["Every closure condition maps to one validator rule id with a positive and a hostile subprocess test."]},
+    {"question_id": "RQ-000002", "text": "Where must the validator execute, given the DevForge trust boundary and the frozen Research CLI contract of exactly ten operations?", "completion_criteria": ["An invocation that changes no frozen contract, ships in the staging wheel, and maps to the future protected DevForge command, accepted by the decision authority."]},
+    {"question_id": "RQ-000003", "text": "How is explicitly external evidence represented so that repository-relative path escape is rejected while out-of-repository evidence stays admissible?", "completion_criteria": ["A schema field and a validator rule, with the plan's own run-5 inputs passing and a hostile absolute path failing."]},
+    {"question_id": "RQ-000004", "text": "What does reviewer independence mean when identities are self-reported record fields?", "completion_criteria": ["A rule that rejects self-review, and a recorded limitation stating what the rule cannot establish."]},
+    {"question_id": "RQ-000005", "text": "What definitions make the hostile cases 'unbounded limitation' and 'empty or non-concrete reopen_if' testable?", "completion_criteria": ["A written definition in decisions.md and a hostile test that matches it exactly."]}
+  ],
+  "intended_downstream_use": "The CP-00 work PR: checkpoint schema, semantic validator, initial records, tests, and this dossier; later checkpoints close only through the validator.",
+  "linked_refs": [
+    "docs/research/spec-driven-development-gap-closure/README.md",
+    "docs/research/spec-driven-development-gap-closure/checkpoints/CP-00.yaml"
+  ],
+  "hypotheses": [
+    {"label": "UNVERIFIED_HYPOTHESIS", "text": "Every section 7.1 closure condition can be checked deterministically from the record, the plan README, the dossier manifest, and Git ancestry, without a model in the loop."}
+  ],
+  "scope": {
+    "include": [
+      "Plan sections 5, 6, 7, 9 and 12 as closure rules",
+      "Repository contracts that bound where a validator may live",
+      "Owner decisions on the DevForge trust boundary and the validator invocation"
+    ],
+    "exclude": [
+      "Review-skill generation, installer expansion, evidence export",
+      "Authentication of identities",
+      "The protected DevForge repository itself"
+    ]
+  },
+  "as_of": "2026-09-04T13:00:00Z",
+  "risk_tier": "MATERIAL",
+  "source_policy": {
+    "required_classes": ["PRIMARY"],
+    "prohibited_classes": ["SEARCH_SNIPPET"],
+    "freshness_requirements": ["PRIMARY sources are repository files read at base commit 6a446355605a06891cdeab1cc9d25f35309afba2 and digested, or decisions recorded by the decision authority on 2026-09-04; model memory is not a source."]
+  },
+  "existing_refs": [],
+  "budget": {
+    "profile": "quick",
+    "limits": {"atomic_questions": 6, "research_lanes": 3, "concurrent_workers": 2, "discovery_queries": 30, "admitted_sources": 20, "external_tool_calls": 90, "aggregate_model_tokens": 120000, "context_bytes": 65536, "elapsed_minutes": 45, "retry_per_failed_lane": 1},
+    "confirmed_overrides": []
+  },
+  "authority": {
+    "requester_id": "agent:claude-fable-5.1",
+    "phase_owner_id": "agent:claude-fable-5.1",
+    "decision_authority_id": "github:bankielewicz",
+    "confirming_authority_id": "github:bankielewicz",
+    "persistence_authorized": true
+  },
+  "execution_policy": {
+    "write_fence": [
+      "docs/research/sdd-checkpoint-custody",
+      "docs/research/spec-driven-development-gap-closure/checkpoints",
+      "schemas/devforgeai/v1/research-gap-checkpoint.schema.json",
+      "components/research-core/src/devforgeai/checkpoint",
+      "tests/research/test_gap_checkpoints.py"
+    ],
+    "network_policy": "DENY",
+    "network_allowlist": []
+  },
+  "completion_criteria": [
+    "Every question has a terminal disposition.",
+    "The validator rejects every hostile case named by CP-00 and accepts one complete synthetic record and this repository's fifteen open records.",
+    "Every claim is either independently verified or marked not accepted."
+  ],
+  "stop_conditions": [
+    "Stop at the quick-profile limits.",
+    "Stop if a required repository contract would have to change to place the validator."
+  ],
+  "escalation_owner_id": "github:bankielewicz",
+  "created_at_utc": "2026-09-04T13:00:00Z"
+}

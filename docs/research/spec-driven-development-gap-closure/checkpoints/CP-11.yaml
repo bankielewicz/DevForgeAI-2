@@ -1,0 +1,63 @@
+checkpoint_id: CP-11
+checkpoint_type: RESEARCH_AND_IMPLEMENTATION
+closed: false
+attempt_outcome: null
+owner_id: role:unassigned
+decision_authority_id: github:bankielewicz
+base_commit: 6a446355605a06891cdeab1cc9d25f35309afba2
+admitted_inputs: []
+closure_stages:
+  researched: NOT_RUN
+  implemented: NOT_RUN
+  proven: NOT_RUN
+research:
+  dossier_path: docs/research/executable-security-compliance
+  manifest_sha256: null
+  verification_ids: []
+implementation:
+  governing_decision_ids: []
+  changed_contracts: []
+  changed_runtime_paths: []
+  test_evidence: []
+enforcement:
+  trust_stage: UNBOUND
+  candidate:
+    source_commit: null
+    manifest_path: null
+    manifest_sha256: null
+  protected_release:
+    version: null
+    source_commit: null
+    promotion_evidence_path: null
+    promotion_evidence_sha256: null
+    executable_path: null
+    executable_sha256: null
+    schema_set_version: null
+    schema_set_sha256: null
+    contract_policy_version: null
+    contract_policy_sha256: null
+    installation_owner: null
+    permissions_evidence_path: null
+    permissions_evidence_sha256: null
+provider_proof:
+  claude:
+    status: NOT_RUN
+    evidence_path: null
+    subject_sha256: null
+  codex:
+    status: NOT_RUN
+    evidence_path: null
+    subject_sha256: null
+independent_review:
+  reviewer_id: null
+  verdict: null
+  evidence_path: null
+human_closure:
+  authority_id: null
+  decision: null
+  rationale: null
+  decided_at: null
+evidence_merge_commits: []
+limitations:
+- 'Not started. Listed admitted_inputs, if any, are AVAILABLE_FOR_ADMISSION only: they do not start this checkpoint, satisfy a dependency, or set a stage to PASS until CP-00 closes and an admission PR validates their custody.'
+reopen_if: []

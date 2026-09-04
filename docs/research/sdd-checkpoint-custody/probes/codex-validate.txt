@@ -1,0 +1,4 @@
+terminal: Codex CLI
+status: NOT_RUN
+command: PYTHONPATH=components/research-core/src python3 -m devforgeai.checkpoint validate --plan docs/research/spec-driven-development-gap-closure
+note: to be executed by the independent reviewer from a Codex terminal; record codex --version, exit code and output here in the closure PR.

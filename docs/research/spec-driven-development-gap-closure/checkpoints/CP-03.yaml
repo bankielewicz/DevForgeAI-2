@@ -1,0 +1,89 @@
+checkpoint_id: CP-03
+checkpoint_type: RESEARCH_AND_IMPLEMENTATION
+closed: false
+attempt_outcome: null
+owner_id: role:unassigned
+decision_authority_id: github:bankielewicz
+base_commit: 6a446355605a06891cdeab1cc9d25f35309afba2
+admitted_inputs:
+- input_id: CP03-PY-NODE-CONFORMANCE-001
+  state: AVAILABLE_FOR_ADMISSION
+  source_commit: 90de68ec4659189dabbab7686d06360ddd114d4d
+  subject: docs/design/examples/hooks/run_conformance.py
+  subject_sha256: 84eaa20a761d990e356a25f6ad18e8fdd6022192233237be594f6047c63850f9
+  provider: provider-neutral foreground harness
+  provider_version: Python 3.12.3; Node 24.18.0; rerun in Codex CLI 0.153.0 at re-freeze
+  command: python3 docs/design/examples/hooks/run_conformance.py
+  result: 240/240 rows held; configured pytest and Node 24 dialect cases only
+  evidence_paths:
+  - docs/design/examples/hooks/run_conformance.py
+  limitations:
+  - 'Configured execution only: no stack discovery, no Rust lane, no live parity; CP-03 cannot start before CP-02 closes.'
+- input_id: CP03-PY-NODE-DEMO-001
+  state: AVAILABLE_FOR_ADMISSION
+  source_commit: 90de68ec4659189dabbab7686d06360ddd114d4d
+  subject: docs/design/examples/hooks/demo_sequencer.sh
+  subject_sha256: bcaa1aefe5d7cfb991264c9c8edc44433bf7cf30e2be1766aff04513dd68d691
+  provider: provider-neutral foreground harness
+  provider_version: Python 3.12.3; Node 24.18.0
+  command: bash docs/design/examples/hooks/demo_sequencer.sh
+  result: Python and Node pass in copy and worktree modes
+  evidence_paths:
+  - docs/design/examples/hooks/demo_sequencer.sh
+  limitations:
+  - Configured execution only; not stack neutrality.
+closure_stages:
+  researched: NOT_RUN
+  implemented: NOT_RUN
+  proven: NOT_RUN
+research:
+  dossier_path: docs/research/cross-runner-oracle-normalization
+  manifest_sha256: null
+  verification_ids: []
+implementation:
+  governing_decision_ids: []
+  changed_contracts: []
+  changed_runtime_paths: []
+  test_evidence: []
+enforcement:
+  trust_stage: UNBOUND
+  candidate:
+    source_commit: null
+    manifest_path: null
+    manifest_sha256: null
+  protected_release:
+    version: null
+    source_commit: null
+    promotion_evidence_path: null
+    promotion_evidence_sha256: null
+    executable_path: null
+    executable_sha256: null
+    schema_set_version: null
+    schema_set_sha256: null
+    contract_policy_version: null
+    contract_policy_sha256: null
+    installation_owner: null
+    permissions_evidence_path: null
+    permissions_evidence_sha256: null
+provider_proof:
+  claude:
+    status: NOT_RUN
+    evidence_path: null
+    subject_sha256: null
+  codex:
+    status: NOT_RUN
+    evidence_path: null
+    subject_sha256: null
+independent_review:
+  reviewer_id: null
+  verdict: null
+  evidence_path: null
+human_closure:
+  authority_id: null
+  decision: null
+  rationale: null
+  decided_at: null
+evidence_merge_commits: []
+limitations:
+- 'Not started. Listed admitted_inputs, if any, are AVAILABLE_FOR_ADMISSION only: they do not start this checkpoint, satisfy a dependency, or set a stage to PASS until CP-00 closes and an admission PR validates their custody.'
+reopen_if: []
