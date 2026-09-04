@@ -8,11 +8,11 @@ base_commit: "6a446355605a06891cdeab1cc9d25f35309afba2"
 admitted_inputs: []
 closure_stages:
   researched: NOT_RUN
-  implemented: PASS
+  implemented: NOT_RUN
   proven: NOT_RUN
 research:
   dossier_path: "docs/research/sdd-checkpoint-custody"
-  manifest_sha256: "9c28b00688f020e67a95d3ddc10b77e0f8960d8ad6cfda5a582b0d3294d55dd4"
+  manifest_sha256: "7854971d2806190a8abcab562f062279d1549164f17c33dd884cd6f74dc798ad"
   verification_ids: []
 implementation:
   governing_decision_ids:
@@ -48,13 +48,11 @@ implementation:
     - "docs/research/sdd-checkpoint-custody/probes/tests.txt"
     - "docs/research/sdd-checkpoint-custody/probes/claude-validate.txt"
 enforcement:
-  trust_stage: STAGED_CANDIDATE
-  # Candidate pin (D-CP00-09): the commit that carries the candidate bytes,
-  # verified by rule S13 against framework/contracts/MANIFEST.sha256.
+  trust_stage: UNBOUND
   candidate:
-    source_commit: "89be8348a2be12814ee28db3737fb0dbb3909718"
-    manifest_path: framework/contracts/MANIFEST.sha256
-    manifest_sha256: "d3d0d2a27c3d1ec2af216eaf311e67942a27ba068b41fcc6101e529144e6ad68"
+    source_commit: null
+    manifest_path: null
+    manifest_sha256: null
   protected_release:
     version: null
     source_commit: null
@@ -84,6 +82,7 @@ human_closure:
 evidence_merge_commits: []
 limitations:
   - "Candidate `c784ab7` (the first pin) was found not promotion-eligible by the Codex security review of PR 20 (snapshot `sha256:55f244705de1243a43ef6c6882165f642a8020659c71fd4ab9d597e42892e92b`, dossier `reviews/codex-security-2026-09-04/`): fail-open release pin, caller-replaceable schema and repository root, S10 skipped without `--diff`, destructive probe design (D-CP00-11). Corrective-spec-001 was implemented red-first (D-CP00-12); the pin below names the corrected candidate. No promotion, installation or closure evidence until the corrected candidate passes independent exact-head review."
+  - "Candidate `89be834` (the second pin, corrective 001) was found not promotion-eligible by the Codex exact-head review of PR 22 at `257ba7d` (dossier `reviews/codex-security-2026-09-04-pr22/`): inherited Git environment, executing release unbound from the record's release (CS-1.8), `LD_PRELOAD` before the shell wrapper, caller-selected closure range (D-CP00-13). Corrective-spec-002 is implemented red-first on the same branch; the record is UNBOUND with a null pin until the next pin commit. No promotion, installation or closure evidence until the corrected candidate passes independent exact-head review."
   - "The corrective work uses a second work branch, `research/cp-00-checkpoint-custody-fix1`, because the plan's CP-00 branch merged with PR 19; recorded deviation from plan section 5 (D-CP00-11)."
   - "The validator is a staged promotion candidate (plan section 4.2), invoked as `PYTHONPATH=components/research-core/src python3 -m devforgeai.checkpoint validate --plan docs/research/spec-driven-development-gap-closure`; the authoritative executable is the future protected DevForge `devforge checkpoint validate`, so `proven` requires that pinned, root-owned install and CP-00 stays open until it exists (D-CP00-08)."
   - "The positive protected case (a root-owned release tree accepted by the fail-closed release pin) is testable in this repository only in-process through the `release_fs` seam with a fake that reports uid 0; the CLI exposes no seam. The true positive integration test is DevForge's two-terminal probe against a real root-owned install (CS-1.7)."

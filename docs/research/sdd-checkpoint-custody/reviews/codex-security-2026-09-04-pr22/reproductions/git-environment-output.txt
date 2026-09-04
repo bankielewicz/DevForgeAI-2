@@ -1,0 +1,6 @@
+normal_root=/tmp/pr22-legit.5IFqvk
+normal_head=133c2b4e25dd4f04c118bf6dee9940b98c57d305
+controlled_root=/tmp/pr22-legit.5IFqvk
+controlled_head=5173de79635c9a11c9538736e0112fe8db41b91e
+result: show-toplevel stayed legitimate while HEAD came from the alternate GIT_DIR
+

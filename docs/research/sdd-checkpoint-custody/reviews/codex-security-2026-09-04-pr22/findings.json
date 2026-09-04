@@ -1,0 +1,402 @@
+{
+  "documentType": "codex-security.findings",
+  "findings": [
+    {
+      "attackPath": {
+        "controls": [
+          "root-owned release bytes",
+          "release digest verification",
+          "human independent review"
+        ],
+        "dataflow": {
+          "outcome": "attacker-selected evidence is accepted as authoritative",
+          "sink": "checkpoint closure verdict",
+          "source": "workspace-controlled record, arguments, or process environment",
+          "summary": "record protected_release fields -> derive root B -> verify B; module location -> derive root A -> verify A; no equality or release-metadata comparison -> PASS",
+          "transformations": [
+            "protected wrapper or validator receives untrusted values",
+            "changed control validates only local consistency",
+            "verdict is emitted without the missing binding"
+          ]
+        },
+        "reachability": {
+          "attacker": "Claude Code or Codex process running as the ordinary workspace user",
+          "entrypoint": "absolute devforge checkpoint validate invocation",
+          "outcome": "the protected gate can produce a misleading PASS",
+          "preconditions": [
+            "the agent can write its workspace and invoke the allowed validation command"
+          ],
+          "summary": "A workspace agent can select another installed, root-owned DevForge version in the record. The agent need not modify either release; coexistence of two releases is enough."
+        },
+        "summary": "A workspace agent can select another installed, root-owned DevForge version in the record. The agent need not modify either release; coexistence of two releases is enough."
+      },
+      "confidence": {
+        "level": "high",
+        "rationale": "The changed code was traced end to end and a focused reproduction exercised the actual boundary without sudo or protected-file mutation."
+      },
+      "extensions": {
+        "candidateId": "candidate-fa00cbdf00fd925e"
+      },
+      "findingId": "csf_e4b224c06aca404396e8a81d",
+      "fingerprints": {
+        "algorithm": "codex-security/v1",
+        "primary": "codex-security/v1:sha256:6d6febcfd25101e628ef27638619b6a92d84ad8fdb39074e4e753dfb3865cb40"
+      },
+      "identity": {
+        "anchor": "executing-release-not-bound-to-record-release"
+      },
+      "locations": [
+        {
+          "endLine": 545,
+          "path": "components/research-core/src/devforgeai/checkpoint/validate.py",
+          "role": "root_control",
+          "startLine": 515
+        },
+        {
+          "endLine": 850,
+          "path": "components/research-core/src/devforgeai/checkpoint/validate.py",
+          "role": "entrypoint",
+          "startLine": 845
+        },
+        {
+          "endLine": 30,
+          "path": "components/devforge-release/INSTALLED-LAYOUT.md",
+          "role": "expected_control",
+          "startLine": 23
+        }
+      ],
+      "occurrenceId": "occ_79280ef169fa9b4576795bdd",
+      "preventiveControls": [
+        "One machine-readable release identity used by the wrapper, validator, record, and provider proofs."
+      ],
+      "provenance": {
+        "source": "local_plugin"
+      },
+      "remediation": "Carry the executing `release_root` into record enforcement and require an exact canonical match to `<release_root>/bin/devforge`. Add a digest-bound release metadata file under `RELEASE.sha256` that binds release version, DevForge source commit, candidate-manifest digest, and release-manifest digest; parse promotion evidence or replace it with that machine record.",
+      "remediationTests": [
+        "Reject a complete valid record when its executable is under a different protected root.",
+        "Reject wrong version, source commit, candidate manifest digest, or release manifest digest even when selected files hash correctly."
+      ],
+      "rootCause": {
+        "summary": "`validate_plan` derives and verifies the executing release root but does not pass it to `_check_release_pin`; that function derives a second root solely from the record executable. It hashes promotion evidence but does not parse a candidate-manifest to DevForge commit/tag to release-manifest mapping or bind version/source fields to the executing tree."
+      },
+      "ruleId": "checkpoint.release-identity",
+      "severity": {
+        "changeConditions": "Severity would decrease only if a protected caller supplies and authenticates every relevant input and process environment so the workspace agent cannot reach this path.",
+        "level": "high",
+        "rationale": "A workspace agent can select another installed, root-owned DevForge version in the record. The agent need not modify either release; coexistence of two releases is enough. The impact is loss of integrity in the machine gate that is intended to stop an agent from gaming checkpoint closure."
+      },
+      "summary": "The installed validator verifies its own release and the record-selected release separately, so a record can bind provider proof to another coexisting protected release and still pass.",
+      "taxonomy": {
+        "category": "Release identity substitution",
+        "cwe": [
+          "CWE-345"
+        ]
+      },
+      "title": "Record-selected release can differ from the executing validator",
+      "validation": {
+        "disposition": "reportable",
+        "limitations": [
+          "No root-owned install or live provider probe was authorized; neither is needed to observe the missing control."
+        ],
+        "method": "Focused local reproduction against the exact PR head",
+        "status": "confirmed",
+        "summary": "A hostile fixture made release A the executing root and left the closed record naming separately protected release B. Both trees verified and `validate_plan` returned PASS with no problems."
+      }
+    },
+    {
+      "attackPath": {
+        "controls": [
+          "root-owned release bytes",
+          "release digest verification",
+          "human independent review"
+        ],
+        "dataflow": {
+          "outcome": "attacker-selected evidence is accepted as authoritative",
+          "sink": "checkpoint closure verdict",
+          "source": "workspace-controlled record, arguments, or process environment",
+          "summary": "caller environment -> wrapper preserves GIT_* -> `_git` inherits environment -> Git reads attacker object database -> S06/S10/S13 consume attacker history",
+          "transformations": [
+            "protected wrapper or validator receives untrusted values",
+            "changed control validates only local consistency",
+            "verdict is emitted without the missing binding"
+          ]
+        },
+        "reachability": {
+          "attacker": "Claude Code or Codex process running as the ordinary workspace user",
+          "entrypoint": "absolute devforge checkpoint validate invocation",
+          "outcome": "the protected gate can produce a misleading PASS",
+          "preconditions": [
+            "the agent can write its workspace and invoke the allowed validation command"
+          ],
+          "summary": "The ordinary workspace agent can create an alternate Git directory and set process environment variables when invoking validation unless a protected host strips them first."
+        },
+        "summary": "The ordinary workspace agent can create an alternate Git directory and set process environment variables when invoking validation unless a protected host strips them first."
+      },
+      "confidence": {
+        "level": "high",
+        "rationale": "The changed code was traced end to end and a focused reproduction exercised the actual boundary without sudo or protected-file mutation."
+      },
+      "extensions": {
+        "candidateId": "candidate-47705383ae3f38a3"
+      },
+      "findingId": "csf_1de574dca348c8686aa86208",
+      "fingerprints": {
+        "algorithm": "codex-security/v1",
+        "primary": "codex-security/v1:sha256:5755f5607adaca5f6ff9b2d0e9b30437a3d779adf532b81076f9f5519fa1c105"
+      },
+      "identity": {
+        "anchor": "git-object-database-selected-by-caller-environment"
+      },
+      "locations": [
+        {
+          "endLine": 21,
+          "path": "components/devforge-release/bin/devforge",
+          "role": "source",
+          "startLine": 20
+        },
+        {
+          "endLine": 160,
+          "path": "components/research-core/src/devforgeai/checkpoint/validate.py",
+          "role": "root_control",
+          "startLine": 152
+        },
+        {
+          "endLine": 42,
+          "path": "components/research-core/src/devforgeai/checkpoint/__main__.py",
+          "role": "entrypoint",
+          "startLine": 38
+        }
+      ],
+      "occurrenceId": "occ_682fd87a2d952d68cd02a4b9",
+      "preventiveControls": [
+        "Central immutable subprocess environment policy for every enforcement child process."
+      ],
+      "provenance": {
+        "source": "local_plugin"
+      },
+      "remediation": "Invoke `/usr/bin/git` with an explicit minimal environment rather than a copy of `os.environ`; remove all Git-control variables and disable user/system configuration and hooks. Treat a protected host's repository identity as input rather than trusting discovery alone.",
+      "remediationTests": [
+        "Set GIT_DIR/GIT_WORK_TREE to an alternate repository and require COULD_NOT_RUN or the canonical HEAD.",
+        "Cover GIT_OBJECT_DIRECTORY, alternates, config count, hooks path, diff external, and work-tree variables."
+      ],
+      "rootCause": {
+        "summary": "The wrapper clears only Python variables, and `_git` inherits every remaining variable while invoking `git` through PATH. `GIT_DIR`, `GIT_WORK_TREE`, object-directory, config, hook, and diff controls are therefore caller-selected inputs to every security decision."
+      },
+      "ruleId": "checkpoint.git-environment",
+      "severity": {
+        "changeConditions": "Severity would decrease only if a protected caller supplies and authenticates every relevant input and process environment so the workspace agent cannot reach this path.",
+        "level": "high",
+        "rationale": "The ordinary workspace agent can create an alternate Git directory and set process environment variables when invoking validation unless a protected host strips them first. The impact is loss of integrity in the machine gate that is intended to stop an agent from gaming checkpoint closure."
+      },
+      "summary": "`_git` uses a PATH-resolved Git subprocess with the caller's complete environment, allowing Git control variables to redirect HEAD, ancestry, tree, and diff operations while the reported work-tree root still appears legitimate.",
+      "taxonomy": {
+        "category": "External control of system configuration",
+        "cwe": [
+          "CWE-15"
+        ]
+      },
+      "title": "Inherited Git environment can replace the repository history",
+      "validation": {
+        "disposition": "reportable",
+        "limitations": [
+          "No root-owned install or live provider probe was authorized; neither is needed to observe the missing control."
+        ],
+        "method": "Focused local reproduction against the exact PR head",
+        "status": "confirmed",
+        "summary": "With two repositories holding different HEADs, setting `GIT_DIR` to the alternate repository and `GIT_WORK_TREE` to the legitimate plan path made `git -C` report the legitimate show-toplevel but return the alternate HEAD."
+      }
+    },
+    {
+      "attackPath": {
+        "controls": [
+          "root-owned release bytes",
+          "release digest verification",
+          "human independent review"
+        ],
+        "dataflow": {
+          "outcome": "attacker-selected evidence is accepted as authoritative",
+          "sink": "checkpoint closure verdict",
+          "source": "workspace-controlled record, arguments, or process environment",
+          "summary": "caller LD_PRELOAD -> dynamic loader starts /bin/sh -> injected constructor executes -> wrapper later scrubs only Python variables -> attacker can alter exec or verdict",
+          "transformations": [
+            "protected wrapper or validator receives untrusted values",
+            "changed control validates only local consistency",
+            "verdict is emitted without the missing binding"
+          ]
+        },
+        "reachability": {
+          "attacker": "Claude Code or Codex process running as the ordinary workspace user",
+          "entrypoint": "absolute devforge checkpoint validate invocation",
+          "outcome": "the protected gate can produce a misleading PASS",
+          "preconditions": [
+            "the agent can write its workspace and invoke the allowed validation command"
+          ],
+          "summary": "A development agent that can write source and run compiler/tool commands as the ordinary user can supply a shared object when the absolute validator is called. A provider allowlist may reduce reachability but cannot be the independent DevForge boundary."
+        },
+        "summary": "A development agent that can write source and run compiler/tool commands as the ordinary user can supply a shared object when the absolute validator is called. A provider allowlist may reduce reachability but cannot be the independent DevForge boundary."
+      },
+      "confidence": {
+        "level": "high",
+        "rationale": "The changed code was traced end to end and a focused reproduction exercised the actual boundary without sudo or protected-file mutation."
+      },
+      "extensions": {
+        "candidateId": "candidate-72d484d951dcef65"
+      },
+      "findingId": "csf_6cd466cbee4cde1aac6ba1ef",
+      "fingerprints": {
+        "algorithm": "codex-security/v1",
+        "primary": "codex-security/v1:sha256:acbc90e36813a001560b27c525c60351baa82de4640849c0f6a5d6cd9f653d37"
+      },
+      "identity": {
+        "anchor": "dynamic-loader-precedes-shell-scrub"
+      },
+      "locations": [
+        {
+          "endLine": 29,
+          "path": "components/devforge-release/bin/devforge",
+          "role": "root_control",
+          "startLine": 18
+        }
+      ],
+      "occurrenceId": "occ_8d4e0dfc1c38828276dc0910",
+      "preventiveControls": [
+        "A single protected process launcher shared by hooks, CI, and terminal probes."
+      ],
+      "provenance": {
+        "source": "local_plugin"
+      },
+      "remediation": "Launch enforcement from a protected parent with an explicit environment, or replace the shell entrypoint with an appropriately reviewed static launcher that clears loader, Git, Python, locale, and shell controls before `execve` of the interpreter. Do not claim a shell script can self-sanitize pre-start loader state.",
+      "remediationTests": [
+        "Invoke through hostile LD_PRELOAD and LD_AUDIT libraries and prove no constructor executes and output remains canonical.",
+        "Repeat from both provider terminals through the actual protected host path."
+      ],
+      "rootCause": {
+        "summary": "The first executable is `/bin/sh`, selected by the shebang. The dynamic loader processes `LD_PRELOAD` before shell code reaches the environment cleanup. Unsetting loader variables inside the script would therefore be too late."
+      },
+      "ruleId": "checkpoint.process-environment",
+      "severity": {
+        "changeConditions": "Severity would decrease only if a protected caller supplies and authenticates every relevant input and process environment so the workspace agent cannot reach this path.",
+        "level": "high",
+        "rationale": "A development agent that can write source and run compiler/tool commands as the ordinary user can supply a shared object when the absolute validator is called. A provider allowlist may reduce reachability but cannot be the independent DevForge boundary. The impact is loss of integrity in the machine gate that is intended to stop an agent from gaming checkpoint closure."
+      },
+      "summary": "The protected entry point is a dynamically loaded shell script. Loader-control variables are acted on before the script executes, so root ownership and an absolute path do not stop same-user code injection into the validation process.",
+      "taxonomy": {
+        "category": "External control of process environment",
+        "cwe": [
+          "CWE-15"
+        ]
+      },
+      "title": "Loader injection runs before the protected wrapper can scrub the environment",
+      "validation": {
+        "disposition": "reportable",
+        "limitations": [
+          "No root-owned install or live provider probe was authorized; neither is needed to observe the missing control."
+        ],
+        "method": "Focused local reproduction against the exact PR head",
+        "status": "confirmed",
+        "summary": "A minimal constructor shared object supplied via `LD_PRELOAD` created a marker before a relative invocation was rejected and fired repeatedly through the absolute wrapper invocation. No repository or protected byte was changed."
+      }
+    },
+    {
+      "attackPath": {
+        "controls": [
+          "root-owned release bytes",
+          "release digest verification",
+          "human independent review"
+        ],
+        "dataflow": {
+          "outcome": "attacker-selected evidence is accepted as authoritative",
+          "sink": "checkpoint closure verdict",
+          "source": "workspace-controlled record, arguments, or process environment",
+          "summary": "workspace implementation change -> commit and candidate re-pin -> record-only head commit -> caller selects implementation commit as base -> no false-to-true transition -> S10 returns -> PASS",
+          "transformations": [
+            "protected wrapper or validator receives untrusted values",
+            "changed control validates only local consistency",
+            "verdict is emitted without the missing binding"
+          ]
+        },
+        "reachability": {
+          "attacker": "Claude Code or Codex process running as the ordinary workspace user",
+          "entrypoint": "absolute devforge checkpoint validate invocation",
+          "outcome": "the protected gate can produce a misleading PASS",
+          "preconditions": [
+            "the agent can write its workspace and invoke the allowed validation command"
+          ],
+          "summary": "The plan explicitly admits this as CS-3.3 future DevForge work. That is honest counterevidence against a PROVEN claim, but the CP-00 record currently labels the staged implementation PASS and the candidate is proposed for promotion."
+        },
+        "summary": "The plan explicitly admits this as CS-3.3 future DevForge work. That is honest counterevidence against a PROVEN claim, but the CP-00 record currently labels the staged implementation PASS and the candidate is proposed for promotion."
+      },
+      "confidence": {
+        "level": "high",
+        "rationale": "The changed code was traced end to end and a focused reproduction exercised the actual boundary without sudo or protected-file mutation."
+      },
+      "extensions": {
+        "candidateId": "candidate-6a9bcf718aaa5828"
+      },
+      "findingId": "csf_69fc2ce607d1e6cef3dfb4bb",
+      "fingerprints": {
+        "algorithm": "codex-security/v1",
+        "primary": "codex-security/v1:sha256:d6a110e5af6dcff9e6d1a57fe799e1d2fbc5586b516f17e7f2bfeab14172f30f"
+      },
+      "identity": {
+        "anchor": "caller-selects-closure-diff-base"
+      },
+      "locations": [
+        {
+          "endLine": 33,
+          "path": "components/research-core/src/devforgeai/checkpoint/__main__.py",
+          "role": "source",
+          "startLine": 31
+        },
+        {
+          "endLine": 828,
+          "path": "components/research-core/src/devforgeai/checkpoint/validate.py",
+          "role": "root_control",
+          "startLine": 773
+        }
+      ],
+      "occurrenceId": "occ_ff6a30e9dbcddade571cee33",
+      "preventiveControls": [
+        "Protected review-range attestation consumed by closure validation."
+      ],
+      "provenance": {
+        "source": "local_plugin"
+      },
+      "remediation": "Do not authorize closure from an arbitrary terminal-supplied range. Bind base and head in a protected DevForge/CI host from reviewed PR metadata, and make the validator verify that binding. Revalidate any already-closed record mutation and its candidate-to-release mapping, not only first closure transitions.",
+      "remediationTests": [
+        "Retain the reproduced implementation-commit to pin-commit range and require rejection.",
+        "Test mutations to every already-closed record after its original closure.",
+        "Reject a caller range that differs from the protected review range."
+      ],
+      "rootCause": {
+        "summary": "The CLI exposes `--diff` directly to the caller. `_check_diff` verifies only that head is current and base is a proper ancestor, then returns immediately if no currently closed record changed from open to closed relative to that base."
+      },
+      "ruleId": "checkpoint.closure-range",
+      "severity": {
+        "changeConditions": "Severity would decrease only if a protected caller supplies and authenticates every relevant input and process environment so the workspace agent cannot reach this path.",
+        "level": "high",
+        "rationale": "The plan explicitly admits this as CS-3.3 future DevForge work. That is honest counterevidence against a PROVEN claim, but the CP-00 record currently labels the staged implementation PASS and the candidate is proposed for promotion. The impact is loss of integrity in the machine gate that is intended to stop an agent from gaming checkpoint closure."
+      },
+      "summary": "S10 only scans changes in the supplied range and only enforces closure-only paths when it observes a false-to-true record transition. A workspace caller can choose a later base after implementation changes and re-pin an already-closed record in the head commit.",
+      "taxonomy": {
+        "category": "Reliance on untrusted input in security decision",
+        "cwe": [
+          "CWE-807"
+        ]
+      },
+      "title": "Caller-selected diff base can hide closure-related implementation changes",
+      "validation": {
+        "disposition": "reportable",
+        "limitations": [
+          "No root-owned install or live provider probe was authorized; neither is needed to observe the missing control."
+        ],
+        "method": "Focused local reproduction against the exact PR head",
+        "status": "confirmed",
+        "summary": "After a legal closure, a focused fixture changed implementation and candidate-manifest bytes in one commit and re-pinned the still-closed record in the next. Using the implementation commit as base returned PASS with no S10 problem."
+      }
+    }
+  ],
+  "scanId": "pr22-257ba7d-20260904t164023z",
+  "schemaVersion": "1.0"
+}

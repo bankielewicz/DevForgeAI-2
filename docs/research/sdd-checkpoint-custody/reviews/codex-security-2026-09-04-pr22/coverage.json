@@ -1,0 +1,134 @@
+{
+  "completeness": "partial",
+  "deferred": [
+    {
+      "id": "real-protected-install",
+      "paths": [
+        "components/devforge-release/"
+      ],
+      "reason": "A real uid-0 installation and fresh Claude/Codex invocation remain NOT_EVALUATED under the stop order.",
+      "surfaceIds": [
+        "installer",
+        "layout"
+      ]
+    },
+    {
+      "id": "tac-advisory",
+      "reason": "The advisory tool requested authentication and returned no intelligence; source-backed local review continued without it.",
+      "surfaceIds": [
+        "payload"
+      ]
+    }
+  ],
+  "documentType": "codex-security.coverage",
+  "excludePaths": [],
+  "explicitExclusions": [
+    {
+      "pattern": "protected DevForge repository and /usr/local installation",
+      "reason": "D-CP00-11 expressly prohibited DevForge changes, sudo, installs, probe script authoring, and closure evidence."
+    }
+  ],
+  "includePaths": [
+    "."
+  ],
+  "inventoryStrategy": "diff",
+  "mode": "diff",
+  "openQuestions": [
+    {
+      "followUpPrompt": "Specify and hostile-test the protected range and process launcher before promoting PR 22's candidate.",
+      "question": "What protected DevForge host will authenticate the reviewed base/head and launch the validator with a minimal environment?"
+    },
+    {
+      "followUpPrompt": "Add CS-1.8 and release-metadata hostile cases, then regenerate the candidate pin.",
+      "question": "Will the release carry a machine-readable identity that binds candidate digest, DevForge commit/tag, release manifest, and exact executable root?"
+    }
+  ],
+  "scanId": "pr22-257ba7d-20260904t164023z",
+  "schemaVersion": "1.0",
+  "surfaces": [
+    {
+      "disposition": "reported",
+      "id": "release_identity",
+      "label": "Validator release identity and promotion mapping",
+      "notes": "Cross-root fixture returned PASS.",
+      "receiptRefs": [
+        "artifacts/05_findings/candidate-fa00cbdf00fd925e/validation_report.md",
+        "artifacts/05_findings/candidate-fa00cbdf00fd925e/attack_path_analysis_report.md"
+      ],
+      "riskArea": "release substitution"
+    },
+    {
+      "disposition": "reported",
+      "id": "git_environment",
+      "label": "Git repository and history selection",
+      "notes": "Alternate object database selected through inherited environment.",
+      "receiptRefs": [
+        "artifacts/05_findings/candidate-47705383ae3f38a3/validation_report.md",
+        "artifacts/05_findings/candidate-47705383ae3f38a3/attack_path_analysis_report.md"
+      ],
+      "riskArea": "caller-controlled Git configuration"
+    },
+    {
+      "disposition": "reported",
+      "id": "process_environment",
+      "label": "Protected wrapper process boundary",
+      "notes": "Constructor code ran before the shell script executed.",
+      "receiptRefs": [
+        "artifacts/05_findings/candidate-72d484d951dcef65/validation_report.md",
+        "artifacts/05_findings/candidate-72d484d951dcef65/attack_path_analysis_report.md"
+      ],
+      "riskArea": "loader injection"
+    },
+    {
+      "disposition": "reported",
+      "id": "closure_range",
+      "label": "Closure-only Git range enforcement",
+      "notes": "Narrowed range passed with post-closure implementation changes.",
+      "receiptRefs": [
+        "artifacts/05_findings/candidate-6a9bcf718aaa5828/validation_report.md",
+        "artifacts/05_findings/candidate-6a9bcf718aaa5828/attack_path_analysis_report.md"
+      ],
+      "riskArea": "security decision from untrusted range"
+    },
+    {
+      "disposition": "no_issue_found",
+      "id": "payload",
+      "label": "Offline dependencies, wheel lock, and manifests",
+      "notes": "Vendored wheel hashes, offline install, manifests, and release tests passed; PyPI was not refreshed.",
+      "receiptRefs": [
+        "artifacts/03_coverage/reviewed_surfaces.md"
+      ],
+      "riskArea": "dependency and release payload integrity"
+    },
+    {
+      "disposition": "needs_follow_up",
+      "id": "installer",
+      "label": "Installer source custody and post-install verifier",
+      "notes": "Assumes immutable DevForge source and skips post-verification if the sibling verifier is missing or not executable.",
+      "receiptRefs": [
+        "artifacts/03_coverage/reviewed_surfaces.md"
+      ],
+      "riskArea": "root installer trust"
+    },
+    {
+      "disposition": "needs_follow_up",
+      "id": "layout",
+      "label": "Installed layout v1 equivalence",
+      "notes": "Narrative requires launcher and exact modes; generator, verifier, and validator enforce a narrower subset.",
+      "receiptRefs": [
+        "artifacts/03_coverage/reviewed_surfaces.md"
+      ],
+      "riskArea": "contract drift"
+    },
+    {
+      "disposition": "needs_follow_up",
+      "id": "plan_outputs",
+      "label": "CP-00 required outputs",
+      "notes": "The governing plan output list omits the release scaffold and its no-diff example becomes invalid after closure.",
+      "receiptRefs": [
+        "artifacts/03_coverage/reviewed_surfaces.md"
+      ],
+      "riskArea": "governance completeness"
+    }
+  ]
+}
