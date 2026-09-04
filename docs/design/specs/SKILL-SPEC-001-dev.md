@@ -82,7 +82,7 @@ Install the dev variant worker bodies from section 7e unless the invocation name
    - Any other mode name is a spec defect. The deferred interactive mode is `12-post-mvp.md#pm-06`.
 6. **Output location** is given in the prompt. Create `<output-dir>/dev/`. Do not write anywhere else except the `dev-workspace/` sibling that eval runs require.
 7. **On ambiguity, stop before output.** If the spec is still `draft`, contains an unresolved authoring assumption, omits a section, contradicts itself, or leaves a decision this document does not make, do not guess and do not write candidate skill files. End with a list titled `SPEC GAPS` naming each section and question. The spec author fixes and approves the spec before re-running.
-8. **Fidelity over creativity.** Use the description in section 3 verbatim. Use the selected variant's worker contracts in section 7e verbatim as `agents/<role>.md` bodies, adding only the four-section framing `templates/agent-md.md` fixes (Job, Inputs, Rules, Receipt) and the frontmatter key set section 7g fixes. Use the phase guidance in section 7d verbatim as `references/<phase>.md`; a single `# <phase>` heading line above the verbatim text is the one addition allowed there. Do not add steps, tools, or behaviours the spec does not mention.
+8. **Fidelity over creativity.** Use the description in section 3 verbatim. Use the selected variant's worker contracts in section 7e verbatim as `agents/<role>.md` bodies, adding only the four-section framing `templates/agent-md.md` fixes (Job, Inputs, Rules, Receipt) and the frontmatter key set section 7g fixes. Use the phase guidance in section 7d verbatim as `references/<phase>.md`; a single `# <phase>` heading line above the verbatim text is the one addition allowed there, and `references/envelope.md` may open with `# envelope` in the same way. Do not add steps, tools, or behaviours the spec does not mention.
 9. **Finish with the acceptance checks** in section 14 and include their output in your final message.
 
 ## 1. Identity
@@ -119,7 +119,7 @@ The `dev-tdd` variant is generated from this same specification when `docs/archi
 
 ## 3. Description
 
-The exact frontmatter `description`. Written as a YAML block scalar so colons are safe; no angle brackets anywhere.
+The exact frontmatter `description`. Written as a YAML folded block scalar (`description: >`) so colons are safe. The `>` is YAML's scalar indicator, not part of the value; the value itself contains no angle bracket.
 
 ```yaml
 description: >
@@ -261,7 +261,7 @@ phase: "red | green | refactor | smoke | review"
 agent: "red_dev | green_dev | refactor_dev | smoke_qa | dev_critic"
 status: pass | fail | needs_user | could_not_run
 reason_code: runner_missing | timeout | network | hook_fault | provider_tool_refused | prerequisite_missing | checkpoint_fault   # required only when status is could_not_run
-candidate: {id: "STORY-001", input_checkpoint: "red | green | refactor | base"}
+candidate: {id: "STORY-001", input_checkpoint: "base | red | green | refactor | smoke"}   # the candidate.checkpoint the status block names, verbatim; the sequencer refuses any other value
 claimed_paths: ["tinyapp/text.py"]      # root-relative, at most 64; empty for any non-pass status
 evidence_refs: [".devforgeai/work/STORY-001/red-report.md"]   # at most 16
 note: "at most three lines"
@@ -422,6 +422,8 @@ The `review` phase is the independent critic. You judge, you repair nothing, and
 One block per worker per variant. `must_not` is compiled into the agent prompt verbatim. The `dev` variant is the default; `dev-tdd` is installed when `constitution.md#mandates` carries `tdd: required`. Exactly one body per canonical name is installed, so `agents/` always holds five files.
 
 `writes` is the header every worker declares, and its enum is `candidate | none`: `candidate` for the three producers, `none` for the two judges. A producer's `tools` carry `Edit` and `Write` — `apply_patch` on the Codex target — plus `Bash`, the surface through which the hook layer admits the keys `granted_keys` lists. A judge's carry `Read`, `Grep`, `Glob` and `Bash` and nothing else: no `Write`, no `Edit`, no `apply_patch`, and nothing else that reaches a shell. A judge's evidence reaches disk through the receipt's required `findings` string, which the sequencer persists on its behalf. Section 7g compiles these blocks into provider-native subagent files. `tools` names tools only: a Claude Code subagent's `tools:` frontmatter accepts tool names and MCP server patterns, never a command pattern, so the hook dispatcher is the only command-level bound. A judge's `Bash` runs `devforgeai status` and the dispatcher's read-only command set (`cat cmp cut diff echo grep head jq ls pwd rg sha256sum tail test tr wc`, plus read-only git subcommands inside the root) and nothing else; a producer's additionally runs `devforgeai run KEY` for its granted keys.
+
+`granted_keys` in a contract below lists the registry's run keys for the phase (`10-sequencer-and-contracts.md` section 3). The set a run actually grants is those keys intersected with the story's `commands.use`: the sequencer computes it once at every phase entry, stores it in `run.yaml#granted_keys`, prints it in the status block, and enforces that one stored set at the `PreToolUse` check and in `devforgeai run` alike, so no key is ever advertised that another check refuses. A worker runs the keys the status block lists, never the contract's — why: the fixture story authorises `test` and `lint` only, so its `refactor` status block reads `granted_keys: [lint, test]` although the registry grants `build` too, and a worker that trusted the contract would be refused (D16).
 
 #### `red_dev`
 
@@ -707,7 +709,7 @@ Two keys named `isolation` must not be confused. The template's `isolation: requ
 
 The body of each file is the four-part outline `templates/agent-md.md` fixes, filled from the worker's section 7e contract and its `references/<phase>.md`:
 
-1. **Job** — the `responsibility` sentence, expanded to what a good result looks like and what it leaves to the next worker. A producer's body opens with the work: "You write … inside the candidate root the status block names, using Edit and Write; run `devforgeai run <key>` whenever you need the tests; finish with the receipt." A judge's opens with the template's own `writes: none` sentence: "You judge …. You write nothing. Finish with the receipt."
+1. **Job** — the `responsibility` sentence, expanded to what a good result looks like and what it leaves to the next worker. A producer's body opens with the work: "You write … inside the candidate root the status block names, using Edit and Write; run `devforgeai run <key>` whenever you need the tests; finish with the receipt." A judge's opens with the template's own `writes: none` sentence, in full: "You judge …. You write nothing: you hold no write tool, and your evidence goes in the receipt's `findings`, which the sequencer saves for the next worker to read. Finish with the receipt."
 2. **Inputs** — one line per `inputs:` entry, and nothing outside that list is opened. The first entry is always the `devforgeai status` block the primary pasted, which is where the run id, the candidate root, the phase, the fence and the granted keys come from.
 3. **Rules** — the `must_not` lines verbatim, each with the mechanism that catches it: the fence check and the claimed-path check at ingest, the phase's `writes` mode against the root, the header's `writes` scope for the agent's own tools, the lease, the oracle condition.
 4. **Receipt** — the `devforgeai.worker-result/v1` object from section 6, the statuses this worker may return, and the rule that the final message is exactly that object with no fence and no prose. A judge's Receipt section additionally states that `findings` is required on `pass` and `fail` and optional on `needs_user` and `could_not_run`, is capped at 16,384 UTF-8 bytes either way, is where the detailed working goes, and is persisted by the sequencer to a fixed path the worker does not choose; a producer's states that `findings` is forbidden on its receipt at every status.
@@ -766,7 +768,7 @@ The deterministic checks a script would otherwise perform are already determinis
 | `review.md` | section 7d, review: the four checks, quoted evidence, report-do-not-repair, what a `fail` costs | dispatching `dev_critic` |
 | `envelope.md` | the `devforgeai.worker-result/v1` shape, the closed status set, the `reason_code` rule including `provider_tool_refused`, the `findings` rule (required on a judge, forbidden on a producer, at most 16,384 UTF-8 bytes, persisted by the sequencer), the bounds, and the rule that the final message is exactly this object with no fence and no prose | every dispatch |
 
-Each of the five phase files may open with a single `# <phase>` heading line — `# red`, `# green`, `# refactor`, `# smoke`, `# review` — above the section 7d text, and carries that text verbatim below it. The heading is the one permitted addition; nothing else is prepended, appended or reworded.
+Each of the five phase files may open with a single `# <phase>` heading line — `# red`, `# green`, `# refactor`, `# smoke`, `# review` — above the section 7d text, and carries that text verbatim below it. The heading is the one permitted addition; nothing else is prepended, appended or reworded. `envelope.md` may likewise open with a single `# envelope` line above the section 6 text. `SKILL.md` opens with the `# dev` heading `templates/skill-md.md` places above its four required sections; that heading is the template's, not an addition.
 
 ### assets/
 
@@ -881,7 +883,7 @@ Each eval runs in its own workspace, built by copying files that already exist. 
       "expectations": [
         "The transcript shows `devforgeai phase start dev STORY-001 --lenient` exiting 0 and naming phase red",
         "tests/test_text.py exists after the run and defines test_slugify_basic, test_slugify_unicode and test_slugify_empty",
-        "tinyapp/text.py defines slugify, and the only project files changed are the two the story's write_fence names, tinyapp/text.py and tests/test_text.py",
+        "tinyapp/text.py defines slugify; outside .devforgeai/ the only files that differ from the fixture copy are the two the story's write_fence names, tinyapp/text.py and tests/test_text.py, and the rendered report views docs/reports/dev-STORY-001-<phase>.md that section 6 lists as a dev output; nothing else in the tree changed",
         "The transcript shows the first handoff block naming devforgeai promote STORY-001, then that command being run, and only then do both files reach the working tree: .devforgeai/state.yaml records the run with status promoted",
         ".devforgeai/work/STORY-001/ contains red-result.json, green-result.json, refactor-result.json, smoke-result.json and review-result.json",
         ".devforgeai/work/STORY-001/red-report.md records the red transition and .devforgeai/work/STORY-001/handoff.json, rewritten by devforgeai promote, has outcome pass with next /review STORY-001",
@@ -925,10 +927,10 @@ Quick-mode results are generation feedback only: one enabled run per eval and no
 
 | Kind | Value |
 |------|-------|
-| Tools | `SKILL.md`: `Read`, `Agent`, and a Bash grammar no wider than `devforgeai status \| phase start dev <story> [--fix] [--lenient] \| phase fail --reason \| validate \| promote <run>`, each call a bare command with no compound and no redirect. Producers (`red_dev`, `green_dev`, `refactor_dev`): `Read`, `Grep`, `Glob`, `Edit`, `Write`, `Bash` and `Bash`, with writes admitted under the candidate root. Judges (`smoke_qa`, `dev_critic`): `Read`, `Grep`, `Glob` and `Bash`, and no write tool of any kind on either target. |
+| Tools | `SKILL.md`: `Read`, `Agent`, and a Bash grammar no wider than `devforgeai status \| phase start dev <story> [--fix] [--lenient] \| phase fail --reason \| validate \| promote <run>`, each call a bare command with no compound and no redirect. Producers (`red_dev`, `green_dev`, `refactor_dev`): `Read`, `Grep`, `Glob`, `Edit`, `Write` and `Bash`, with writes admitted under the candidate root. Judges (`smoke_qa`, `dev_critic`): `Read`, `Grep`, `Glob` and `Bash`, and no write tool of any kind on either target. |
 | MCP servers | none |
 | Runtime | Python 3.11+ and PyYAML 6+ for the sequencer and the hook dispatcher. Worktree mode additionally needs `git` with a repository at the project root, at least one commit, `.devforgeai/work/` ignored, and both the provider's settings file and `.devforgeai/stack.yaml` tracked; the `SessionStart` self-test checks all five and fails `phase start` with `could_not_run: prerequisite_missing` rather than falling back to copy mode. The project under development supplies its own runtime; the fixture's `python` stack section additionally needs `pytest` for the `test` key and `ruff` for the `lint` key. |
-| Project commands | `.devforgeai/stack.yaml#<anchor>`, resolved from the story's `commands.source` and pinned by `commands.hash`. Keys granted by the registry: `test` at `red`, `test` and `build` at `green`, `test`, `build` and `lint` at `refactor`, `test` at `smoke`, none at `review`. A producer may run a granted key through `devforgeai run <key>`; the sequencer runs the same keys again in the transition oracle. The `smoke` grant is spent by nothing: that phase's oracle is `report_only` and its worker carries no run surface. Keys are named, never literal commands. Contract: `10-sequencer-and-contracts.md` section 7. |
+| Project commands | `.devforgeai/stack.yaml#<anchor>`, resolved from the story's `commands.source` and pinned by `commands.hash`. Keys granted by the registry: `test` at `red`, `test` and `build` at `green`, `test`, `build` and `lint` at `refactor`, `test` at `smoke`, none at `review`. A producer may run a granted key through `devforgeai run <key>`; the sequencer runs the same keys again in the transition oracle. The `smoke` grant is spent by nothing: that phase's oracle is `report_only` and its worker carries no run surface. A run's effective set is these keys intersected with the story's `commands.use`; the sequencer stores it in `run.yaml#granted_keys`, and the status block, not this row, names it. Keys are named, never literal commands. Contract: `10-sequencer-and-contracts.md` section 7. |
 | DevForgeAI/Core compatibility | Requires the sequencer grammar and the `devforgeai.worker-result/v1` schema of `10-sequencer-and-contracts.md`, 2026-09-02. `NOT_APPLICABLE` for Research Core: `dev` is an anatomy-governed skill, not a Research adapter. |
 | Other skills | Consumes `story` from `plan`, `clarification` from `clarify`, `qa-report` from `qa`, `review-report` from `review`, and the architecture set plus `stack` from `architect` or `onboard`. Produces `dev-notes` for `review`, `qa` and `retro`. Invokes none of them: every edge is a handoff row. |
 
@@ -988,7 +990,7 @@ A generated package is an uninstalled candidate until those provider-native cont
 - References one level deep from whichever file is loaded: `SKILL.md` links to `references/`, `agents/` and `assets/`; an `agents/*.md` links to `references/*.md`. Nothing links further.
 - Hooks, state writes and phase advancement are not in the skill. Do not write an instruction the sequencer or a hook already enforces: the gate is `devforgeai phase start`, the fence is result validation plus the `PreToolUse` deny, and "the tests pass" is the transition oracle.
 - No `README.md` inside the skill directory.
-- No angle brackets in frontmatter. Description 830 characters, name 3 characters.
+- No angle brackets in any frontmatter value. The `>` after `description:` is the folded-scalar indicator section 3 mandates, YAML syntax rather than a value. Description 848 characters as section 3 counts it, under the 1,024 limit; name 3 characters.
 - Imperative voice. Explain why a step matters rather than shouting it; where an instruction is non-negotiable it is a gate, a fence or an oracle, and the text names that mechanism.
 - Provide defaults, not menus. Procedures over declarations.
 - No script is shipped, so no script prompts.
@@ -1016,8 +1018,10 @@ grep -LE 'Write|Edit|apply_patch' <output-dir>/dev/agents/smoke_qa.md <output-di
 ls <output-dir>/dev/references/                          # red.md green.md refactor.md smoke.md review.md envelope.md
 # no leftover placeholders; assets/ is excluded because a template carries its own by design
 grep -rnE --exclude-dir=assets 'T[O]DO|T[B]D|\{\{' <output-dir>/dev || echo clean
-# no compounded or redirected sequencer call in the skill body
-grep -nE 'devforgeai [a-z][^|]*(; |&&| \| | > |>>|2>)' <output-dir>/dev/SKILL.md || echo clean
+# no compounded or redirected sequencer call: scan fenced code blocks and inline code spans
+# only, never prose or table layout, so a sentence such as "does both; a worker" cannot trip it
+{ awk '/^```/{f=!f;next} f' <output-dir>/dev/SKILL.md; grep -oE '`[^`]+`' <output-dir>/dev/SKILL.md; } \
+  | grep -nE 'devforgeai [a-z][^|`]*(; |&&| \| | > |>>|2>)' || echo clean
 # the spec battery
 python3 docs/design/specs/verify.py --only v1,v2,v4
 ```
