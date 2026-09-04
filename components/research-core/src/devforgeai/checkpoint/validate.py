@@ -13,14 +13,21 @@ or a reviewer can name it:
                        not contain ``..``
   S05 stages           closure stages legal for the checkpoint type when closed
   S06 closure          the nine ``closed: true`` conditions of section 7.1; S06.9 is
-                       the release pin: ``enforcement.trust_stage`` PROTECTED_RELEASE,
-                       every release field non-null, executable absolute and outside
-                       the repository, local digests equal when the files exist, both
-                       provider proofs bound to the executable digest
+                       the release pin, fail-closed (corrective-spec-001 CS-1): every
+                       release resource exists; the executable, ``RELEASE.sha256`` at
+                       the release root, every file it lists and every ancestor up to
+                       ``/`` are regular objects owned by uid 0 with no group/other
+                       write and no symbolic link; the release manifest verifies in
+                       both directions and lists the executable, the schema and the
+                       policy; the record's digests equal the installed bytes; both
+                       provider proofs are bound to the executable digest
   S07 open record      an open record carries no human closure decision
   S08 admission        ``ADMITTED`` only after CP-00 closed; admitted entries carry evidence
   S09 dependencies     a closed checkpoint's dependencies are closed
-  S10 closure diff     a diff that closes a record touches closure paths only
+  S10 closure diff     a diff that closes a record touches closure paths only; the
+                       range is mandatory once any record is closed (RangeRequired,
+                       CLI exit 2), its head must be HEAD and its base a proper
+                       ancestor (CS-3)
   S11 manifest         ``checkpoints/MANIFEST.sha256`` exists, excludes itself, covers
                        every record, and every entry verifies
   S12 authority        every record's ``decision_authority_id`` equals the plan's
@@ -35,13 +42,21 @@ or a reviewer can name it:
 
 Rules S06 and S10 need Git; when Git or the repository is unavailable the run
 is ``COULD_NOT_RUN`` (exit 3), never a pass.
+
+Policy is never caller-selected (CS-2): the schema is resolved from the
+validator's own location (installed release root, else the checkout holding
+the module), the Git root from the plan directory alone, and the CLI carries
+no override. The filesystem view of protected paths is the ``ReleaseFS``
+seam, injectable in-process for tests only; the CLI always uses the real one.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
+import stat as statmod
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
@@ -56,6 +71,24 @@ CLOSURE_ONLY_SUFFIXES = ("README.md", "MANIFEST.sha256")
 LEDGER_HEADER = re.compile(r"^\|\s*ID\s*\|\s*Type\s*\|", re.I)
 LEDGER_ROW = re.compile(r"^\|\s*(CP-\d{2})\s*\|")
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
+
+
+class RangeRequired(Exception):
+    """A closed record is present and no ``<base>..<head>`` range was given (CS-3.1)."""
+
+
+class ReleaseFS:
+    """Filesystem view of protected paths. Tests inject a fake in-process; the CLI
+    never exposes a way to select one."""
+
+    def lstat(self, path: Path) -> os.stat_result:
+        return os.lstat(path)
+
+    def read_bytes(self, path: Path) -> bytes:
+        return Path(path).read_bytes()
+
+    def walk(self, root: Path) -> list[Path]:
+        return sorted(Path(root).rglob("*"))
 
 
 class CouldNotRun(Exception):
@@ -94,20 +127,26 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _find_schema(plan: Path, override: Path | None) -> Path:
-    if override is not None:
-        if not override.is_file():
-            raise CouldNotRun(f"schema not found: {override}")
-        return override
-    for ancestor in (plan.resolve(), *plan.resolve().parents):
+def _release_root_of(module_file: Path) -> Path | None:
+    """Installed mode: the module lies under a release root holding RELEASE.sha256."""
+    for ancestor in module_file.absolute().parents:
+        if (ancestor / "RELEASE.sha256").is_file():
+            return ancestor
+    return None
+
+
+def _locate_schema() -> tuple[Path, Path | None]:
+    """The schema comes from the validator's own location, never from the plan's
+    tree (CS-2.2): the installed release root, else the checkout holding the module."""
+    here = Path(__file__)
+    root = _release_root_of(here)
+    if root is not None:
+        return root / "schemas" / "devforgeai" / "v1" / SCHEMA_NAME, root
+    for ancestor in here.absolute().parents:
         candidate = ancestor / "schemas" / "devforgeai" / "v1" / SCHEMA_NAME
         if candidate.is_file():
-            return candidate
-    for ancestor in Path(__file__).resolve().parents:
-        candidate = ancestor / "schemas" / "devforgeai" / "v1" / SCHEMA_NAME
-        if candidate.is_file():
-            return candidate
-    raise CouldNotRun(f"{SCHEMA_NAME} not found above {plan} or above the validator")
+            return candidate, None
+    raise CouldNotRun(f"{SCHEMA_NAME} not found above the validator module {here}")
 
 
 def _git(root: Path, *argv: str) -> tuple[int, str]:
@@ -121,17 +160,17 @@ def _git(root: Path, *argv: str) -> tuple[int, str]:
     return completed.returncode, (completed.stdout + completed.stderr).strip()
 
 
-def _git_root(plan: Path, override: Path | None) -> Path:
-    if override is not None:
-        root = override.resolve()
-    else:
-        code, out = _git(plan.resolve(), "rev-parse", "--show-toplevel")
-        if code != 0:
-            raise CouldNotRun(f"{plan} is not inside a Git repository: {out}")
-        root = Path(out.splitlines()[0]).resolve()
+def _git_root(plan: Path) -> Path:
+    """The repository root derives from the plan directory alone (CS-2.3)."""
+    code, out = _git(plan.resolve(), "rev-parse", "--show-toplevel")
+    if code != 0:
+        raise CouldNotRun(f"{plan} is not inside a Git repository: {out}")
+    root = Path(out.splitlines()[0]).resolve()
     code, out = _git(root, "rev-parse", "--is-inside-work-tree")
     if code != 0 or out.splitlines()[-1] != "true":
         raise CouldNotRun(f"{root} is not a Git work tree: {out}")
+    if not plan.resolve().is_relative_to(root):
+        raise CouldNotRun(f"plan {plan} is not inside its repository root {root}")
     return root
 
 
@@ -270,7 +309,7 @@ def _glob_to_regex(pattern: str) -> re.Pattern[str]:
 
 
 def _check_enforcement(rec: dict[str, Any], plan: Path, git_root: Path,
-                       closed: bool, reject: Any) -> None:
+                       closed: bool, reject: Any, fs: ReleaseFS) -> None:
     """S13 (open record) and S06.9 (closure): the candidate and release pins."""
     enforcement = rec.get("enforcement", {})
     stage = enforcement.get("trust_stage", "UNBOUND")
@@ -306,7 +345,7 @@ def _check_enforcement(rec: dict[str, Any], plan: Path, git_root: Path,
         if missing:
             reject(closed_rule, f"release pin incomplete: {', '.join(missing)} null")
         else:
-            _check_release_pin(rec, release, git_root, closed_rule, reject)
+            _check_release_pin(rec, release, git_root, closed_rule, reject, fs)
 
 
 def _check_candidate_pin(rec: dict[str, Any], candidate: dict[str, Any], plan: Path,
@@ -374,35 +413,159 @@ def _check_candidate_pin(rec: dict[str, Any], candidate: dict[str, Any], plan: P
             reject(rule, f"fenced file not pinned by the candidate manifest: {path}")
 
 
+def _protected_path_problems(path: Path, fs: ReleaseFS, want_dir: bool = False) -> list[str]:
+    """CS-1.3: every component of ``path`` up to ``/`` exists, is not a symbolic
+    link, is owned by uid 0 and grants no group/other write."""
+    problems: list[str] = []
+    chain = [*reversed(path.parents), path]
+    for prefix in chain:
+        label = "ancestor" if prefix != path else ("directory" if want_dir else "file")
+        try:
+            st = fs.lstat(prefix)
+        except FileNotFoundError:
+            problems.append(f"{label} missing: {prefix}")
+            return problems
+        except OSError as exc:
+            problems.append(f"{label} cannot be inspected: {prefix}: {exc}")
+            return problems
+        if statmod.S_ISLNK(st.st_mode):
+            problems.append(f"{label} is a symbolic link: {prefix}")
+            return problems
+        if prefix != path and not statmod.S_ISDIR(st.st_mode):
+            problems.append(f"ancestor is not a directory: {prefix}")
+            return problems
+        if prefix == path and not (statmod.S_ISDIR(st.st_mode) if want_dir else statmod.S_ISREG(st.st_mode)):
+            problems.append(f"{label} is not a regular {'directory' if want_dir else 'file'}: {prefix}")
+            return problems
+        if st.st_uid != 0:
+            problems.append(f"{label} not owned by uid 0 (uid {st.st_uid}): {prefix}")
+        if st.st_mode & 0o022:
+            problems.append(f"{label} is group or other writable (mode {statmod.S_IMODE(st.st_mode):o}): {prefix}")
+    return problems
+
+
+def _release_root(executable: Path) -> Path:
+    """CS-1.2: parent of ``bin/``, else the executable's directory."""
+    return executable.parent.parent if executable.parent.name == "bin" else executable.parent
+
+
+def _parse_manifest_text(text: str) -> dict[str, str]:
+    entries: dict[str, str] = {}
+    for line in text.splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        digest, _, name = line.partition("  ")
+        name = name.strip()
+        if name.startswith("./"):
+            name = name[2:]
+        entries[name] = digest.strip()
+    return entries
+
+
+def verify_release_tree(root: Path, fs: ReleaseFS) -> tuple[list[str], dict[str, str]]:
+    """CS-1.3 and CS-1.4 over an installed release root. Returns (problems, entries)."""
+    problems: list[str] = []
+    manifest = root / "RELEASE.sha256"
+    for why in _protected_path_problems(root, fs, want_dir=True):
+        problems.append(f"release root: {why}")
+    try:
+        fs.lstat(manifest)
+    except FileNotFoundError:
+        problems.append(f"RELEASE.sha256 missing at {root}")
+        return problems, {}
+    for why in _protected_path_problems(manifest, fs):
+        problems.append(f"RELEASE.sha256: {why}")
+    try:
+        entries = _parse_manifest_text(fs.read_bytes(manifest).decode("utf-8"))
+    except (OSError, UnicodeDecodeError) as exc:
+        problems.append(f"RELEASE.sha256 unreadable: {exc}")
+        return problems, {}
+    if not entries:
+        problems.append("RELEASE.sha256 is empty")
+    if "RELEASE.sha256" in entries:
+        problems.append("RELEASE.sha256 lists itself")
+    for name, digest in entries.items():
+        if name.startswith("/") or ".." in PurePosixPath(name).parts:
+            problems.append(f"RELEASE.sha256 entry escapes the release root: {name}")
+            continue
+        target = root / name
+        whys = _protected_path_problems(target, fs)
+        for why in whys:
+            problems.append(f"release entry {name}: {why}")
+        if whys and any("missing" in w or "symbolic" in w or "not a regular" in w for w in whys):
+            continue
+        if not re.fullmatch(r"[0-9a-f]{64}", digest):
+            problems.append(f"release entry {name}: malformed digest")
+            continue
+        if hashlib.sha256(fs.read_bytes(target)).hexdigest() != digest:
+            problems.append(f"release entry does not verify: {name}")
+    for path in fs.walk(root):
+        rel = path.relative_to(root).as_posix()
+        try:
+            st = fs.lstat(path)
+        except OSError:
+            continue
+        if statmod.S_ISLNK(st.st_mode):
+            problems.append(f"symbolic link inside the release root: {rel}")
+        elif statmod.S_ISREG(st.st_mode) and rel != "RELEASE.sha256" and rel not in entries:
+            problems.append(f"release file not listed in RELEASE.sha256: {rel}")
+    return problems, entries
+
+
 def _check_release_pin(rec: dict[str, Any], release: dict[str, Any], git_root: Path,
-                       rule: str, reject: Any) -> None:
+                       rule: str, reject: Any, fs: ReleaseFS) -> None:
+    """CS-1: fail-closed. Every resource mandatory; protected-path rule; release
+    manifest verified both ways; record digests bound to installed bytes."""
     executable = str(release["executable_path"])
     if not executable.startswith("/") or ".." in PurePosixPath(executable).parts:
         reject(rule, f"executable_path must be absolute without `..` (no PATH resolution): {executable}")
-    else:
+        return
+    exe = Path(executable)
+    if exe.is_relative_to(git_root.resolve()) or exe.resolve().is_relative_to(git_root.resolve()):
+        reject(rule, f"executable_path is inside the repository (project-local fallback): {executable}")
+    whys = _protected_path_problems(exe, fs)
+    for why in whys:
+        reject(rule, f"executable: {why}" if not why.startswith("file missing") else f"executable missing: {executable}")
+    exe_present = not any("missing" in w or "symbolic" in w or "not a regular" in w for w in whys)
+    root = _release_root(exe)
+    problems, entries = verify_release_tree(root, fs)
+    for why in problems:
+        reject(rule, why)
+    if entries:
+        exe_rel = exe.relative_to(root).as_posix() if exe.is_relative_to(root) else None
+        if exe_rel not in entries:
+            reject(rule, f"RELEASE.sha256 does not list the executable {exe_rel}")
+        schema_rel = f"schemas/devforgeai/v1/{SCHEMA_NAME}"
+        policy_rel = "contracts/MANIFEST.sha256"
+        for label, rel, field in (("schema", schema_rel, "schema_set_sha256"),
+                                  ("policy", policy_rel, "contract_policy_sha256")):
+            if rel not in entries:
+                reject(rule, f"RELEASE.sha256 does not list the {label} {rel}")
+            elif entries[rel] != release[field]:
+                reject(rule, f"{field} does not equal the installed {label} digest")
+    if exe_present:
         try:
-            inside = Path(executable).resolve().is_relative_to(git_root.resolve())
-        except (OSError, ValueError):
-            inside = False
-        if inside:
-            reject(rule, f"executable_path is inside the repository (project-local fallback): {executable}")
-        exe = Path(executable)
-        if exe.is_file() and _sha256(exe) != release["executable_sha256"]:
-            reject(rule, f"executable digest mismatch at {executable}")
+            if hashlib.sha256(fs.read_bytes(exe)).hexdigest() != release["executable_sha256"]:
+                reject(rule, f"executable digest mismatch at {executable}")
+        except OSError as exc:
+            reject(rule, f"executable unreadable: {exc}")
     for label in ("promotion_evidence_path", "permissions_evidence_path"):
         value = str(release[label])
         digest = release[label.replace("_path", "_sha256")]
         if value.startswith("/"):
+            if ".." in PurePosixPath(value).parts:
+                reject(rule, f"{label} contains `..`: {value}")
+                continue
             target = Path(value)
         elif why := _bad_relative(value):
             reject(rule, f"{label}: {why}: {value}")
             continue
         else:
             target = git_root / value
-            if not target.is_file():
-                reject(rule, f"{label} missing on disk: {value}")
-                continue
-        if target.is_file() and _sha256(target) != digest:
+        if not target.is_file():
+            reject(rule, f"{label} missing: {value}")
+            continue
+        if _sha256(target) != digest:
             reject(rule, f"{label} digest mismatch: {value}")
     if not rec.get("enforcement", {}).get("candidate", {}).get("source_commit"):
         reject(rule, "release pin without the retained candidate pin (candidate/release mapping)")
@@ -462,7 +625,7 @@ def _parse_readme(readme: Path) -> PlanHeader:
 
 def _check_record(cp: str, rec: dict[str, Any], header: PlanHeader, plan: Path,
                   git_root: Path, records: dict[str, dict[str, Any]],
-                  problems: list[Problem]) -> None:
+                  problems: list[Problem], fs: ReleaseFS) -> None:
     def reject(rule: str, message: str) -> None:
         problems.append(Problem(cp, rule, message))
 
@@ -522,7 +685,7 @@ def _check_record(cp: str, rec: dict[str, Any], header: PlanHeader, plan: Path,
         if rec.get("human_closure", {}).get("decision") is not None:
             reject("S07", "an open record carries a human closure decision")
         # S13 pins of an open record
-        _check_enforcement(rec, plan, git_root, False, reject)
+        _check_enforcement(rec, plan, git_root, False, reject, fs)
         return
 
     # ---- closed: S05, S06, S09 ----
@@ -597,7 +760,7 @@ def _check_record(cp: str, rec: dict[str, Any], header: PlanHeader, plan: Path,
             reject("S06.8", f"reopen_if condition is not concrete: {condition!r}")
 
     # S06.9 release pin (closure condition 9) and the retained candidate pin
-    _check_enforcement(rec, plan, git_root, True, reject)
+    _check_enforcement(rec, plan, git_root, True, reject, fs)
 
     # S09 dependencies
     if row is not None and row["depends"] not in ("", "—", "-"):
@@ -613,6 +776,23 @@ def _check_diff(plan: Path, git_root: Path, checkpoints: Path, records: dict[str
     if ".." not in diff_range:
         raise CouldNotRun(f"--diff needs <base>..<head>, got {diff_range!r}")
     base, _, head = diff_range.partition("..")
+    code, head_sha = _git(git_root, "rev-parse", "--verify", f"{head}^{{commit}}")
+    if code != 0:
+        problems.append(Problem("PLAN", "S10", f"range head {head!r} does not resolve: {head_sha}"))
+        return
+    code, base_sha = _git(git_root, "rev-parse", "--verify", f"{base}^{{commit}}")
+    if code != 0:
+        problems.append(Problem("PLAN", "S10", f"range base {base!r} does not resolve: {base_sha}"))
+        return
+    _, current = _git(git_root, "rev-parse", "HEAD")
+    if head_sha != current:
+        problems.append(Problem("PLAN", "S10", f"range head {head_sha[:12]} is not HEAD ({current[:12]}); "
+                                              "closure validation runs at the reviewed head"))
+        return
+    code, _ = _git(git_root, "merge-base", "--is-ancestor", base_sha, head_sha)
+    if code != 0 or base_sha == head_sha:
+        problems.append(Problem("PLAN", "S10", f"range base {base_sha[:12]} is not a proper ancestor of head"))
+        return
     code, out = _git(git_root, "diff", "--name-only", diff_range)
     if code != 0:
         raise CouldNotRun(f"git diff {diff_range} failed: {out}")
@@ -650,8 +830,11 @@ def _check_diff(plan: Path, git_root: Path, checkpoints: Path, records: dict[str
 
 # ---------- entry ----------
 
-def validate_plan(plan: Path, git_root: Path | None = None, schema_path: Path | None = None,
-                  diff_range: str | None = None) -> Report:
+def validate_plan(plan: Path, diff_range: str | None = None,
+                  release_fs: ReleaseFS | None = None) -> Report:
+    """Validate every record of ``plan``. ``release_fs`` is the in-process test seam
+    of CS-1.7; the CLI never sets it."""
+    fs = release_fs or ReleaseFS()
     plan = Path(plan)
     readme = plan / "README.md"
     checkpoints = plan / "checkpoints"
@@ -659,10 +842,18 @@ def validate_plan(plan: Path, git_root: Path | None = None, schema_path: Path | 
         raise CouldNotRun(f"plan README not found: {readme}")
     if not checkpoints.is_dir():
         raise CouldNotRun(f"checkpoints directory not found: {checkpoints}")
-    schema = json.loads(_find_schema(plan, schema_path).read_text(encoding="utf-8"))
+    schema_path, release_root = _locate_schema()
+    if release_root is not None:
+        # Installed mode: the release verifies itself before any record is read.
+        tree_problems, _ = verify_release_tree(release_root, ReleaseFS())
+        if tree_problems:
+            raise CouldNotRun("installed release fails verification: " + "; ".join(tree_problems[:5]))
+    if not schema_path.is_file():
+        raise CouldNotRun(f"schema not found: {schema_path}")
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
     Draft202012Validator.check_schema(schema)
     validator = Draft202012Validator(schema)
-    root = _git_root(plan, git_root)
+    root = _git_root(plan)
     header = _parse_readme(readme)
     problems: list[Problem] = []
 
@@ -697,6 +888,10 @@ def validate_plan(plan: Path, git_root: Path | None = None, schema_path: Path | 
             continue
         records[cp] = data
 
+    # CS-3.1: a closed record makes the range mandatory.
+    if not diff_range and any(rec.get("closed") for rec in records.values()):
+        raise RangeRequired("closure validation requires --diff <base>..<head>")
+
     # S03: every ledger row has a record
     for cp in header.ledger:
         if cp not in records and not any(p.checkpoint == cp for p in problems):
@@ -721,7 +916,7 @@ def validate_plan(plan: Path, git_root: Path | None = None, schema_path: Path | 
                 problems.append(Problem("PLAN", "S11", f"manifest entry missing on disk: {name}"))
 
     for cp, rec in records.items():
-        _check_record(cp, rec, header, plan, root, records, problems)
+        _check_record(cp, rec, header, plan, root, records, problems, fs)
 
     if diff_range:
         _check_diff(plan, root, checkpoints, records, diff_range, problems)

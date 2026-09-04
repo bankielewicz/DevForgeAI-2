@@ -12,7 +12,7 @@ closure_stages:
   proven: NOT_RUN
 research:
   dossier_path: "docs/research/sdd-checkpoint-custody"
-  manifest_sha256: "3110f7930b0cbf5cf4dc805b3c484c2791b2cd327be23992d53369f012ee54e9"
+  manifest_sha256: "9c28b00688f020e67a95d3ddc10b77e0f8960d8ad6cfda5a582b0d3294d55dd4"
   verification_ids: []
 implementation:
   governing_decision_ids:
@@ -81,14 +81,15 @@ human_closure:
   decided_at: null
 evidence_merge_commits: []
 limitations:
-  - "Candidate `c784ab7` (pin above) is NOT promotion-eligible: the Codex security review of PR 20 (snapshot `sha256:55f244705de1243a43ef6c6882165f642a8020659c71fd4ab9d597e42892e92b`, dossier `reviews/codex-security-2026-09-04/`) found the release pin fail-open (missing or user-owned executable passes), caller-replaceable schema and repository root (`--schema`, `--git-root`), S10 skipped without `--diff`, and a destructive probe design; every finding was reproduced by the owner at `0246e76`. `implemented` is therefore `NOT_RUN` until a corrective work PR with hostile red tests re-pins a corrected candidate and passes independent exact-head review (D-CP00-11). No promotion, installation, dependency install or closure evidence before then."
+  - "Candidate `c784ab7` (the first pin) was found not promotion-eligible by the Codex security review of PR 20 (snapshot `sha256:55f244705de1243a43ef6c6882165f642a8020659c71fd4ab9d597e42892e92b`, dossier `reviews/codex-security-2026-09-04/`): fail-open release pin, caller-replaceable schema and repository root, S10 skipped without `--diff`, destructive probe design (D-CP00-11). Corrective-spec-001 was implemented red-first (D-CP00-12); the pin below names the corrected candidate. No promotion, installation or closure evidence until the corrected candidate passes independent exact-head review."
   - "The corrective work uses a second work branch, `research/cp-00-checkpoint-custody-fix1`, because the plan's CP-00 branch merged with PR 19; recorded deviation from plan section 5 (D-CP00-11)."
   - "The validator is a staged promotion candidate (plan section 4.2), invoked as `PYTHONPATH=components/research-core/src python3 -m devforgeai.checkpoint validate --plan docs/research/spec-driven-development-gap-closure`; the authoritative executable is the future protected DevForge `devforge checkpoint validate`, so `proven` requires that pinned, root-owned install and CP-00 stays open until it exists (D-CP00-08)."
-  - "Release-pin digests (executable, promotion and permissions evidence) are verified against local bytes only when the pinned path exists on the validating machine; on a machine without the protected install the validator checks the pin's shape, absoluteness and location, not its bytes."
-  - "The candidate pin names a commit, so it is recorded in a second commit on the work branch (D-CP00-09); the work PR must merge with a merge commit, not a squash, or the pinned source commit disappears from the history."
+  - "The positive protected case (a root-owned release tree accepted by the fail-closed release pin) is testable in this repository only in-process through the `release_fs` seam with a fake that reports uid 0; the CLI exposes no seam. The true positive integration test is DevForge's two-terminal probe against a real root-owned install (CS-1.7)."
+  - "A `PROTECTED_RELEASE` record validates only on a machine where the pinned release is installed: every release resource is mandatory and inspected on the filesystem (CS-1). Once any record of the plan is closed, every validation of the plan, CI included, must supply `--diff <base>..<head>` with head equal to HEAD (CS-3.3); a trusted base/head supplied by the protected host is DevForge work."
+  - "Ownership and mode rules are POSIX; another operating system needs its own accepted realization (plan section 4.2). The interpreter and standard library are outside RELEASE.sha256 and are pinned by distro package in the permissions evidence (INSTALLED-LAYOUT.md rule 5)."
   - "Reviewer independence is checked as inequality over self-reported identifier strings; the validator does not authenticate identities."
-  - "The work happened in the Claude Code worktree directory `.claude/worktrees/cp-00-checkpoint-custody` rather than the plan's `worktrees/cp-00-checkpoint-custody`, because the Claude Code worktree tool only enters directories under `.claude/worktrees/`; the branch name `research/cp-00-checkpoint-custody` is the one the plan fixes."
-  - "The schema is resolved from the repository checkout, not from wheel data-files, because the Research Core packaging contract freezes the shipped schema set; DevForge embeds the schema when it takes the validator."
+  - "The work happened in the Claude Code worktree directory `.claude/worktrees/cp-00-checkpoint-custody` (and `.claude/worktrees/cp-00-fix1` for the corrective branch) rather than the plan's `worktrees/cp-00-checkpoint-custody`, because the Claude Code worktree tool only enters directories under `.claude/worktrees/`; accepted by the decision authority (D-CP00-05)."
+  - "The candidate pin names a commit, so it is recorded in a later commit on the work branch (D-CP00-09); the work PR must merge with a merge commit, not a squash, or the pinned source commit disappears from the history."
 reopen_if:
   - "DevForge releases a checkpoint validator whose embedded schema digest differs from `schemas/devforgeai/v1/research-gap-checkpoint.schema.json` at the closure commit."
   - "Claude Code or Codex CLI changes version before the two-terminal validator probe recorded under `docs/research/sdd-checkpoint-custody/probes/` is repeated on the new version."

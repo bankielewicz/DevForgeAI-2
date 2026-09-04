@@ -1,0 +1,29 @@
+#!/bin/sh
+# devforge: entry point of the checkpoint validator release (INSTALLED-LAYOUT.md rule 7).
+# STAGED CANDIDATE source in DevForgeAI; the installed copy is root-owned in the
+# DevForge release. Refuses a relative or bare-name invocation, scrubs the
+# environment, and execs the distro interpreter in isolated mode on the launcher.
+# (A PATH lookup through an absolute PATH entry yields an absolute $0 and is not
+# distinguishable here; a PATH shadow is why callers must use the absolute path.)
+set -eu
+
+case "$0" in
+  /*) ;;
+  *)
+    echo "devforge: invoke by absolute path (got '$0')" >&2
+    exit 2
+    ;;
+esac
+
+bindir=$(dirname "$0")
+root=$(dirname "$bindir")
+export PATH=/usr/bin:/bin
+unset PYTHONPATH PYTHONHOME PYTHONSTARTUP PYTHONUSERBASE PYTHONSAFEPATH 2>/dev/null || true
+
+if [ "${1:-}" != "checkpoint" ]; then
+  echo "usage: $0 checkpoint validate --plan <dir> [--diff <base>..<head>] [--json]" >&2
+  exit 2
+fi
+shift
+
+exec /usr/bin/python3 -I -B -P "$root/bin/devforge-checkpoint.py" "$@"

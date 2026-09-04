@@ -22,6 +22,9 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "components" / "research-core" / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+from devforgeai.checkpoint.validate import RangeRequired, ReleaseFS, validate_plan  # noqa: E402
 SCHEMA = ROOT / "schemas" / "devforgeai" / "v1" / "research-gap-checkpoint.schema.json"
 REAL_PLAN = ROOT / "docs" / "research" / "spec-driven-development-gap-closure"
 AUTH = "github:test-authority"
@@ -54,6 +57,24 @@ RELEASE_FIELDS = ("version", "source_commit", "promotion_evidence_path", "promot
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+class FakeProtectedFS(ReleaseFS):
+    """CS-1.7 seam: the fixture's release tree and its ancestors read as owned by
+    uid 0 with no group/other write; bytes and symlinks are real. In-process only."""
+
+    def lstat(self, path: Path) -> os.stat_result:
+        st = os.lstat(path)
+        if os.path.islink(path):
+            return st
+        masked = (st.st_mode & ~0o022, st.st_ino, st.st_dev, st.st_nlink, 0, 0,
+                  st.st_size, st.st_atime, st.st_mtime, st.st_ctime)
+        return os.stat_result(masked)
+
+
+def run_inprocess(plan: Path, diff_range: str | None = None):
+    """The positive protected path: in-process, seam injected. Returns the report."""
+    return validate_plan(plan, diff_range=diff_range, release_fs=FakeProtectedFS())
 
 
 def admitted_input(**overrides: object) -> dict:
@@ -294,22 +315,44 @@ class GapCheckpointValidatorTests(unittest.TestCase):
         self.assertEqual(code, 0, out)
         self.assertIn("3 record(s), 0 problem(s)", out)
 
-    def test_complete_closed_record_passes(self) -> None:
-        evidence = self.scratch.commit("evidence")
-        self.scratch.close("CP-00", evidence)
+    def _work_then_close(self, *cps: str) -> tuple[str, str]:
+        """Work commit (dossiers, candidate, open records), then the closure commit."""
+        for cp in cps:
+            self.scratch.write_dossier(cp)
+        self.scratch.write_candidate("CP-00")
         self.scratch.materialize()
-        self.scratch.commit("closure")
-        code, out = run_validator(self.scratch.plan)
-        self.assertEqual(code, 0, out)
+        base = self.scratch.commit("work")
+        for cp in cps:
+            self.scratch.close(cp, base)
+        self.scratch.materialize()
+        head = self.scratch.commit("closure")
+        return base, head
+
+    def test_complete_closed_record_passes(self) -> None:
+        # CS-1.7: the positive protected case runs in-process through the seam.
+        base, head = self._work_then_close("CP-00")
+        report = run_inprocess(self.scratch.plan, f"{base}..{head}")
+        self.assertEqual([str(p) for p in report.problems], [])
+        self.assertEqual(report.outcome, "PASS")
 
     def test_research_only_disposition_passes(self) -> None:
-        evidence = self.scratch.commit("evidence")
-        self.scratch.close("CP-00", evidence)
-        self.scratch.close("CP-13", evidence)
-        self.scratch.materialize()
-        self.scratch.commit("closure")
-        code, out = run_validator(self.scratch.plan)
-        self.assertEqual(code, 0, out)
+        base, head = self._work_then_close("CP-00", "CP-13")
+        report = run_inprocess(self.scratch.plan, f"{base}..{head}")
+        self.assertEqual([str(p) for p in report.problems], [])
+
+    def test_no_seam_from_the_cli(self) -> None:
+        # The same closed plan through the subprocess path: the user-owned
+        # release tree is rejected, so no CLI flag or environment selects the seam.
+        base, head = self._work_then_close("CP-00")
+        code, out = run_validator(self.scratch.plan, "--diff", f"{base}..{head}")
+        self.assertEqual(code, 1, out)
+        self.assertIn("S06.9", out)
+        self.assertIn("not owned by uid 0", out)
+
+    def test_closed_plan_without_range_raises_in_process(self) -> None:
+        self._work_then_close("CP-00")
+        with self.assertRaises(RangeRequired):
+            run_inprocess(self.scratch.plan)
 
     def test_open_record_with_staged_candidate_and_research_holds(self) -> None:
         # The CP-00 work-PR state the amendment allows: researched and
@@ -324,15 +367,10 @@ class GapCheckpointValidatorTests(unittest.TestCase):
     def test_closure_only_diff_passes(self) -> None:
         # The work PR created the dossier, the candidate pin and its manifest;
         # the closure diff touches records, ledger and adjacent manifest only.
-        self.scratch.write_dossier("CP-00")
-        self.scratch.write_candidate("CP-00")
-        self.scratch.materialize()
-        base = self.scratch.commit("work")
-        self.scratch.close("CP-00", base)
-        self.scratch.materialize()
-        head = self.scratch.commit("closure")
-        code, out = run_validator(self.scratch.plan, "--diff", f"{base}..{head}")
-        self.assertEqual(code, 0, out)
+        base, head = self._work_then_close("CP-00")
+        report = run_inprocess(self.scratch.plan, f"{base}..{head}")
+        self.assertEqual([str(p) for p in report.problems if p.rule == "S10"], [])
+        self.assertEqual(report.outcome, "PASS")
 
     def test_json_output_names_outcome(self) -> None:
         self.scratch.materialize()
@@ -344,6 +382,8 @@ class GapCheckpointValidatorTests(unittest.TestCase):
     # ---- hostile: each mutation is rejected with its rule id ----
 
     def _closed_scratch(self) -> tuple[str, dict]:
+        self.scratch.write_dossier("CP-00")
+        self.scratch.write_candidate("CP-00")
         evidence = self.scratch.commit("evidence")
         rec = self.scratch.close("CP-00", evidence)
         return evidence, rec
@@ -351,7 +391,10 @@ class GapCheckpointValidatorTests(unittest.TestCase):
     def _expect(self, rule: str, *needles: str) -> str:
         self.scratch.materialize()
         self.scratch.commit()
-        code, out = run_validator(self.scratch.plan)
+        extra = ()
+        if any(rec["closed"] for rec in self.scratch.records.values()):
+            extra = ("--diff", "HEAD~1..HEAD")      # CS-3.1: the range is mandatory
+        code, out = run_validator(self.scratch.plan, *extra)
         self.assertEqual(code, 1, out)
         self.assertIn(rule, out)
         for needle in needles:
